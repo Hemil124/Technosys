@@ -26,7 +26,8 @@ router.use((req, res, next) => {
 });
 
 // Admin dashboard stats
-router.get("/stats", getTechnicianStats);
+// router.get("/stats", getTechnicianStats);
+router.get("/technicians/stats", getTechnicianStats);
 
 // Get technicians with optional status filter
 router.get("/technicians", getTechnicians);

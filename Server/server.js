@@ -42,8 +42,19 @@ app.use((req, res, next) => {
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
-// Set Security Headers
-app.use(helmet());
+// Set Security Headers with configured CSP
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        imgSrc: ["'self'", "http://localhost:4000", "data:", "blob:"],
+        connectSrc: ["'self'", "http://localhost:4000"],
+      },
+    },
+  })
+);
 
 // Rate Limiting
 const limiter = rateLimit({
@@ -58,10 +69,32 @@ app.use(hpp());
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors({ origin: allowedOrigins, credentials: true }));
+app.use(cors({ 
+  origin: allowedOrigins, 
+  credentials: true,
+  exposedHeaders: ['Content-Type', 'Content-Length']
+}));
 
 // Serve static files (uploads folder)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', (req, res, next) => {
+  res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.join(__dirname, 'uploads')));
+
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  setHeaders: (res, path) => {
+    // Set CORS headers for static files
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigins);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    
+    // Cache control for better performance
+    if (path.endsWith('.jpg') || path.endsWith('.png') || path.endsWith('.jpeg')) {
+      res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day cache for images
+    }
+  }
+}));
+
 
 // Needed for Passport during the OAuth handshake
 app.use(session({

@@ -6,7 +6,7 @@
 // export const getTechnicians = async (req, res) => {
 //   try {
 //     const { status } = req.query;
-    
+
 //     let filter = {};
 //     if (status && ["Pending", "Approved", "Rejected"].includes(status)) {
 //       filter.VerifyStatus = status;
@@ -37,7 +37,7 @@
 
 //     const technician = await Technician.findByIdAndUpdate(
 //       id,
-//       { 
+//       {
 //         VerifyStatus: "Approved",
 //         ActiveStatus: "Active"
 //       },
@@ -94,7 +94,7 @@
 
 //     const technician = await Technician.findByIdAndUpdate(
 //       id,
-//       { 
+//       {
 //         VerifyStatus: "Rejected",
 //         ActiveStatus: "Deactive"
 //       },
@@ -171,17 +171,24 @@
 //   }
 // };
 
-
-
 import Technician from "../models/Technician.js";
 import nodemailer from "nodemailer";
 
 // Create transporter for emails
+// const transporter = nodemailer.createTransport({
+//   service: 'gmail',
+//   auth: {
+//     user: process.env.SENDER_EMAIL,
+//     pass: process.env.SMTP_PASS,
+//   },
+// });
+// For Brevo SMTP
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: "smtp-relay.brevo.com",
+  port: 587,
   auth: {
-    user: process.env.SENDER_EMAIL,
-    pass: process.env.EMAIL_PASSWORD,
+    user: process.env.SMTP_USER, // "95f675001@smtp-brevo.com"
+    pass: process.env.SMTP_PASS, // "mU5SRsKt6OkGq73H"
   },
 });
 
@@ -189,26 +196,26 @@ const transporter = nodemailer.createTransport({
 export const getTechnicians = async (req, res) => {
   try {
     const { status } = req.query;
-    
+
     let filter = {};
     if (status && ["Pending", "Approved", "Rejected"].includes(status)) {
       filter.VerifyStatus = status;
     }
 
     const technicians = await Technician.find(filter)
-      .select('-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry')
+      .select("-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry")
       .sort({ createdAt: -1 });
 
     res.json({
       success: true,
       technicians,
-      total: technicians.length
+      total: technicians.length,
     });
   } catch (error) {
     console.error("Get technicians error:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message: "Internal server error",
     });
   }
 };
@@ -218,52 +225,139 @@ export const getTechnicianById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const technician = await Technician.findById(id)
-      .select('-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry');
+    const technician = await Technician.findById(id).select(
+      "-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry"
+    );
 
     if (!technician) {
       return res.status(404).json({
         success: false,
-        message: "Technician not found"
+        message: "Technician not found",
       });
     }
 
     res.json({
       success: true,
-      technician
+      technician,
     });
   } catch (error) {
     console.error("Get technician error:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message: "Internal server error",
     });
   }
 };
 
 // Approve technician
+// export const approveTechnician = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+
+//     const technician = await Technician.findByIdAndUpdate(
+//       id,
+//       {
+//         VerifyStatus: "Approved",
+//         ActiveStatus: "Active"
+//       },
+//       { new: true }
+//     ).select('-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry');
+
+//     if (!technician) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Technician not found"
+//       });
+//     }
+
+//     // Send approval email
+//     // try {
+//     //   await transporter.sendMail({
+//     //     from: process.env.SENDER_EMAIL,
+//     //     to: technician.Email,
+//     //     subject: "Your Technician Account Has Been Approved - Technosys",
+//     //     html: `
+//     //       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+//     //         <h2 style="color: #4F46E5; text-align: center;">🎉 Account Approved!</h2>
+//     //         <p>Dear <strong>${technician.Name}</strong>,</p>
+//     //         <p>We are pleased to inform you that your technician account has been approved by our administration team.</p>
+
+//     //         <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+//     //           <p style="margin: 0;"><strong>Account Details:</strong></p>
+//     //           <ul style="margin: 10px 0;">
+//     //             <li><strong>Name:</strong> ${technician.Name}</li>
+//     //             <li><strong>Email:</strong> ${technician.Email}</li>
+//     //             <li><strong>Mobile:</strong> ${technician.MobileNumber}</li>
+//     //             <li><strong>Service Category:</strong> ${technician.ServiceCategoryID}</li>
+//     //           </ul>
+//     //         </div>
+
+//     //         <p>You can now login to your account and start accepting service requests from customers.</p>
+
+//     //         <div style="text-align: center; margin: 25px 0;">
+//     //           <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login"
+//     //              style="background-color: #4F46E5; color: white; padding: 12px 30px;
+//     //                     text-decoration: none; border-radius: 6px; display: inline-block;">
+//     //             Login to Your Account
+//     //           </a>
+//     //         </div>
+
+//     //         <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
+
+//     //         <br/>
+//     //         <p>Best regards,<br/>
+//     //         <strong>Technosys Team</strong></p>
+
+//     //         <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+//     //         <p style="color: #6b7280; font-size: 12px; text-align: center;">
+//     //           This is an automated message. Please do not reply to this email.
+//     //         </p>
+//     //       </div>
+//     //     `
+//     //   });
+//     //   console.log(`Approval email sent jhbjhbjhjhvjv to: ${technician.Email}`);
+//     // } catch (emailError) {
+//     //   console.error("Approval email error:", emailError);
+//     //   // Continue even if email fails
+//     // }
+
+//     res.json({
+//       success: true,
+//       message: "Technician approved successfully",
+//       technician
+//     });
+//   } catch (error) {
+//     console.error("Approve technician error:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Internal server error"
+//     });
+//   }
+// };
 export const approveTechnician = async (req, res) => {
   try {
     const { id } = req.params;
 
     const technician = await Technician.findByIdAndUpdate(
       id,
-      { 
+      {
         VerifyStatus: "Approved",
-        ActiveStatus: "Active"
+        ActiveStatus: "Active",
       },
       { new: true }
-    ).select('-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry');
+    ).select("-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry");
 
     if (!technician) {
       return res.status(404).json({
         success: false,
-        message: "Technician not found"
+        message: "Technician not found",
       });
     }
 
-    // Send approval email
+    // Send approval email - UNCOMMENT THIS SECTION
     try {
+      console.log(`Attempting to send approval email to: ${technician.Email}`);
+
       await transporter.sendMail({
         from: process.env.SENDER_EMAIL,
         to: technician.Email,
@@ -280,14 +374,18 @@ export const approveTechnician = async (req, res) => {
                 <li><strong>Name:</strong> ${technician.Name}</li>
                 <li><strong>Email:</strong> ${technician.Email}</li>
                 <li><strong>Mobile:</strong> ${technician.MobileNumber}</li>
-                <li><strong>Service Category:</strong> ${technician.ServiceCategoryID}</li>
+                <li><strong>Service Category:</strong> ${
+                  technician.ServiceCategoryID
+                }</li>
               </ul>
             </div>
 
             <p>You can now login to your account and start accepting service requests from customers.</p>
             
             <div style="text-align: center; margin: 25px 0;">
-              <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" 
+              <a href="${
+                process.env.FRONTEND_URL || "http://localhost:5173"
+              }/login" 
                  style="background-color: #4F46E5; color: white; padding: 12px 30px; 
                         text-decoration: none; border-radius: 6px; display: inline-block;">
                 Login to Your Account
@@ -305,24 +403,26 @@ export const approveTechnician = async (req, res) => {
               This is an automated message. Please do not reply to this email.
             </p>
           </div>
-        `
+        `,
       });
-      console.log(`Approval email sent to: ${technician.Email}`);
+      console.log(
+        `✅ Approval email sent successfully to: ${technician.Email}`
+      );
     } catch (emailError) {
-      console.error("Approval email error:", emailError);
+      console.error("❌ Approval email error:", emailError);
       // Continue even if email fails
     }
 
     res.json({
       success: true,
       message: "Technician approved successfully",
-      technician
+      technician,
     });
   } catch (error) {
     console.error("Approve technician error:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message: "Internal server error",
     });
   }
 };
@@ -333,26 +433,26 @@ export const rejectTechnician = async (req, res) => {
     const { id } = req.params;
     const { reason } = req.body;
 
-    if (!reason || reason.trim() === '') {
+    if (!reason || reason.trim() === "") {
       return res.status(400).json({
         success: false,
-        message: "Rejection reason is required"
+        message: "Rejection reason is required",
       });
     }
 
     const technician = await Technician.findByIdAndUpdate(
       id,
-      { 
+      {
         VerifyStatus: "Rejected",
-        ActiveStatus: "Deactive"
+        ActiveStatus: "Deactive",
       },
       { new: true }
-    ).select('-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry');
+    ).select("-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry");
 
     if (!technician) {
       return res.status(404).json({
         success: false,
-        message: "Technician not found"
+        message: "Technician not found",
       });
     }
 
@@ -381,7 +481,9 @@ export const rejectTechnician = async (req, res) => {
             <p>We encourage you to review our technician requirements and apply again in the future if your circumstances change.</p>
             
             <div style="text-align: center; margin: 25px 0;">
-              <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/contact" 
+              <a href="${
+                process.env.FRONTEND_URL || "http://localhost:5173"
+              }/contact" 
                  style="background-color: #6b7280; color: white; padding: 12px 30px; 
                         text-decoration: none; border-radius: 6px; display: inline-block;">
                 Contact Support
@@ -397,7 +499,7 @@ export const rejectTechnician = async (req, res) => {
               This is an automated message. Please do not reply to this email.
             </p>
           </div>
-        `
+        `,
       });
       console.log(`Rejection email sent to: ${technician.Email}`);
     } catch (emailError) {
@@ -408,27 +510,85 @@ export const rejectTechnician = async (req, res) => {
     res.json({
       success: true,
       message: "Technician rejected successfully",
-      technician
+      technician,
     });
   } catch (error) {
     console.error("Reject technician error:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message: "Internal server error",
     });
   }
 };
 
+// // Get statistics
+// export const getTechnicianStats = async (req, res) => {
+//   try {
+//     const [pending, approved, rejected, total, active, deactive] = await Promise.all([
+//       Technician.countDocuments({ VerifyStatus: "Pending" }),
+//       Technician.countDocuments({ VerifyStatus: "Approved" }),
+//       Technician.countDocuments({ VerifyStatus: "Rejected" }),
+//       Technician.countDocuments(),
+//       Technician.countDocuments({ ActiveStatus: "Active" }),
+//       Technician.countDocuments({ ActiveStatus: "Deactive" })
+//     ]);
+
+//     res.json({
+//       success: true,
+//       stats: {
+//         pending,
+//         approved,
+//         rejected,
+//         total,
+//         active,
+//         deactive
+//       }
+//     });
+//   } catch (error) {
+//     console.error("Get stats error:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Internal server error"
+//     });
+//   }
+// };
+
+// Get statistics
+// export const getTechnicianStats = async (req, res) => {
+//   try {
+//     const [pending, approved, rejected, total] = await Promise.all([
+//       Technician.countDocuments({ VerifyStatus: "Pending" }),
+//       Technician.countDocuments({ VerifyStatus: "Approved" }),
+//       Technician.countDocuments({ VerifyStatus: "Rejected" }),
+//       Technician.countDocuments(),
+//     ]);
+
+//     res.json({
+//       success: true,
+//       stats: {
+//         pending,
+//         approved,
+//         rejected,
+//         total,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Get stats error:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Internal server error",
+//     });
+//   }
+// };
+
 // Get statistics
 export const getTechnicianStats = async (req, res) => {
   try {
-    const [pending, approved, rejected, total, active, deactive] = await Promise.all([
+    const [pending, approved, rejected, total] = await Promise.all([
       Technician.countDocuments({ VerifyStatus: "Pending" }),
       Technician.countDocuments({ VerifyStatus: "Approved" }),
       Technician.countDocuments({ VerifyStatus: "Rejected" }),
       Technician.countDocuments(),
-      Technician.countDocuments({ ActiveStatus: "Active" }),
-      Technician.countDocuments({ ActiveStatus: "Deactive" })
     ]);
 
     res.json({
@@ -438,29 +598,26 @@ export const getTechnicianStats = async (req, res) => {
         approved,
         rejected,
         total,
-        active,
-        deactive
-      }
+      },
     });
   } catch (error) {
     console.error("Get stats error:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message: "Internal server error",
     });
   }
 };
-
 // Toggle technician active status
 export const toggleTechnicianStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { action } = req.body; // 'activate' or 'deactivate'
 
-    if (!['activate', 'deactivate'].includes(action)) {
+    if (!["activate", "deactivate"].includes(action)) {
       return res.status(400).json({
         success: false,
-        message: "Action must be 'activate' or 'deactivate'"
+        message: "Action must be 'activate' or 'deactivate'",
       });
     }
 
@@ -468,35 +625,35 @@ export const toggleTechnicianStatus = async (req, res) => {
     if (!technician) {
       return res.status(404).json({
         success: false,
-        message: "Technician not found"
+        message: "Technician not found",
       });
     }
 
-    if (technician.VerifyStatus !== 'Approved') {
+    if (technician.VerifyStatus !== "Approved") {
       return res.status(400).json({
         success: false,
-        message: "Only approved technicians can be activated/deactivated"
+        message: "Only approved technicians can be activated/deactivated",
       });
     }
 
-    const newStatus = action === 'activate' ? 'Active' : 'Deactive';
-    
+    const newStatus = action === "activate" ? "Active" : "Deactive";
+
     const updatedTechnician = await Technician.findByIdAndUpdate(
       id,
       { ActiveStatus: newStatus },
       { new: true }
-    ).select('-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry');
+    ).select("-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry");
 
     res.json({
       success: true,
       message: `Technician ${action}d successfully`,
-      technician: updatedTechnician
+      technician: updatedTechnician,
     });
   } catch (error) {
     console.error("Toggle technician status error:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message: "Internal server error",
     });
   }
 };

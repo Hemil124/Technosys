@@ -20,12 +20,12 @@
 // //   const fetchTechnicians = async () => {
 // //     try {
 // //       setLoading(true);
-// //       const url = filter === 'all' 
+// //       const url = filter === 'all'
 // //         ? `${backendUrl}/api/admin/technicians`
 // //         : `${backendUrl}/api/admin/technicians?status=${filter}`;
-      
+
 // //       const { data } = await axios.get(url, { withCredentials: true });
-      
+
 // //       if (data.success) {
 // //         setTechnicians(data.technicians);
 // //       }
@@ -39,20 +39,20 @@
 //   try {
 //     setLoading(true);
 //     console.log('Fetching technicians with filter:', filter);
-    
-//     const url = filter === 'all' 
+
+//     const url = filter === 'all'
 //       ? `${backendUrl}/api/admin/technicians`
 //       : `${backendUrl}/api/admin/technicians?status=${filter}`;
-    
+
 //     console.log('API URL:', url);
-    
-//     const { data } = await axios.get(url, { 
+
+//     const { data } = await axios.get(url, {
 //       withCredentials: true,
 //       timeout: 10000 // 10 second timeout
 //     });
-    
+
 //     console.log('API response:', data);
-    
+
 //     if (data.success) {
 //       setTechnicians(data.technicians);
 //     } else {
@@ -60,13 +60,13 @@
 //     }
 //   } catch (error) {
 //     console.error('Full error details:', error);
-    
+
 //     if (error.response) {
 //       // Server responded with error status
 //       console.error('Response data:', error.response.data);
 //       console.error('Response status:', error.response.status);
 //       console.error('Response headers:', error.response.headers);
-      
+
 //       if (error.response.status === 401) {
 //         toast.error('Authentication failed. Please login again.');
 //       } else if (error.response.status === 403) {
@@ -90,10 +90,10 @@
 
 //   const fetchStats = async () => {
 //     try {
-//       const { data } = await axios.get(`${backendUrl}/api/admin/stats`, { 
-//         withCredentials: true 
+//       const { data } = await axios.get(`${backendUrl}/api/admin/stats`, {
+//         withCredentials: true
 //       });
-      
+
 //       if (data.success) {
 //         setStats(data.stats);
 //       }
@@ -146,7 +146,7 @@
 //       Approved: 'bg-green-100 text-green-800',
 //       Rejected: 'bg-red-100 text-red-800'
 //     };
-    
+
 //     return (
 //       <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[status]}`}>
 //         {status}
@@ -324,7 +324,7 @@
 //           <div className="bg-white p-6 rounded-lg w-full max-w-md">
 //             <h3 className="text-lg font-semibold mb-4">Reject Technician</h3>
 //             <p className="text-gray-600 mb-4">Please provide a reason for rejection:</p>
-            
+
 //             <textarea
 //               value={rejectReason}
 //               onChange={(e) => setRejectReason(e.target.value)}
@@ -332,7 +332,7 @@
 //               className="w-full p-3 border border-gray-300 rounded-lg mb-4"
 //               rows={3}
 //             />
-            
+
 //             <div className="flex justify-end space-x-3">
 //               <button
 //                 onClick={() => {
@@ -360,18 +360,23 @@
 
 // export default TechnicianRequest;
 
-import React, { useState, useEffect, useContext } from 'react';
-import { AppContext } from '../context/AppContext';
-import axios from 'axios';
-import { toast } from 'react-toastify';
+import React, { useState, useEffect, useContext } from "react";
+import { AppContext } from "../context/AppContext";
+import axios from "axios";
+import { toast } from "react-toastify";
 
 const TechnicianRequest = () => {
   const { backendUrl, userData } = useContext(AppContext);
   const [technicians, setTechnicians] = useState([]);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0, total: 0 });
-  const [rejectReason, setRejectReason] = useState('');
+  const [stats, setStats] = useState({
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+    total: 0,
+  });
+  const [rejectReason, setRejectReason] = useState("");
   const [showRejectModal, setShowRejectModal] = useState(null);
   const [selectedTechnician, setSelectedTechnician] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -384,41 +389,44 @@ const TechnicianRequest = () => {
   const fetchTechnicians = async () => {
     try {
       setLoading(true);
-      console.log('Fetching technicians with filter:', filter);
-      
-      const url = filter === 'all' 
-        ? `${backendUrl}/api/admin/technicians`
-        : `${backendUrl}/api/admin/technicians?status=${filter}`;
-      
-      console.log('API URL:', url);
-      
-      const { data } = await axios.get(url, { 
+      console.log("Fetching technicians with filter:", filter);
+
+      const url =
+        filter === "all"
+          ? `${backendUrl}/api/admin/technicians`
+          : `${backendUrl}/api/admin/technicians?status=${filter}`;
+
+      console.log("API URL:", url);
+
+      const { data } = await axios.get(url, {
         withCredentials: true,
-        timeout: 10000
+        timeout: 10000,
       });
-      
-      console.log('API response:', data);
-      
+
+      console.log("API response:", data);
+
       if (data.success) {
         setTechnicians(data.technicians);
       } else {
-        toast.error(data.message || 'Failed to fetch technicians');
+        toast.error(data.message || "Failed to fetch technicians");
       }
     } catch (error) {
-      console.error('Full error details:', error);
-      
+      console.error("Full error details:", error);
+
       if (error.response) {
         if (error.response.status === 401) {
-          toast.error('Authentication failed. Please login again.');
+          toast.error("Authentication failed. Please login again.");
         } else if (error.response.status === 403) {
-          toast.error('Access denied. Admin privileges required.');
+          toast.error("Access denied. Admin privileges required.");
         } else {
-          toast.error(error.response.data?.message || 'Failed to fetch technicians');
+          toast.error(
+            error.response.data?.message || "Failed to fetch technicians"
+          );
         }
       } else if (error.request) {
-        toast.error('Network error. Please check your connection.');
+        toast.error("Network error. Please check your connection.");
       } else {
-        toast.error('An unexpected error occurred');
+        toast.error("An unexpected error occurred");
       }
     } finally {
       setLoading(false);
@@ -427,30 +435,36 @@ const TechnicianRequest = () => {
 
   const fetchStats = async () => {
     try {
-      const { data } = await axios.get(`${backendUrl}/api/admin/technicians/stats`, { 
-        withCredentials: true 
-      });
-      
+      const { data } = await axios.get(
+        `${backendUrl}/api/admin/technicians/stats`,
+        {
+          withCredentials: true,
+        }
+      );
+
       if (data.success) {
         setStats(data.stats);
       }
     } catch (error) {
-      console.error('Failed to fetch stats:', error);
+      console.error("Failed to fetch stats:", error);
     }
   };
 
   const fetchTechnicianDetails = async (id) => {
     try {
-      const { data } = await axios.get(`${backendUrl}/api/admin/technicians/${id}`, { 
-        withCredentials: true 
-      });
-      
+      const { data } = await axios.get(
+        `${backendUrl}/api/admin/technicians/${id}`,
+        {
+          withCredentials: true,
+        }
+      );
+
       if (data.success) {
         setSelectedTechnician(data.technician);
         setShowDetailsModal(true);
       }
     } catch (error) {
-      toast.error('Failed to fetch technician details');
+      toast.error("Failed to fetch technician details");
     }
   };
 
@@ -463,12 +477,14 @@ const TechnicianRequest = () => {
       );
 
       if (data.success) {
-        toast.success('Technician approved successfully');
+        toast.success("Technician approved successfully");
         fetchTechnicians();
         fetchStats();
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to approve technician');
+      toast.error(
+        error.response?.data?.message || "Failed to approve technician"
+      );
     }
   };
 
@@ -481,26 +497,30 @@ const TechnicianRequest = () => {
       );
 
       if (data.success) {
-        toast.success('Technician rejected successfully');
+        toast.success("Technician rejected successfully");
         setShowRejectModal(null);
-        setRejectReason('');
+        setRejectReason("");
         fetchTechnicians();
         fetchStats();
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to reject technician');
+      toast.error(
+        error.response?.data?.message || "Failed to reject technician"
+      );
     }
   };
 
   const getStatusBadge = (status) => {
     const styles = {
-      Pending: 'bg-yellow-100 text-yellow-800 border border-yellow-200',
-      Approved: 'bg-green-100 text-green-800 border border-green-200',
-      Rejected: 'bg-red-100 text-red-800 border border-red-200'
+      Pending: "bg-yellow-100 text-yellow-800 border border-yellow-200",
+      Approved: "bg-green-100 text-green-800 border border-green-200",
+      Rejected: "bg-red-100 text-red-800 border border-red-200",
     };
-    
+
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status]}`}>
+      <span
+        className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status]}`}
+      >
         {status}
       </span>
     );
@@ -508,49 +528,86 @@ const TechnicianRequest = () => {
 
   const getActiveStatusBadge = (status) => {
     const styles = {
-      Active: 'bg-emerald-100 text-emerald-800 border border-emerald-200',
-      Deactive: 'bg-gray-100 text-gray-800 border border-gray-200'
+      Active: "bg-emerald-100 text-emerald-800 border border-emerald-200",
+      Deactive: "bg-gray-100 text-gray-800 border border-gray-200",
     };
-    
+
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[status]}`}>
+      <span
+        className={`px-2 py-1 rounded-full text-xs font-medium ${styles[status]}`}
+      >
         {status}
       </span>
     );
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   // Function to get photo URL
+  // const getPhotoUrl = (photoPath) => {
+  //   if (!photoPath) return null;
+  //   // If it's already a full URL, return as is
+  //   if (photoPath.startsWith('http')) return photoPath;
+  //   // If it's a relative path, prepend backend URL
+  //   return `${backendUrl}${photoPath}`;
+  // };
+
+  // Function to get photo URL - FIXED VERSION
   const getPhotoUrl = (photoPath) => {
     if (!photoPath) return null;
+
+    // console.log("Original photo path:", photoPath); // Debug log
+
     // If it's already a full URL, return as is
-    if (photoPath.startsWith('http')) return photoPath;
-    // If it's a relative path, prepend backend URL
-    return `${backendUrl}${photoPath}`;
+    if (photoPath.startsWith("http")) return photoPath;
+
+    // If it starts with /uploads, construct the full URL
+    if (photoPath.startsWith("/uploads")) {
+      const url = `${backendUrl}${photoPath}`;
+      // console.log("Constructed photo URL:", url); // Debug log
+      return url;
+    }
+
+    // If it's just a filename, construct the path
+    const url = `${backendUrl}/uploads/photos/${photoPath}`;
+    // console.log("Constructed photo URL from filename:", url); // Debug log
+    return url;
   };
 
   // Default avatar component
-  const DefaultAvatar = ({ name, className = "" }) => (
-    <div className={`bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold ${className}`}>
-      {name?.charAt(0)?.toUpperCase() || 'T'}
+  // const DefaultAvatar = ({ name, className = "" }) => (
+  //   <div
+  //     className={`bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold ${className}`}
+  //   >
+  //     {name?.charAt(0)?.toUpperCase() || "T"}
+  //   </div>
+  // );
+  // Default avatar component - make sure this is correct
+  const DefaultAvatar = ({ name, className = "", style = {} }) => (
+    <div
+      className={`bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-semibold ${className}`}
+      style={style}
+    >
+      {name?.charAt(0)?.toUpperCase() || "T"}
     </div>
   );
 
-  if (userData?.role !== 'admin') {
+  if (userData?.role !== "admin") {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-red-600">Access Denied</h2>
-          <p className="text-gray-600">Admin privileges required to view this page.</p>
+          <p className="text-gray-600">
+            Admin privileges required to view this page.
+          </p>
         </div>
       </div>
     );
@@ -559,8 +616,12 @@ const TechnicianRequest = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Technician Management</h1>
-        <p className="text-gray-600 mb-8">Manage technician registrations and account status</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Technician Management
+        </h1>
+        <p className="text-gray-600 mb-8">
+          Manage technician registrations and account status
+        </p>
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -570,11 +631,15 @@ const TechnicianRequest = () => {
           </div>
           <div className="bg-white p-6 rounded-lg shadow border">
             <h3 className="text-lg font-semibold text-gray-600">Pending</h3>
-            <p className="text-3xl font-bold text-yellow-600">{stats.pending}</p>
+            <p className="text-3xl font-bold text-yellow-600">
+              {stats.pending}
+            </p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow border">
             <h3 className="text-lg font-semibold text-gray-600">Approved</h3>
-            <p className="text-3xl font-bold text-green-600">{stats.approved}</p>
+            <p className="text-3xl font-bold text-green-600">
+              {stats.approved}
+            </p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow border">
             <h3 className="text-lg font-semibold text-gray-600">Rejected</h3>
@@ -585,18 +650,18 @@ const TechnicianRequest = () => {
         {/* Filter Buttons */}
         <div className="flex flex-wrap gap-2 mb-6">
           {[
-            { key: 'all', label: 'All', count: stats.total },
-            { key: 'Pending', label: 'Pending', count: stats.pending },
-            { key: 'Approved', label: 'Approved', count: stats.approved },
-            { key: 'Rejected', label: 'Rejected', count: stats.rejected }
+            { key: "all", label: "All", count: stats.total },
+            { key: "Pending", label: "Pending", count: stats.pending },
+            { key: "Approved", label: "Approved", count: stats.approved },
+            { key: "Rejected", label: "Rejected", count: stats.rejected },
           ].map((item) => (
             <button
               key={item.key}
               onClick={() => setFilter(item.key)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filter === item.key 
-                  ? 'bg-blue-600 text-white shadow-md' 
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                filter === item.key
+                  ? "bg-blue-600 text-white shadow-md"
+                  : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
               }`}
             >
               {item.label} ({item.count})
@@ -647,49 +712,79 @@ const TechnicianRequest = () => {
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-12 w-12">
                             {tech.Photo ? (
-                              <img
-                                src={getPhotoUrl(tech.Photo)}
-                                alt={tech.Name}
-                                className="h-12 w-12 rounded-full object-cover border-2 border-gray-200 cursor-pointer hover:border-blue-500 transition-all"
-                                onClick={() => fetchTechnicianDetails(tech._id)}
-                                onError={(e) => {
-                                  e.target.style.display = 'none';
-                                  e.target.nextSibling.style.display = 'flex';
-                                }}
+                              <div className="relative">
+                                <img
+                                  src={getPhotoUrl(tech.Photo)}
+                                  alt={tech.Name}
+                                  className="h-12 w-12 rounded-full object-cover border-2 border-gray-200 cursor-pointer hover:border-blue-500 transition-all"
+                                  onClick={() =>
+                                    fetchTechnicianDetails(tech._id)
+                                  }
+                                  onError={(e) => {
+                                    console.error(
+                                      "Image failed to load:",
+                                      e.target.src
+                                    );
+                                    // Hide the broken image
+                                    e.target.style.display = "none";
+
+                                    // Show default avatar
+                                    const parent = e.target.parentElement;
+                                    let defaultAvatar =
+                                      parent.querySelector(".default-avatar");
+                                    if (defaultAvatar) {
+                                      defaultAvatar.style.display = "flex";
+                                    }
+                                  }}
+                                />
+                                {/* Default avatar - hidden by default */}
+                                <DefaultAvatar
+                                  name={tech.Name}
+                                  className="h-12 w-12 text-lg default-avatar absolute inset-0"
+                                  style={{ display: "none" }}
+                                />
+                              </div>
+                            ) : (
+                              <DefaultAvatar
+                                name={tech.Name}
+                                className="h-12 w-12 text-lg"
                               />
-                            ) : null}
-                            {/* <DefaultAvatar 
-                              name={tech.Name} 
-                              className="h-12 w-12 text-lg"
-                              style={{ display: tech.Photo ? 'none' : 'flex' }}
-                            /> */}
+                            )}
                           </div>
                           <div className="ml-4">
-                            <div 
+                            <div
                               className="text-sm font-medium text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
                               onClick={() => fetchTechnicianDetails(tech._id)}
                             >
                               {tech.Name}
                             </div>
-                            <div className="text-xs text-gray-500">ID: {tech._id.toString().slice(-6)}</div>
+                            <div className="text-xs text-gray-500">
+                              ID: {tech._id?.toString().slice(-6)}
+                            </div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">{tech.Email}</div>
-                        <div className="text-sm text-gray-500">{tech.MobileNumber}</div>
+                        <div className="text-sm text-gray-900">
+                          {tech.Email}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {tech.MobileNumber}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">Category {tech.ServiceCategoryID}</div>
-                        <div className="text-xs text-gray-500">Bank: {tech.BankAccountNo?.slice(-4)}</div>
+                        <div className="text-sm text-gray-900">
+                          Category {tech.ServiceCategoryID}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Bank: {tech.BankAccountNo?.slice(-4)}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="space-y-1">
                           {getStatusBadge(tech.VerifyStatus)}
-                          {tech.VerifyStatus === 'Approved' && (
-                            <div>
-                              {getActiveStatusBadge(tech.ActiveStatus)}
-                            </div>
+                          {tech.VerifyStatus === "Approved" && (
+                            <div>{getActiveStatusBadge(tech.ActiveStatus)}</div>
                           )}
                         </div>
                       </td>
@@ -700,7 +795,7 @@ const TechnicianRequest = () => {
                       </td>
                       <td className="px-6 py-4 text-sm font-medium">
                         <div className="flex flex-col space-y-2">
-                          {tech.VerifyStatus === 'Pending' && (
+                          {tech.VerifyStatus === "Pending" && (
                             <div className="flex space-x-2">
                               <button
                                 onClick={() => handleApprove(tech._id)}
@@ -716,7 +811,7 @@ const TechnicianRequest = () => {
                               </button>
                             </div>
                           )}
-                          
+
                           <button
                             onClick={() => fetchTechnicianDetails(tech._id)}
                             className="bg-gray-600 text-white px-3 py-1 rounded text-xs hover:bg-gray-700 transition-colors"
@@ -738,9 +833,14 @@ const TechnicianRequest = () => {
       {showRejectModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white p-6 rounded-lg w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">Reject Technician Application</h3>
-            <p className="text-gray-600 mb-4">Please provide a reason for rejection. This will be sent to the technician.</p>
-            
+            <h3 className="text-lg font-semibold mb-4">
+              Reject Technician Application
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Please provide a reason for rejection. This will be sent to the
+              technician.
+            </p>
+
             <textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
@@ -748,12 +848,12 @@ const TechnicianRequest = () => {
               className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               rows={4}
             />
-            
+
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => {
                   setShowRejectModal(null);
-                  setRejectReason('');
+                  setRejectReason("");
                 }}
                 className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
               >
@@ -776,7 +876,9 @@ const TechnicianRequest = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white p-6 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-2xl font-bold text-gray-900">Technician Details</h3>
+              <h3 className="text-2xl font-bold text-gray-900">
+                Technician Details
+              </h3>
               <button
                 onClick={() => setShowDetailsModal(false)}
                 className="text-gray-400 hover:text-gray-600 text-2xl"
@@ -791,33 +893,50 @@ const TechnicianRequest = () => {
                 <div className="bg-gray-50 p-4 rounded-lg text-center">
                   <div className="mb-4">
                     {selectedTechnician.Photo ? (
-                      <img
-                        src={getPhotoUrl(selectedTechnician.Photo)}
-                        alt={selectedTechnician.Name}
-                        className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-md mx-auto"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          // Show default avatar if image fails to load
-                          const defaultAvatar = e.target.parentElement.querySelector('.default-avatar');
-                          if (defaultAvatar) defaultAvatar.style.display = 'flex';
-                        }}
+                      <div className="relative">
+                        <img
+                          src={getPhotoUrl(selectedTechnician.Photo)}
+                          alt={selectedTechnician.Name}
+                          className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-md mx-auto"
+                          onError={(e) => {
+                            console.error(
+                              "Details modal image failed to load:",
+                              e.target.src
+                            );
+                            e.target.style.display = "none";
+                            const defaultAvatar = document.getElementById(
+                              "details-default-avatar"
+                            );
+                            if (defaultAvatar) {
+                              defaultAvatar.style.display = "flex";
+                            }
+                          }}
+                        />
+                        <DefaultAvatar
+                          id="details-default-avatar"
+                          name={selectedTechnician.Name}
+                          className="w-32 h-32 text-2xl mx-auto absolute inset-0"
+                          style={{ display: "none" }}
+                        />
+                      </div>
+                    ) : (
+                      <DefaultAvatar
+                        name={selectedTechnician.Name}
+                        className="w-32 h-32 text-2xl mx-auto"
                       />
-                    ) : null}
-                    <DefaultAvatar 
-                      name={selectedTechnician.Name} 
-                      className="w-32 h-32 text-2xl mx-auto default-avatar"
-                      style={{ display: selectedTechnician.Photo ? 'none' : 'flex' }}
-                    />
+                    )}
                   </div>
-                  <h4 className="text-xl font-semibold text-gray-900">{selectedTechnician.Name}</h4>
+                  <h4 className="text-xl font-semibold text-gray-900">
+                    {selectedTechnician.Name}
+                  </h4>
                   <p className="text-gray-600">Technician</p>
-                  
+
                   <div className="mt-4 space-y-2">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Status:</span>
                       {getStatusBadge(selectedTechnician.VerifyStatus)}
                     </div>
-                    {selectedTechnician.VerifyStatus === 'Approved' && (
+                    {selectedTechnician.VerifyStatus === "Approved" && (
                       <div className="flex justify-between">
                         <span className="text-gray-600">Active:</span>
                         {getActiveStatusBadge(selectedTechnician.ActiveStatus)}
@@ -828,42 +947,72 @@ const TechnicianRequest = () => {
 
                 {/* Documents Section */}
                 <div className="mt-6 bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-gray-700 mb-3">Documents</h4>
+                  <h4 className="font-semibold text-gray-700 mb-3">
+                    Documents
+                  </h4>
                   <div className="space-y-3">
                     <div>
-                      <p className="text-sm font-medium text-gray-600 mb-2">Profile Photo:</p>
+                      <p className="text-sm font-medium text-gray-600 mb-2">
+                        Profile Photo:
+                      </p>
                       {selectedTechnician.Photo ? (
-                        <a 
-                          href={getPhotoUrl(selectedTechnician.Photo)} 
-                          target="_blank" 
+                        <a
+                          href={getPhotoUrl(selectedTechnician.Photo)}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm"
                         >
                           <span>View Photo</span>
-                          <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          <svg
+                            className="w-4 h-4 ml-1"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                            />
                           </svg>
                         </a>
                       ) : (
-                        <span className="text-gray-500 text-sm">Not available</span>
+                        <span className="text-gray-500 text-sm">
+                          Not available
+                        </span>
                       )}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-600 mb-2">ID Proof:</p>
+                      <p className="text-sm font-medium text-gray-600 mb-2">
+                        ID Proof:
+                      </p>
                       {selectedTechnician.IDProof ? (
-                        <a 
-                          href={getPhotoUrl(selectedTechnician.IDProof)} 
-                          target="_blank" 
+                        <a
+                          href={getPhotoUrl(selectedTechnician.IDProof)}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center text-blue-600 hover:text-blue-800 text-sm"
                         >
                           <span>View ID Proof</span>
-                          <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          <svg
+                            className="w-4 h-4 ml-1"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                            />
                           </svg>
                         </a>
                       ) : (
-                        <span className="text-gray-500 text-sm">Not available</span>
+                        <span className="text-gray-500 text-sm">
+                          Not available
+                        </span>
                       )}
                     </div>
                   </div>
@@ -874,68 +1023,126 @@ const TechnicianRequest = () => {
               <div className="lg:col-span-2">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <h4 className="font-semibold text-gray-700 mb-3">Personal Information</h4>
+                    <h4 className="font-semibold text-gray-700 mb-3">
+                      Personal Information
+                    </h4>
                     <div className="space-y-3">
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Full Name</label>
-                        <p className="text-gray-900">{selectedTechnician.Name}</p>
+                        <label className="text-sm font-medium text-gray-500">
+                          Full Name
+                        </label>
+                        <p className="text-gray-900">
+                          {selectedTechnician.Name}
+                        </p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Email Address</label>
-                        <p className="text-gray-900">{selectedTechnician.Email}</p>
+                        <label className="text-sm font-medium text-gray-500">
+                          Email Address
+                        </label>
+                        <p className="text-gray-900">
+                          {selectedTechnician.Email}
+                        </p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Mobile Number</label>
-                        <p className="text-gray-900">{selectedTechnician.MobileNumber}</p>
+                        <label className="text-sm font-medium text-gray-500">
+                          Mobile Number
+                        </label>
+                        <p className="text-gray-900">
+                          {selectedTechnician.MobileNumber}
+                        </p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Address</label>
-                        <p className="text-gray-900">{selectedTechnician.Address || 'Not provided'}</p>
+                        <label className="text-sm font-medium text-gray-500">
+                          Address
+                        </label>
+                        <p className="text-gray-900">
+                          {selectedTechnician.Address || "Not provided"}
+                        </p>
                       </div>
                     </div>
                   </div>
 
                   <div>
-                    <h4 className="font-semibold text-gray-700 mb-3">Professional Information</h4>
+                    <h4 className="font-semibold text-gray-700 mb-3">
+                      Professional Information
+                    </h4>
                     <div className="space-y-3">
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Service Category</label>
-                        <p className="text-gray-900">{selectedTechnician.ServiceCategoryID}</p>
+                        <label className="text-sm font-medium text-gray-500">
+                          Service Category
+                        </label>
+                        <p className="text-gray-900">
+                          {selectedTechnician.ServiceCategoryID}
+                        </p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-500">Bank Account</label>
-                        <p className="text-gray-900">{selectedTechnician.BankAccountNo}</p>
+                        <label className="text-sm font-medium text-gray-500">
+                          Bank Account
+                        </label>
+                        <p className="text-gray-900">
+                          {selectedTechnician.BankAccountNo}
+                        </p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-500">IFSC Code</label>
-                        <p className="text-gray-900">{selectedTechnician.IFSCCode}</p>
+                        <label className="text-sm font-medium text-gray-500">
+                          IFSC Code
+                        </label>
+                        <p className="text-gray-900">
+                          {selectedTechnician.IFSCCode}
+                        </p>
                       </div>
                     </div>
                   </div>
 
                   <div className="md:col-span-2">
-                    <h4 className="font-semibold text-gray-700 mb-3">Verification Status</h4>
+                    <h4 className="font-semibold text-gray-700 mb-3">
+                      Verification Status
+                    </h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="text-center p-3 bg-gray-50 rounded-lg">
-                        <div className="text-sm font-medium text-gray-500">Mobile</div>
-                        <div className={`text-lg font-semibold ${selectedTechnician.isMobileVerified ? 'text-green-600' : 'text-red-600'}`}>
-                          {selectedTechnician.isMobileVerified ? '✅ Verified' : '❌ Pending'}
+                        <div className="text-sm font-medium text-gray-500">
+                          Mobile
+                        </div>
+                        <div
+                          className={`text-lg font-semibold ${
+                            selectedTechnician.isMobileVerified
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {selectedTechnician.isMobileVerified
+                            ? "✅ Verified"
+                            : "❌ Pending"}
                         </div>
                       </div>
                       <div className="text-center p-3 bg-gray-50 rounded-lg">
-                        <div className="text-sm font-medium text-gray-500">Email</div>
-                        <div className={`text-lg font-semibold ${selectedTechnician.isEmailVerified ? 'text-green-600' : 'text-red-600'}`}>
-                          {selectedTechnician.isEmailVerified ? '✅ Verified' : '❌ Pending'}
+                        <div className="text-sm font-medium text-gray-500">
+                          Email
+                        </div>
+                        <div
+                          className={`text-lg font-semibold ${
+                            selectedTechnician.isEmailVerified
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {selectedTechnician.isEmailVerified
+                            ? "✅ Verified"
+                            : "❌ Pending"}
                         </div>
                       </div>
                       <div className="text-center p-3 bg-gray-50 rounded-lg">
-                        <div className="text-sm font-medium text-gray-500">Registered</div>
+                        <div className="text-sm font-medium text-gray-500">
+                          Registered
+                        </div>
                         <div className="text-sm text-gray-900">
                           {formatDate(selectedTechnician.createdAt)}
                         </div>
                       </div>
                       <div className="text-center p-3 bg-gray-50 rounded-lg">
-                        <div className="text-sm font-medium text-gray-500">Last Updated</div>
+                        <div className="text-sm font-medium text-gray-500">
+                          Last Updated
+                        </div>
                         <div className="text-sm text-gray-900">
                           {formatDate(selectedTechnician.updatedAt)}
                         </div>
@@ -947,7 +1154,7 @@ const TechnicianRequest = () => {
             </div>
 
             <div className="mt-6 flex justify-end space-x-3">
-              {selectedTechnician.VerifyStatus === 'Pending' && (
+              {selectedTechnician.VerifyStatus === "Pending" && (
                 <>
                   <button
                     onClick={() => handleApprove(selectedTechnician._id)}
