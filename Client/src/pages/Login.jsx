@@ -3466,6 +3466,7 @@ export const Login = () => {
   const [activeTab, setActiveTab] = useState("login");
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
+  const [serviceCategories, setServiceCategories] = useState([]);
   const [isMobileVerified, setIsMobileVerified] = useState(false);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
@@ -3879,17 +3880,26 @@ export const Login = () => {
     }
   };
 
-  // Predefined service categories
-  const serviceCategories = [
-    { id: "1", name: "Plumbing" },
-    { id: "2", name: "Electrical" },
-    { id: "3", name: "Carpentry" },
-    { id: "4", name: "Painting" },
-    { id: "5", name: "AC Repair" },
-    { id: "6", name: "Appliance Repair" },
-    { id: "7", name: "Computer Repair" },
-    { id: "8", name: "Mobile Repair" },
-  ];
+  // Fetch service categories from backend
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const { data } = await axios.get(`${backendUrl}/api/service-categories`);
+        if (data.success) {
+          setServiceCategories(data.data || []);
+        } else {
+          toast.error(data.message || "Failed to load service categories");
+        }
+      } catch (error) {
+        toast.error(
+          error.response?.data?.message ||
+            error.message ||
+            "Failed to load service categories"
+        );
+      }
+    };
+    fetchCategories();
+  }, [backendUrl]);
 
   useEffect(() => {
     // Set active tab based on state
@@ -4219,12 +4229,12 @@ export const Login = () => {
                       >
                         <option value="">Select specialty</option>
                         {serviceCategories.map((category) => (
-                          <option key={category.id} value={category.id}>
+                          <option key={category._id} value={category._id}>
                             {category.name}
                           </option>
                         ))}
                       </select>
-                    </div>
+                   </div>
                   </div>
                 </div>
 

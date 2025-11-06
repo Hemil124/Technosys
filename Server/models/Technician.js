@@ -6,7 +6,7 @@ const technicianSchema = new mongoose.Schema({
   Email: { type: String, maxlength: 100, unique: true }, 
   Password: { type: String }, 
   Address: { type: String, default: null },
-  ServiceCategoryID: { type: Number }, 
+  ServiceCategoryID: { type: mongoose.Schema.Types.ObjectId, ref: "ServiceCategory" }, 
   BankAccountNo: { type: String, maxlength: 30 }, 
   IFSCCode: { type: String, maxlength: 20 }, 
 
