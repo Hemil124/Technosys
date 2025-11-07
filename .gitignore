@@ -1,0 +1,21 @@
+# Node modules (both client & server)
+Client/node_modules/
+Server/node_modules/
+
+# Env files
+Client/.env
+Server/.env
+
+# Logs
+*.log
+logs/
+Client/npm-debug.log*
+Server/npm-debug.log*
+
+# Build or dist folders (future-proof)
+Client/dist/
+Client/build/
+Server/dist/
+Server/build/
+
+
