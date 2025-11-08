@@ -111,12 +111,6 @@
 // //   );
 // // };
 
-
-
-
-
-
-
 // import React, { useContext } from "react";
 // import { assets } from "../assets/assets";
 // import { useNavigate } from "react-router-dom";
@@ -184,8 +178,8 @@
 //       />
 //     ) : ( */}
 //           <div
-//             className="w-10 h-10 flex items-center justify-center rounded-full bg-black text-white font-semibold text-lg 
-//                    transition-all duration-300 
+//             className="w-10 h-10 flex items-center justify-center rounded-full bg-black text-white font-semibold text-lg
+//                    transition-all duration-300
 //                    group-hover:scale-110 group-hover:shadow-[0_0_8px_2px_rgba(59,130,246,0.6)]"
 //             title={userData.name}
 //           >
@@ -245,8 +239,6 @@
 //   );
 // };
 
-
-
 import React, { useContext, useState } from "react";
 import { assets } from "../assets/assets";
 import { useNavigate } from "react-router-dom";
@@ -290,92 +282,95 @@ export const Navbar = () => {
   };
 
   return (
-    <div className="w-full flex justify-between items-center p-2 sm:p-3 sm:px-24 fixed top-0 bg-white shadow-md z-50">
-      {/* Logo */}
-      <img
-        src={assets.navbarlogo}
-        alt="Logo"
-        className="w-12 sm:w-16 cursor-pointer"
-        onClick={() => navigate("/")}
-      />
+    // <div className="w-full flex justify-between items-center p-2 sm:p-3 sm:px-24 fixed top-0 bg-white shadow-md z-50">
+    <div className="w-full bg-white shadow-md fixed top-0 z-50">
+      <div className="max-w-screen-2xl mx-auto flex justify-between items-center h-16 px-4 sm:px-6 lg:px-8">
+        {/* Logo */}
+        <img
+          src={assets.navbarlogo}
+          alt="Logo"
+          className="w-10 h-10 cursor-pointer"
+          onClick={() => navigate("/")}
+        />
 
-      {/* Conditional rendering based on login */}
-      {isLoggedIn && userData ? (
-        <div className="relative flex items-center group cursor-pointer">
-          {/* Avatar */}
-          <div
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-black text-white font-semibold text-lg 
+        {/* Conditional rendering based on login */}
+        {isLoggedIn && userData ? (
+          <div className="relative flex items-center group cursor-pointer">
+            {/* Avatar */}
+            <div
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-black text-white font-semibold text-lg 
                    transition-all duration-300 
                    group-hover:scale-110 group-hover:shadow-[0_0_8px_2px_rgba(59,130,246,0.6)]"
-            title={userData.name}
-          >
-            {userData.name?.charAt(0).toUpperCase()}
-          </div>
-
-          {/* Dropdown menu */}
-          <div
-            className="absolute hidden group-hover:block top-0 right-0 pt-12 z-10 text-black rounded
-                 transition-all duration-300"
-          >
-            <ul className="list-none m-0 p-2 bg-gray-100 text-sm rounded shadow-lg w-44">
-              <li
-                onClick={logout}
-                className="py-2 px-3 hover:bg-gray-200 cursor-pointer rounded flex items-center gap-2 text-red-600 hover:text-red-700 hover:shadow-[0_0_6px_1px_rgba(239,68,68,0.4)]"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5 text-red-600"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 16l4-4m0 0l-4-4m4 4H7"
-                  />
-                </svg>
-                Logout
-              </li>
-            </ul>
-          </div>
-        </div>
-      ) : (
-        <div className="login-dropdown-group relative">
-          <button
-            onClick={() => setLoginDropdownOpen(!loginDropdownOpen)}
-            className="flex items-center gap-2 border border-gray-500 rounded-full px-6 py-2 text-gray-800 hover:bg-gray-100 transition-all shadow-sm hover:shadow-md"
-          >
-            Login
-            <img src={assets.arrow_icon} alt="Arrow" className="w-4 h-4" />
-          </button>
-          
-          {/* Login Options Dropdown */}
-          {loginDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
-              <button
-                onClick={() => {
-                  navigate("/login");
-                  setLoginDropdownOpen(false);
-                }}
-                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-              >
-                Login as Technician
-              </button>
-              <button
-                onClick={() => {
-                  navigate("/login-customer");
-                  setLoginDropdownOpen(false);
-                }}
-                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors border-t border-gray-100"
-              >
-                Login as Customer
-              </button>
+              title={userData.name}
+            >
+              {userData.name?.charAt(0).toUpperCase()}
             </div>
-          )}
-        </div>
-      )}
+
+            {/* Dropdown menu */}
+            <div
+              className="absolute hidden group-hover:block top-0 right-0 pt-12 z-10 text-black rounded
+                 transition-all duration-300"
+            >
+              <ul className="list-none m-0 p-2 bg-gray-100 text-sm rounded shadow-lg w-44">
+                <li
+                  onClick={logout}
+                  className="py-2 px-3 hover:bg-gray-200 cursor-pointer rounded flex items-center gap-2 text-red-600 hover:text-red-700 hover:shadow-[0_0_6px_1px_rgba(239,68,68,0.4)]"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5 text-red-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 16l4-4m0 0l-4-4m4 4H7"
+                    />
+                  </svg>
+                  Logout
+                </li>
+              </ul>
+            </div>
+          </div>
+        ) : (
+          <div className="login-dropdown-group relative">
+            <button
+              onClick={() => setLoginDropdownOpen(!loginDropdownOpen)}
+              className="flex items-center gap-2 border border-gray-500 rounded-full px-6 py-2 text-gray-800 hover:bg-gray-100 transition-all shadow-sm hover:shadow-md"
+            >
+              Login
+              <img src={assets.arrow_icon} alt="Arrow" className="w-4 h-4" />
+            </button>
+
+            {/* Login Options Dropdown */}
+            {loginDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-200">
+                <button
+                  onClick={() => {
+                    navigate("/login");
+                    setLoginDropdownOpen(false);
+                  }}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                >
+                  Login as Technician
+                </button>
+                <button
+                  onClick={() => {
+                    navigate("/login-customer");
+                    setLoginDropdownOpen(false);
+                  }}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors border-t border-gray-100"
+                >
+                  Login as Customer
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

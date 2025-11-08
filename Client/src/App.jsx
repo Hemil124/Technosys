@@ -49,6 +49,8 @@ import TechnicianDetails from "./pages/TechnicianDetails";
 import { AdminCategories } from "./pages/AdminCategories";
 import { AdminFeedbacks } from "./pages/AdminFeedbacks";
 import { AdminSettings } from "./pages/AdminSettings";
+import AdminCustomerList from "./pages/AdminCustomerList";
+import AdminTechnicianList from "./pages/AdminTechnicianList";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, role }) => {
@@ -205,9 +207,9 @@ const App = () => {
           {/* Nested admin pages shown inside AdminLayout */}
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<Admin />} />
-          <Route path="technicians" element={<TechnicianRequest />} />
+          <Route path="technicians" element={<AdminTechnicianList />} />
           <Route path="technicians/:id" element={<TechnicianDetails />} />
-          <Route path="customers" element={<Customer />} />
+          <Route path="customers" element={<AdminCustomerList />} />
           <Route path="categories" element={<AdminCategories />} />
           <Route path="feedbacks" element={<AdminFeedbacks />} />
           <Route path="settings" element={<AdminSettings />} />

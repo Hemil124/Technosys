@@ -366,7 +366,6 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { Link } from "react-router-dom";
 
-
 const TechnicianRequest = () => {
   const { backendUrl, userData } = useContext(AppContext);
   const [technicians, setTechnicians] = useState([]);
@@ -454,6 +453,13 @@ const TechnicianRequest = () => {
 
   const fetchTechnicianDetails = async (id) => {
     try {
+      // First try to get from existing list
+    const existingTech = technicians.find(tech => tech._id === id);
+    if (existingTech) {
+      setSelectedTechnician(existingTech);
+      setShowDetailsModal(true);
+      return;
+    }
       const { data } = await axios.get(
         `${backendUrl}/api/admin/technicians/${id}`,
         {
@@ -470,60 +476,59 @@ const TechnicianRequest = () => {
     }
   };
 
-const handleApprove = async (id) => {
-  try {
-    const { data } = await axios.patch(
-      `${backendUrl}/api/admin/technicians/${id}/approve`,
-      {},
-      { withCredentials: true }
-    );
 
-    if (data.success) {
-      toast.success("Technician approved successfully");
+  const handleApprove = async (id) => {
+    try {
+      const { data } = await axios.patch(
+        `${backendUrl}/api/admin/technicians/${id}/approve`,
+        {},
+        { withCredentials: true }
+      );
 
-      // ✅ Auto-close modals after approval
-      setShowDetailsModal(false);
-      setShowRejectModal(null);
+      if (data.success) {
+        toast.success("Technician approved successfully");
 
-      // Refresh list and stats
-      fetchTechnicians();
-      fetchStats();
+        // ✅ Auto-close modals after approval
+        setShowDetailsModal(false);
+        setShowRejectModal(null);
+
+        // Refresh list and stats
+        fetchTechnicians();
+        fetchStats();
+      }
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Failed to approve technician"
+      );
     }
-  } catch (error) {
-    toast.error(
-      error.response?.data?.message || "Failed to approve technician"
-    );
-  }
-};
+  };
 
+  const handleReject = async (id) => {
+    try {
+      const { data } = await axios.patch(
+        `${backendUrl}/api/admin/technicians/${id}/reject`,
+        { reason: rejectReason },
+        { withCredentials: true }
+      );
 
- const handleReject = async (id) => {
-  try {
-    const { data } = await axios.patch(
-      `${backendUrl}/api/admin/technicians/${id}/reject`,
-      { reason: rejectReason },
-      { withCredentials: true }
-    );
+      if (data.success) {
+        toast.success("Technician rejected successfully");
 
-    if (data.success) {
-      toast.success("Technician rejected successfully");
+        // ✅ Auto-close all modals after rejection
+        setShowRejectModal(null);
+        setShowDetailsModal(false);
+        setRejectReason("");
 
-      // ✅ Auto-close all modals after rejection
-      setShowRejectModal(null);
-      setShowDetailsModal(false);
-      setRejectReason("");
-
-      // Refresh data
-      fetchTechnicians();
-      fetchStats();
+        // Refresh data
+        fetchTechnicians();
+        fetchStats();
+      }
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Failed to reject technician"
+      );
     }
-  } catch (error) {
-    toast.error(
-      error.response?.data?.message || "Failed to reject technician"
-    );
-  }
-};
-
+  };
 
   const getStatusBadge = (status) => {
     const styles = {
@@ -673,10 +678,11 @@ const handleApprove = async (id) => {
             <button
               key={item.key}
               onClick={() => setFilter(item.key)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === item.key
-                ? "bg-blue-600 text-white shadow-md"
-                : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                }`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                filter === item.key
+                  ? "bg-blue-600 text-white shadow-md"
+                  : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+              }`}
             >
               {item.label} ({item.count})
             </button>
@@ -731,7 +737,6 @@ const handleApprove = async (id) => {
                                   src={getPhotoUrl(tech.Photo)}
                                   alt={tech.Name}
                                   className="h-12 w-12 rounded-full object-cover border-2 border-gray-200 cursor-pointer hover:border-blue-500 transition-all"
-                                 
                                   onError={(e) => {
                                     console.error(
                                       "Image failed to load:",
@@ -764,10 +769,7 @@ const handleApprove = async (id) => {
                             )}
                           </div>
                           <div className="ml-4">
-                            <div
-                              className="text-sm font-medium text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
-                              
-                            >
+                            <div className="text-sm font-medium text-gray-900 cursor-pointer hover:text-blue-600 transition-colors">
                               {tech.Name}
                             </div>
                             <div className="text-xs text-gray-500">
@@ -825,13 +827,17 @@ const handleApprove = async (id) => {
                           )}
 
                           <button
-                            onClick={() => fetchTechnicianDetails(tech._id)}
+                            onClick={() => {
+                              console.log(
+                                "View Details clicked for:",
+                                tech._id
+                              );
+                              fetchTechnicianDetails(tech._id);
+                            }}
                             className="bg-gray-600 text-white px-3 py-1 rounded text-xs hover:bg-gray-700 transition-colors"
                           >
                             View Details
                           </button>
-                         
-
                         </div>
                       </td>
                     </tr>
@@ -1118,10 +1124,11 @@ const handleApprove = async (id) => {
                           Mobile
                         </div>
                         <div
-                          className={`text-lg font-semibold ${selectedTechnician.isMobileVerified
-                            ? "text-green-600"
-                            : "text-red-600"
-                            }`}
+                          className={`text-lg font-semibold ${
+                            selectedTechnician.isMobileVerified
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
                         >
                           {selectedTechnician.isMobileVerified
                             ? "✅ Verified"
@@ -1133,10 +1140,11 @@ const handleApprove = async (id) => {
                           Email
                         </div>
                         <div
-                          className={`text-lg font-semibold ${selectedTechnician.isEmailVerified
-                            ? "text-green-600"
-                            : "text-red-600"
-                            }`}
+                          className={`text-lg font-semibold ${
+                            selectedTechnician.isEmailVerified
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
                         >
                           {selectedTechnician.isEmailVerified
                             ? "✅ Verified"

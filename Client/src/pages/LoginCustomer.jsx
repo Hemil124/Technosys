@@ -377,6 +377,7 @@ import React, { useState, useContext, useEffect, useRef } from 'react';
 import { AppContext } from '../context/AppContext';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import { Navbar } from '../components/Navbar';
 
 export function LoginCustomer() {
   const [mobile, setMobile] = useState("");
@@ -592,9 +593,11 @@ export function LoginCustomer() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
-        <div className="p-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
+      <Navbar />
+      <div className="flex-1 flex items-center justify-center p-4 pt-20">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
+          <div className="p-8">
           <div className="text-center mb-8">
             <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg 
@@ -837,6 +840,7 @@ export function LoginCustomer() {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

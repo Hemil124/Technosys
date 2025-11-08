@@ -1721,17 +1721,17 @@
 //       {/* Header */}
 //       <div className="text-center mb-6">
 //         <div className="w-16 h-16 bg-indigo-900 rounded-full flex items-center justify-center mx-auto mb-4">
-//           <svg 
-//             className="w-8 h-8 text-indigo-300" 
-//             fill="none" 
-//             stroke="currentColor" 
+//           <svg
+//             className="w-8 h-8 text-indigo-300"
+//             fill="none"
+//             stroke="currentColor"
 //             viewBox="0 0 24 24"
 //           >
-//             <path 
-//               strokeLinecap="round" 
-//               strokeLinejoin="round" 
-//               strokeWidth={2} 
-//               d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" 
+//             <path
+//               strokeLinecap="round"
+//               strokeLinejoin="round"
+//               strokeWidth={2}
+//               d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
 //             />
 //           </svg>
 //         </div>
@@ -1804,7 +1804,6 @@
 //     </div>
 //   );
 // };
-
 
 // import React, { useState, useContext, useEffect, useRef } from "react";
 // import ReCAPTCHA from "react-google-recaptcha";
@@ -2102,7 +2101,7 @@
 //       newOtp[index] = value;
 //       const joinedOtp = newOtp.join('');
 //       setOtp(joinedOtp);
-      
+
 //       // Auto-focus next input
 //       if (index < 5 && value) {
 //         otpInputRefs.current[index + 1]?.focus();
@@ -2116,7 +2115,7 @@
 //         // Move to previous input on backspace
 //         otpInputRefs.current[index - 1]?.focus();
 //       }
-      
+
 //       const newOtp = otp.split('');
 //       newOtp[index] = '';
 //       setOtp(newOtp.join(''));
@@ -2235,14 +2234,14 @@
 
 //     if (data.success) {
 //       setShowOtpModal(true);
-      
+
 //       // Set OTP expiry time (15 minutes from now)
 //       const expiryTime = new Date();
 //       expiryTime.setMinutes(expiryTime.getMinutes() + 15);
 //       setOtpExpiryTime(expiryTime);
 //       setTimeLeft(15 * 60); // 15 minutes in seconds
 //       setCanResendOtp(false);
-      
+
 //       toast.success(`OTP sent to your ${type}`);
 
 //       // Store verification ID for mobile OTP (Firebase)
@@ -2266,12 +2265,12 @@
 //   } finally {
 //     setIsSendingOtp(false);
 //   }
-// }; 
+// };
 
 // // Countdown timer effect
 // useEffect(() => {
 //   let timer;
-  
+
 //   if (timeLeft > 0) {
 //     timer = setInterval(() => {
 //       setTimeLeft((prevTime) => {
@@ -3291,17 +3290,17 @@
 //       {/* Header */}
 //       <div className="text-center mb-6">
 //         <div className="w-16 h-16 bg-indigo-900 rounded-full flex items-center justify-center mx-auto mb-4">
-//           <svg 
-//             className="w-8 h-8 text-indigo-300" 
-//             fill="none" 
-//             stroke="currentColor" 
+//           <svg
+//             className="w-8 h-8 text-indigo-300"
+//             fill="none"
+//             stroke="currentColor"
 //             viewBox="0 0 24 24"
 //           >
-//             <path 
-//               strokeLinecap="round" 
-//               strokeLinejoin="round" 
-//               strokeWidth={2} 
-//               d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" 
+//             <path
+//               strokeLinecap="round"
+//               strokeLinejoin="round"
+//               strokeWidth={2}
+//               d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
 //             />
 //           </svg>
 //         </div>
@@ -3314,7 +3313,7 @@
 //             {verificationType === "email" ? email : mobile}
 //           </span>
 //         </p>
-        
+
 //         {/* Countdown Timer */}
 //         {timeLeft > 0 ? (
 //           <div className="flex items-center justify-center space-x-2 mt-2">
@@ -3407,6 +3406,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { AppContext } from "../context/AppContext";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { Navbar } from "../components/Navbar";
 
 export const Login = () => {
   const navigate = useNavigate();
@@ -3481,20 +3481,18 @@ export const Login = () => {
   const [verificationId, setVerificationId] = useState(""); // For Firebase verification
 
   // Password show hide
-    const [showPassword, setShowPassword] = useState({
-      login: false,
-      signup: false
-    });
-  
-    // Toggle password visibility
-    const togglePasswordVisibility = (type) => {
-      setShowPassword(prev => ({
-        ...prev,
-        [type]: !prev[type]
-      }));
-    };
-    
+  const [showPassword, setShowPassword] = useState({
+    login: false,
+    signup: false,
+  });
 
+  // Toggle password visibility
+  const togglePasswordVisibility = (type) => {
+    setShowPassword((prev) => ({
+      ...prev,
+      [type]: !prev[type],
+    }));
+  };
 
   // Add this ref for OTP inputs
   const otpInputRefs = useRef([]);
@@ -3700,13 +3698,13 @@ export const Login = () => {
 
   // OTP input handlers
   const handleOtpInput = (e, index) => {
-    const value = e.target.value.replace(/\D/g, ''); // Only numbers
+    const value = e.target.value.replace(/\D/g, ""); // Only numbers
     if (value) {
-      const newOtp = otp.split('');
+      const newOtp = otp.split("");
       newOtp[index] = value;
-      const joinedOtp = newOtp.join('');
+      const joinedOtp = newOtp.join("");
       setOtp(joinedOtp);
-      
+
       // Auto-focus next input
       if (index < 5 && value) {
         otpInputRefs.current[index + 1]?.focus();
@@ -3715,21 +3713,24 @@ export const Login = () => {
   };
 
   const handleOtpKeyDown = (e, index) => {
-    if (e.key === 'Backspace') {
+    if (e.key === "Backspace") {
       if (!otp[index] && index > 0) {
         // Move to previous input on backspace
         otpInputRefs.current[index - 1]?.focus();
       }
-      
-      const newOtp = otp.split('');
-      newOtp[index] = '';
-      setOtp(newOtp.join(''));
+
+      const newOtp = otp.split("");
+      newOtp[index] = "";
+      setOtp(newOtp.join(""));
     }
   };
 
   const handleOtpPaste = (e) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    const pastedData = e.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, 6);
     if (pastedData.length === 6) {
       setOtp(pastedData);
       // Focus the last input after paste
@@ -3740,9 +3741,9 @@ export const Login = () => {
   };
 
   const resetOtpInputs = () => {
-    setOtp('');
-    otpInputRefs.current.forEach(input => {
-      if (input) input.value = '';
+    setOtp("");
+    otpInputRefs.current.forEach((input) => {
+      if (input) input.value = "";
     });
     if (otpInputRefs.current[0]) {
       otpInputRefs.current[0].focus();
@@ -3753,13 +3754,15 @@ export const Login = () => {
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    return `${minutes.toString().padStart(2, "0")}:${remainingSeconds
+      .toString()
+      .padStart(2, "0")}`;
   };
 
   // Countdown timer effect
   useEffect(() => {
     let timer;
-    
+
     if (timeLeft > 0) {
       timer = setInterval(() => {
         setTimeLeft((prevTime) => {
@@ -3813,14 +3816,14 @@ export const Login = () => {
 
       if (data.success) {
         setShowOtpModal(true);
-        
+
         // Set OTP expiry time (15 minutes from now)
         const expiryTime = new Date();
         expiryTime.setMinutes(expiryTime.getMinutes() + 15);
         setOtpExpiryTime(expiryTime);
         setTimeLeft(2 * 60); // 15 minutes in seconds
         setCanResendOtp(false);
-        
+
         toast.success(`OTP sent to your ${type}`);
 
         // Store verification ID for mobile OTP (Firebase)
@@ -3900,7 +3903,9 @@ export const Login = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const { data } = await axios.get(`${backendUrl}/api/service-categories`);
+        const { data } = await axios.get(
+          `${backendUrl}/api/service-categories`
+        );
         if (data.success) {
           setServiceCategories(data.data || []);
         } else {
@@ -4052,7 +4057,10 @@ export const Login = () => {
           loginPayload.recaptchaToken = recaptchaToken;
         }
 
-        const { data } = await axios.post(`${backendUrl}/api/auth/login`, loginPayload);
+        const { data } = await axios.post(
+          `${backendUrl}/api/auth/login`,
+          loginPayload
+        );
 
         if (data?.success) {
           setIsLoggedIn(true);
@@ -4103,15 +4111,17 @@ export const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="fixed top-5 left-5">
+    
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 pt-20">
+      {/* <div className="fixed top-5 left-5">
         <img
           onClick={() => navigate("/")}
           src={assets.navbarlogo}
           alt="Logo"
-          className="w-28 cursor-pointer transition-transform hover:scale-105"
+          className="w-10 h-10 cursor-pointer transition-transform hover:scale-105"
         />
-      </div>
+      </div> */}
+      <Navbar />
 
       <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row">
         {/* Left Side - Illustration */}
@@ -4250,7 +4260,7 @@ export const Login = () => {
                           </option>
                         ))}
                       </select>
-                   </div>
+                    </div>
                   </div>
                 </div>
 
@@ -4691,84 +4701,143 @@ export const Login = () => {
               </div>
 
               <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-    Password *
-  </label>
-  <div
-    className={`flex items-center border rounded-lg px-4 py-3 transition-colors ${
-      errors.password
-        ? "border-red-500 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500"
-        : "border-gray-300 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500"
-    }`}
-  >
-    <svg
-      className="w-5 h-5 text-gray-400 mr-2"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-      />
-    </svg>
-    <input
-      onChange={handleInputChange}
-      onBlur={handleBlur}
-      value={formData.password}
-      name="password"
-      className="w-full bg-transparent outline-none text-sm pr-10"
-      type={state === "Login" ? (showPassword.login ? "text" : "password") : (showPassword.signup ? "text" : "password")}
-      placeholder="Min 8 chars with uppercase, lowercase, number & special character"
-      required
-    />
-    {/* Show/Hide Password Button */}
-    <button
-      type="button"
-      onClick={() => state === "Login" ? togglePasswordVisibility('login') : togglePasswordVisibility('signup')}
-      className="text-gray-400 hover:text-gray-600 focus:outline-none transition-colors ml-2"
-    >
-      {state === "Login" ? (
-        showPassword.login ? (
-          // Eye open icon (password visible)
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-          </svg>
-        ) : (
-          // Eye closed icon (password hidden) - DEFAULT STATE
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-          </svg>
-        )
-      ) : (
-        showPassword.signup ? (
-          // Eye open icon (password visible)
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-          </svg>
-        ) : (
-          // Eye closed icon (password hidden) - DEFAULT STATE
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-          </svg>
-        )
-      )}
-    </button>
-  </div>
-  {errors.password && (
-    <p className="text-red-500 text-xs mt-1">{errors.password}</p>
-  )}
-  {formData.password.length >= 8 && !errors.password && (
-    <p className="text-green-600 text-xs mt-1">
-      ✓ Strong password
-    </p>
-  )}
-</div>
-
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Password *
+                </label>
+                <div
+                  className={`flex items-center border rounded-lg px-4 py-3 transition-colors ${
+                    errors.password
+                      ? "border-red-500 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500"
+                      : "border-gray-300 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500"
+                  }`}
+                >
+                  <svg
+                    className="w-5 h-5 text-gray-400 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                    />
+                  </svg>
+                  <input
+                    onChange={handleInputChange}
+                    onBlur={handleBlur}
+                    value={formData.password}
+                    name="password"
+                    className="w-full bg-transparent outline-none text-sm pr-10"
+                    type={
+                      state === "Login"
+                        ? showPassword.login
+                          ? "text"
+                          : "password"
+                        : showPassword.signup
+                        ? "text"
+                        : "password"
+                    }
+                    placeholder="Min 8 chars with uppercase, lowercase, number & special character"
+                    required
+                  />
+                  {/* Show/Hide Password Button */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      state === "Login"
+                        ? togglePasswordVisibility("login")
+                        : togglePasswordVisibility("signup")
+                    }
+                    className="text-gray-400 hover:text-gray-600 focus:outline-none transition-colors ml-2"
+                  >
+                    {state === "Login" ? (
+                      showPassword.login ? (
+                        // Eye open icon (password visible)
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
+                        </svg>
+                      ) : (
+                        // Eye closed icon (password hidden) - DEFAULT STATE
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                          />
+                        </svg>
+                      )
+                    ) : showPassword.signup ? (
+                      // Eye open icon (password visible)
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                        />
+                      </svg>
+                    ) : (
+                      // Eye closed icon (password hidden) - DEFAULT STATE
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                        />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+                )}
+                {formData.password.length >= 8 && !errors.password && (
+                  <p className="text-green-600 text-xs mt-1">
+                    ✓ Strong password
+                  </p>
+                )}
+              </div>
 
               {state === "Login" && (
                 <div className="text-right">
@@ -4783,21 +4852,23 @@ export const Login = () => {
               )}
             </div>
 
-              
             {/* Conditional Google reCAPTCHA for Login only */}
             {state === "Login" && showRecaptcha && (
               <div className="flex justify-center mb-4">
                 <ReCAPTCHA
                   ref={recaptchaRef}
                   sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
-                  onChange={token => setRecaptchaToken(token)}
+                  onChange={(token) => setRecaptchaToken(token)}
                   theme="light"
                 />
               </div>
             )}
             <button
               type="submit"
-              disabled={loading || (state === "Login" && showRecaptcha && !recaptchaToken)}
+              disabled={
+                loading ||
+                (state === "Login" && showRecaptcha && !recaptchaToken)
+              }
               className="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium rounded-lg transition-all duration-200 flex items-center justify-center disabled:opacity-70 shadow-md hover:shadow-lg"
             >
               {loading ? (
@@ -4886,17 +4957,17 @@ export const Login = () => {
             {/* Header */}
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-indigo-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg 
-                  className="w-8 h-8 text-indigo-300" 
-                  fill="none" 
-                  stroke="currentColor" 
+                <svg
+                  className="w-8 h-8 text-indigo-300"
+                  fill="none"
+                  stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" 
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                   />
                 </svg>
               </div>
@@ -4909,13 +4980,14 @@ export const Login = () => {
                   {verificationType === "email" ? email : mobile}
                 </span>
               </p>
-              
+
               {/* Countdown Timer */}
               {timeLeft > 0 ? (
                 <div className="flex items-center justify-center space-x-2 mt-2">
                   <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                   <p className="text-red-400 text-sm font-medium">
-                    Expires in: <span className="font-bold">{formatTime(timeLeft)}</span>
+                    Expires in:{" "}
+                    <span className="font-bold">{formatTime(timeLeft)}</span>
                   </p>
                 </div>
               ) : (
@@ -4984,7 +5056,8 @@ export const Login = () => {
                 </button>
               ) : (
                 <p className="text-slate-500 text-sm">
-                  Resend OTP in <span className="font-medium">{formatTime(timeLeft)}</span>
+                  Resend OTP in{" "}
+                  <span className="font-medium">{formatTime(timeLeft)}</span>
                 </p>
               )}
             </div>

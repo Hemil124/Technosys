@@ -1,13 +1,15 @@
 import React from "react";
-import AdminSidebar from "./AdminSidebar";
+import AdminNavbar from "./AdminSidebar";
 import { Outlet } from "react-router-dom";
 
 const AdminLayout = () => {
   return (
-    <div className="flex h-screen bg-gray-100">
-      <AdminSidebar />
-      <div className="flex-1 p-6 overflow-y-auto">
-        <Outlet /> {/* loads child pages here */}
+    <div className="min-h-screen bg-gray-100">
+      <AdminNavbar />
+      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="px-4 py-6 sm:px-0">
+          <Outlet /> {/* loads child pages here */}
+        </div>
       </div>
     </div>
   );

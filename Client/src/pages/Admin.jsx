@@ -6,7 +6,7 @@ import TechnicianRequest from '../components/TechnicianRequest';
 export const Admin = () => {
   return (
     <div>
-        <Navbar />
+        {/* <Navbar /> */}
         {/* <Header /> */}
         <TechnicianRequest />
     </div>
