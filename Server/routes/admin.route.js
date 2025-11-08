@@ -6,7 +6,8 @@ import {
   getTechnicians,
   approveTechnician,
   rejectTechnician,
-  getTechnicianStats
+  getTechnicianStats,
+  getTechnicianDetails 
 } from "../controllers/admin.controller.js";
 
 const router = express.Router();
@@ -15,12 +16,19 @@ const router = express.Router();
 router.use(userAuth);
 
 // Check if user is admin
+// router.use((req, res, next) => {
+//   if (req.userType !== 'admin') {
+//     return res.status(403).json({
+//       success: false,
+//       message: "Access denied. Admin only."
+//     });
+//   }
+//   next();
+// });
+router.use(userAuth);
 router.use((req, res, next) => {
   if (req.userType !== 'admin') {
-    return res.status(403).json({
-      success: false,
-      message: "Access denied. Admin only."
-    });
+    return res.status(403).json({ success: false, message: "Access denied. Admin only." });
   }
   next();
 });
@@ -37,6 +45,10 @@ router.patch("/technicians/:id/approve", approveTechnician);
 
 // Reject technician
 router.patch("/technicians/:id/reject", rejectTechnician);
+
+// Get technician details
+router.get("/technicians/:id", getTechnicianDetails);
+
 
 // Admin dashboard
 router.get("/dashboard", (req, res) => {

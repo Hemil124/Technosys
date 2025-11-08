@@ -249,6 +249,27 @@ export const getTechnicianById = async (req, res) => {
   }
 };
 
+// Get technician details by ID
+export const getTechnicianDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log("📩 Technician details request for ID:", id);
+
+    const technician = await Technician.findById(id);
+    console.log("🔍 Technician found:", technician ? "Yes" : "No");
+
+    if (!technician) {
+      return res.status(404).json({ success: false, message: "Technician not found" });
+    }
+
+    res.status(200).json({ success: true, technician });
+  } catch (error) {
+    console.error("❌ Error fetching technician:", error);
+    res.status(500).json({ success: false, message: "Error fetching technician details" });
+  }
+};
+
+
 // Approve technician
 // export const approveTechnician = async (req, res) => {
 //   try {

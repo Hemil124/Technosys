@@ -41,8 +41,11 @@ import { AppContext } from "./context/AppContext";
 import "react-toastify/dist/ReactToastify.css";
 import { Technicion } from "./pages/Technicion";
 import { LoginCustomer } from "./pages/LoginCustomer";
-import { Customer }from "./pages/Customer";
-import { TempPage }from "./pages/TempPage";
+import { Customer } from "./pages/Customer";
+import { TempPage } from "./pages/TempPage";
+
+import TechnicianRequest from "./components/TechnicianRequest";
+import TechnicianDetails from "./pages/TechnicianDetails";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, role }) => {
@@ -100,7 +103,7 @@ const AuthRedirectHandler = () => {
     );
 
     if (!loadingUser) {
-      const publicRoutes = ["/login", "/login-customer","/reset-password", "/email-verify", "/"];
+      const publicRoutes = ["/login", "/login-customer", "/reset-password", "/email-verify", "/"];
 
       // Redirect to login if not authenticated and trying to access protected routes
       if (!isLoggedIn && !publicRoutes.includes(location.pathname)) {
@@ -199,6 +202,9 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+       
+       <Route path="/admin/technicians" element={<TechnicianRequest />} />
+        <Route path="/technician/:id" element={<TechnicianDetails />} />
 
         <Route
           path="/customer"

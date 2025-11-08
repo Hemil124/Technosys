@@ -364,6 +364,8 @@ import React, { useState, useEffect, useContext } from "react";
 import { AppContext } from "../context/AppContext";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { Link } from "react-router-dom";
+
 
 const TechnicianRequest = () => {
   const { backendUrl, userData } = useContext(AppContext);
@@ -658,11 +660,10 @@ const TechnicianRequest = () => {
             <button
               key={item.key}
               onClick={() => setFilter(item.key)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filter === item.key
-                  ? "bg-blue-600 text-white shadow-md"
-                  : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-              }`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${filter === item.key
+                ? "bg-blue-600 text-white shadow-md"
+                : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                }`}
             >
               {item.label} ({item.count})
             </button>
@@ -812,12 +813,19 @@ const TechnicianRequest = () => {
                             </div>
                           )}
 
-                          <button
+                          {/* <button
                             onClick={() => fetchTechnicianDetails(tech._id)}
                             className="bg-gray-600 text-white px-3 py-1 rounded text-xs hover:bg-gray-700 transition-colors"
                           >
                             View Details
-                          </button>
+                          </button> */}
+                          <Link
+                            to={`/technician/${tech._id}`}
+                            className="bg-gray-600 text-white px-3 py-1 rounded text-xs hover:bg-gray-700 transition-colors"
+                          >
+                            View Details
+                          </Link>
+
                         </div>
                       </td>
                     </tr>
@@ -1104,11 +1112,10 @@ const TechnicianRequest = () => {
                           Mobile
                         </div>
                         <div
-                          className={`text-lg font-semibold ${
-                            selectedTechnician.isMobileVerified
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
+                          className={`text-lg font-semibold ${selectedTechnician.isMobileVerified
+                            ? "text-green-600"
+                            : "text-red-600"
+                            }`}
                         >
                           {selectedTechnician.isMobileVerified
                             ? "✅ Verified"
@@ -1120,11 +1127,10 @@ const TechnicianRequest = () => {
                           Email
                         </div>
                         <div
-                          className={`text-lg font-semibold ${
-                            selectedTechnician.isEmailVerified
-                              ? "text-green-600"
-                              : "text-red-600"
-                          }`}
+                          className={`text-lg font-semibold ${selectedTechnician.isEmailVerified
+                            ? "text-green-600"
+                            : "text-red-600"
+                            }`}
                         >
                           {selectedTechnician.isEmailVerified
                             ? "✅ Verified"
