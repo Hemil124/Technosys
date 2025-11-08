@@ -43,9 +43,12 @@ import { Technicion } from "./pages/Technicion";
 import { LoginCustomer } from "./pages/LoginCustomer";
 import { Customer } from "./pages/Customer";
 import { TempPage } from "./pages/TempPage";
-
+import AdminLayout from "./components/AdminLayout";
 import TechnicianRequest from "./components/TechnicianRequest";
 import TechnicianDetails from "./pages/TechnicianDetails";
+import { AdminCategories } from "./pages/AdminCategories";
+import { AdminFeedbacks } from "./pages/AdminFeedbacks";
+import { AdminSettings } from "./pages/AdminSettings";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, role }) => {
@@ -183,17 +186,35 @@ const App = () => {
 
       <AuthRedirectHandler />
       <Routes>
+        {/* 🌐 Public and Auth routes */}
         <Route path="/" element={<Home />} />
-        {/* <Route path="/admin" element={<Admin />} /> */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/login-customer" element={<LoginCustomer />} />
+        <Route path="/email-verify" element={<EmailVerify />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+
+        {/* 🛠️ Protected Admin routes (Sidebar layout) */}
         <Route
           path="/admin"
           element={
             <ProtectedRoute role="admin">
-              <Admin />
+              <AdminLayout />
             </ProtectedRoute>
           }
-        />
-        {/* <Route path="/technicion" element={<Technicion />} /> */}
+        >
+          {/* Nested admin pages shown inside AdminLayout */}
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<Admin />} />
+          <Route path="technicians" element={<TechnicianRequest />} />
+          <Route path="technicians/:id" element={<TechnicianDetails />} />
+          <Route path="customers" element={<Customer />} />
+          <Route path="categories" element={<AdminCategories />} />
+          <Route path="feedbacks" element={<AdminFeedbacks />} />
+          <Route path="settings" element={<AdminSettings />} />
+
+        </Route>
+
+        {/* 👨‍🔧 Technician Panel */}
         <Route
           path="/technicion"
           element={
@@ -202,10 +223,8 @@ const App = () => {
             </ProtectedRoute>
           }
         />
-       
-       <Route path="/admin/technicians" element={<TechnicianRequest />} />
-        <Route path="/technician/:id" element={<TechnicianDetails />} />
 
+        {/* 👥 Customer Panel */}
         <Route
           path="/customer"
           element={
@@ -215,23 +234,13 @@ const App = () => {
           }
         />
 
-        {/* Auth Routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/email-verify" element={<EmailVerify />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-
-        <Route path="/login-customer" element={<LoginCustomer />} />
-
-
-        {/* temp */}
+        {/* ⚙️ Temp page (optional) */}
         <Route path="/temp" element={<TempPage />} />
 
-        {/* Example of protected routes */}
-        {/* <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} /> */}
-
-        {/* Catch all route - redirect to home */}
+        {/* 🚫 Catch all invalid routes */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+
     </div>
   );
 };
