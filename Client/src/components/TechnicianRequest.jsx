@@ -820,7 +820,7 @@ const TechnicianRequest = () => {
                             View Details
                           </button> */}
                           <Link
-                            to={`/technician/${tech._id}`}
+                            to={`/admin/technicians/${tech._id}`}
                             className="bg-gray-600 text-white px-3 py-1 rounded text-xs hover:bg-gray-700 transition-colors"
                           >
                             View Details
