@@ -31,8 +31,10 @@ connectdb();
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://technosys.vercel.app"
+  "https://technosys.vercel.app",
+  "https://technosys-murex.vercel.app" // ✅ your real deployed frontend
 ];
+
 
 
 // Sanitize data for mongoose injection
