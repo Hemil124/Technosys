@@ -50,14 +50,14 @@ if (process.env.NODE_ENV === "development") {
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
-    contentSecurityPolicy: {
-       directives: 
-       {
-       defaultSrc: ["'self'"],
-       imgSrc: ["'self'", "http://localhost:4000", "data:", "blob:"],
-       connectSrc: ["'self'", "http://localhost:4000"],
-      },
-    },
+   contentSecurityPolicy: {
+  directives: {
+    defaultSrc: ["'self'"],
+    imgSrc: ["'self'", "data:", "blob:", "https://technosys-xq7v.onrender.com"],
+    connectSrc: ["'self'", "https://technosys-xq7v.onrender.com", "https://technosys.vercel.app"],
+  },
+},
+
   })
 );
 
