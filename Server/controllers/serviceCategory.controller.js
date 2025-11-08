@@ -54,3 +54,75 @@ export const createCategory = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+export const updateCategory = async (req, res) => {
+  try {
+    if (req.userType !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only admin can update categories' });
+    }
+
+    const { id } = req.params;
+    const { name, isActive } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, message: 'Name is required' });
+    }
+
+    // Check if category exists
+    const category = await ServiceCategory.findById(id);
+    if (!category) {
+      return res.status(404).json({ success: false, message: 'Category not found' });
+    }
+
+    // Check duplicate name (case-insensitive) excluding current category
+    const duplicate = await ServiceCategory.findOne({
+      _id: { $ne: id },
+      name: { $regex: `^${name.trim()}$`, $options: 'i' }
+    });
+    if (duplicate) {
+      return res.status(409).json({ success: false, message: 'Category name already exists' });
+    }
+
+    // Update category
+    category.name = name.trim();
+    if (isActive !== undefined) {
+      category.isActive = isActive;
+    }
+    await category.save();
+
+    return res.json({ success: true, data: category, message: 'Category updated successfully' });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({ success: false, message: 'Category name already exists' });
+    }
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const deleteCategory = async (req, res) => {
+  try {
+    if (req.userType !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Only admin can delete categories' });
+    }
+
+    const { id } = req.params;
+
+    // Check if category exists
+    const category = await ServiceCategory.findById(id);
+    if (!category) {
+      return res.status(404).json({ success: false, message: 'Category not found' });
+    }
+
+    // Soft delete: Set isActive to false instead of removing from database
+    category.isActive = false;
+    await category.save();
+
+    return res.json({ 
+      success: true, 
+      message: 'Category deactivated successfully',
+      data: category
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
