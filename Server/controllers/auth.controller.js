@@ -309,9 +309,10 @@ export const register = async (req, res) => {
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
+
 
     // ✅ Welcome email
     try {
@@ -380,7 +381,7 @@ export const register = async (req, res) => {
 // export const register = async (req, res) => {
 //   try {
 //     console.log('=== REGISTRATION STARTED ===');
-    
+
 //     // File validation
 //     if (!req.files || !req.files.idProof || !req.files.photo) {
 //       console.log('Files missing');
@@ -454,7 +455,7 @@ export const register = async (req, res) => {
 
 //     // ✅ SIMPLIFIED FILE HANDLING - Use the files that multer already saved
 //     console.log('Processing files...');
-    
+
 //     // Multer has already saved files to the correct directories
 //     // Just use the filenames that multer generated
 //     const idProofPath = `/uploads/idProofs/${req.files.idProof[0].filename}`;
@@ -593,7 +594,7 @@ export const login = async (req, res) => {
   // Find login block info
   const loginBlock = await LoginBlock.findOne({ Email: email });
   // If failed attempts >= 1, require reCAPTCHA
-  if (loginBlock && loginBlock.AttemptCount >= 1 ) {
+  if (loginBlock && loginBlock.AttemptCount >= 1) {
     if (!recaptchaToken) {
       return res.status(400).json({ success: false, message: "reCAPTCHA required" });
     }
@@ -861,10 +862,12 @@ export const googleLogin = async (req, res) => {
 // ================= IS AUTH =================
 export const isAuthenticated = async (req, res) => {
   try {
-    return res.json({ success: true, user: req.user,isLoggedIn: true,
+    return res.json({
+      success: true, user: req.user, isLoggedIn: true,
       message: "User is authenticated",
       userType: req.userType,
-      userEmail: req.userEmail });
+      userEmail: req.userEmail
+    });
   } catch (error) {
     res.json({ success: false, message: error.message });
   }
@@ -1624,7 +1627,7 @@ export const resetPassword = async (req, res) => {
 // };
 
 export const sendCustomerMobileOtp = async (req, res) => {
-  console.log("Customer OTP request body:", req.body); 
+  console.log("Customer OTP request body:", req.body);
   try {
     const { mobile } = req.body;
 
@@ -1814,14 +1817,14 @@ export const updateCustomerProfile = async (req, res) => {
     });
   } catch (error) {
     console.error("Update profile error:", error);
-    
+
     if (error.code === 11000) {
       return res.status(409).json({
         success: false,
         message: "Email already exists"
       });
     }
-    
+
     return res.status(500).json({
       success: false,
       message: "Internal server error"
@@ -1896,7 +1899,7 @@ export const cleanupExpiredOtps = async () => {
     const result = await TempOtpVerification.deleteMany({
       otpExpiry: { $lt: currentTime },
     });
-    
+
     if (result.deletedCount > 0) {
       console.log(`🧹 Cleaned up ${result.deletedCount} expired OTP records at ${currentTime.toISOString()}`);
     }

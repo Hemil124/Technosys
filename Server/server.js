@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import 'dotenv/config';
+import "dotenv/config";
 import cookieParser from "cookie-parser";
 import session from "express-session";
 
@@ -16,112 +16,93 @@ import userRoutesr from "./routes/user.route.js";
 import adminRoutes from "./routes/admin.route.js";
 import adminCreationRoute from "./routes/adminCreation.route.js";
 import serviceCategoryRoutes from "./routes/serviceCategory.route.js";
-import path from 'path';
-import { fileURLToPath } from 'url';
+import path from "path";
+import { fileURLToPath } from "url";
 import "./config/passport.js";
 
 const app = express();
 const port = process.env.PORT || 4000;
 
-// Get __dirname equivalent in ES modules
+// get __dirname in ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// connect database
 connectdb();
 
+// ✅ 1. CORS Setup (must come BEFORE Helmet)
 const allowedOrigins = [
   "http://localhost:5173",
   "https://technosys.vercel.app",
-  "https://technosys-murex.vercel.app" // ✅ your real deployed frontend
+  "https://technosys-murex.vercel.app", // your Vercel frontend
 ];
 
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // allow local dev + your frontend domain + any vercel preview
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        /\.vercel\.app$/.test(origin)
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true, // allow cookies
+  })
+);
 
-
-// Sanitize data for mongoose injection
-// app.use(mongoSanitize());
-app.use((req, res, next) => {
-  if (req.body) req.body = mongoSanitize.sanitize(req.body);
-  if (req.params) req.params = mongoSanitize.sanitize(req.params);
-  // don't touch req.query, as it's read-only
-  next();
-});
-if (process.env.NODE_ENV === "development") {
-  app.use(morgan("dev"));
-}
-// Set security headers
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-  contentSecurityPolicy: false, // disable strict CSP for now
-}));
-
-// Rate Limiting
-const limiter = rateLimit({
-  windowMs: 10 * 60 * 1000, // 10 Minites
-  max: 1000,
-});
-
-app.use(limiter);
-
-// Prevent http param pollution
+// ✅ 2. Security Middleware
+app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" }, contentSecurityPolicy: false }));
 app.use(hpp());
+app.use(
+  rateLimit({
+    windowMs: 10 * 60 * 1000,
+    max: 1000,
+  })
+);
+app.use(mongoSanitize());
 
+// ✅ 3. Utilities
 app.use(express.json());
 app.use(cookieParser());
-
-
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
-  exposedHeaders: ['Content-Type', 'Content-Length']
-}));
-
-// Serve static files (uploads folder)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
-  setHeaders: (res) => {
-    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  }
-}));
-
-
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
-  setHeaders: (res, path) => {
-    // Set CORS headers for static files
-    res.setHeader('Access-Control-Allow-Origin', allowedOrigins);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    
-    // Cache control for better performance
-    if (path.endsWith('.jpg') || path.endsWith('.png') || path.endsWith('.jpeg')) {
-      res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day cache for images
-    }
-  }
-}));
-
-
-// Needed for Passport during the OAuth handshake
 app.use(session({
   secret: process.env.JWT_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production', // true on HTTPS
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
-  }
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+  },
 }));
+if (process.env.NODE_ENV === "development") app.use(morgan("dev"));
 
+// ✅ 4. Serve Static Uploads
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "uploads"), {
+    setHeaders: (res, filePath) => {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      if (filePath.endsWith(".jpg") || filePath.endsWith(".png")) {
+        res.setHeader("Cache-Control", "public, max-age=86400");
+      }
+    },
+  })
+);
 
-// routes
-app.get('/', (req, res) => res.send("API Working"));
-app.use('/api/auth', authRouter);
-app.use('/api/user', userRoutesr);
+// ✅ 5. Routes
+app.get("/", (req, res) => res.json({ success: true, message: "Server healthy" }));
+app.use("/api/auth", authRouter);
+app.use("/api/user", userRoutesr);
 app.use("/api/admin", adminRoutes);
-app.use('/api/service-categories', serviceCategoryRoutes);
-
-// one-time admin creation route
+app.use("/api/service-categories", serviceCategoryRoutes);
 app.use("/api/admin-setup", adminCreationRoute);
 
-
-app.listen(port, () => console.log(`Server started on PORT:${port}`));
-
+// ✅ 6. Start Server
+app.listen(port, () => console.log(`🚀 Server running on PORT: ${port}`));
 
 
 
