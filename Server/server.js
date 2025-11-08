@@ -48,20 +48,11 @@ app.use((req, res, next) => {
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
-// Set Security Headers with configured CSP
-app.use(
-  helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" },
-   contentSecurityPolicy: {
-  directives: {
-    defaultSrc: ["'self'"],
-    imgSrc: ["'self'", "data:", "blob:", "https://technosys-xq7v.onrender.com"],
-    connectSrc: ["'self'", "https://technosys-xq7v.onrender.com", "https://technosys.vercel.app"],
-  },
-},
-
-  })
-);
+// Set security headers
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: false, // disable strict CSP for now
+}));
 
 // Rate Limiting
 const limiter = rateLimit({
@@ -76,8 +67,10 @@ app.use(hpp());
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors({ 
-  origin: allowedOrigins, 
+
+
+app.use(cors({
+  origin: allowedOrigins,
   credentials: true,
   exposedHeaders: ['Content-Type', 'Content-Length']
 }));
