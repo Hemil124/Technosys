@@ -470,47 +470,60 @@ const TechnicianRequest = () => {
     }
   };
 
-  const handleApprove = async (id) => {
-    try {
-      const { data } = await axios.patch(
-        `${backendUrl}/api/admin/technicians/${id}/approve`,
-        {},
-        { withCredentials: true }
-      );
+const handleApprove = async (id) => {
+  try {
+    const { data } = await axios.patch(
+      `${backendUrl}/api/admin/technicians/${id}/approve`,
+      {},
+      { withCredentials: true }
+    );
 
-      if (data.success) {
-        toast.success("Technician approved successfully");
-        fetchTechnicians();
-        fetchStats();
-      }
-    } catch (error) {
-      toast.error(
-        error.response?.data?.message || "Failed to approve technician"
-      );
+    if (data.success) {
+      toast.success("Technician approved successfully");
+
+      // ✅ Auto-close modals after approval
+      setShowDetailsModal(false);
+      setShowRejectModal(null);
+
+      // Refresh list and stats
+      fetchTechnicians();
+      fetchStats();
     }
-  };
+  } catch (error) {
+    toast.error(
+      error.response?.data?.message || "Failed to approve technician"
+    );
+  }
+};
 
-  const handleReject = async (id) => {
-    try {
-      const { data } = await axios.patch(
-        `${backendUrl}/api/admin/technicians/${id}/reject`,
-        { reason: rejectReason },
-        { withCredentials: true }
-      );
 
-      if (data.success) {
-        toast.success("Technician rejected successfully");
-        setShowRejectModal(null);
-        setRejectReason("");
-        fetchTechnicians();
-        fetchStats();
-      }
-    } catch (error) {
-      toast.error(
-        error.response?.data?.message || "Failed to reject technician"
-      );
+ const handleReject = async (id) => {
+  try {
+    const { data } = await axios.patch(
+      `${backendUrl}/api/admin/technicians/${id}/reject`,
+      { reason: rejectReason },
+      { withCredentials: true }
+    );
+
+    if (data.success) {
+      toast.success("Technician rejected successfully");
+
+      // ✅ Auto-close all modals after rejection
+      setShowRejectModal(null);
+      setShowDetailsModal(false);
+      setRejectReason("");
+
+      // Refresh data
+      fetchTechnicians();
+      fetchStats();
     }
-  };
+  } catch (error) {
+    toast.error(
+      error.response?.data?.message || "Failed to reject technician"
+    );
+  }
+};
+
 
   const getStatusBadge = (status) => {
     const styles = {
@@ -718,9 +731,7 @@ const TechnicianRequest = () => {
                                   src={getPhotoUrl(tech.Photo)}
                                   alt={tech.Name}
                                   className="h-12 w-12 rounded-full object-cover border-2 border-gray-200 cursor-pointer hover:border-blue-500 transition-all"
-                                  onClick={() =>
-                                    fetchTechnicianDetails(tech._id)
-                                  }
+                                 
                                   onError={(e) => {
                                     console.error(
                                       "Image failed to load:",
@@ -755,7 +766,7 @@ const TechnicianRequest = () => {
                           <div className="ml-4">
                             <div
                               className="text-sm font-medium text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
-                              onClick={() => fetchTechnicianDetails(tech._id)}
+                              
                             >
                               {tech.Name}
                             </div>
@@ -813,18 +824,13 @@ const TechnicianRequest = () => {
                             </div>
                           )}
 
-                          {/* <button
+                          <button
                             onClick={() => fetchTechnicianDetails(tech._id)}
                             className="bg-gray-600 text-white px-3 py-1 rounded text-xs hover:bg-gray-700 transition-colors"
                           >
                             View Details
-                          </button> */}
-                          <Link
-                            to={`/admin/technicians/${tech._id}`}
-                            className="bg-gray-600 text-white px-3 py-1 rounded text-xs hover:bg-gray-700 transition-colors"
-                          >
-                            View Details
-                          </Link>
+                          </button>
+                         
 
                         </div>
                       </td>
