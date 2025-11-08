@@ -8,7 +8,10 @@ export const AppContextProvider = ({ children }) => {
   const backendUrl =
     import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
 
+  // Axios global setup
   axios.defaults.withCredentials = true;
+  axios.defaults.baseURL = backendUrl;
+  axios.defaults.headers.common["Content-Type"] = "application/json";
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState(null);
@@ -16,21 +19,16 @@ export const AppContextProvider = ({ children }) => {
 
   const getAuthState = async () => {
     try {
-      const { data } = await axios.get(`${backendUrl}/api/auth/is-auth`, {
-        withCredentials: true,
-      });
-
+      const { data } = await axios.get("/api/auth/is-auth");
       if (data.success) {
         setIsLoggedIn(true);
         await getUserData();
       }
     } catch (error) {
-      // Handle 401 errors gracefully (user not logged in)
       if (error.response?.status === 401) {
         setIsLoggedIn(false);
         setUserData(null);
       } else {
-        // Only show other errors
         toast.error(error.response?.data?.message || "Authentication failed");
       }
     } finally {
@@ -38,24 +36,15 @@ export const AppContextProvider = ({ children }) => {
     }
   };
 
-  useEffect(() => {
-    getAuthState();
-  }, []);
-
   const getUserData = async () => {
     try {
-      //   const { data } = await axios.get(`${backendUrl}/api/user/data`);
-      const { data } = await axios.get(`${backendUrl}/api/user/data`, {
-        withCredentials: true,
-      });
-      console.log("Full user data response:", data); // More detailed log
+      const { data } = await axios.get("/api/user/data");
       if (data.success) {
-        // Handle both UserData and userData properties
         const userData = data.UserData || data.userData;
         setUserData(userData);
-        // Store user role in context or localStorage if needed
-        // localStorage.setItem("userRole", userData.role || "technician");
-        console.log("AppContext userData:", userData);
+        if (import.meta.env.MODE === "development") {
+          console.log("AppContext userData:", userData);
+        }
       } else {
         toast.error(data.message);
       }
@@ -63,6 +52,10 @@ export const AppContextProvider = ({ children }) => {
       toast.error(error.response?.data?.message || "Failed to fetch user data");
     }
   };
+
+  useEffect(() => {
+    getAuthState();
+  }, []);
 
   const value = {
     backendUrl,
@@ -76,4 +69,3 @@ export const AppContextProvider = ({ children }) => {
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
-

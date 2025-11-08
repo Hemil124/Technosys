@@ -29,7 +29,7 @@ const __dirname = path.dirname(__filename);
 
 connectdb();
 
-const allowedOrigins = ['http://localhost:5173', 'http://localhost:5175'];
+const allowedOrigins = ['http://localhost:5173', 'http://localhost:5175',process.env.FRONTEND_URL ];
 
 // Sanitize data for mongoose injection
 // app.use(mongoSanitize());
@@ -47,10 +47,11 @@ app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
     contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        imgSrc: ["'self'", "http://localhost:4000", "data:", "blob:"],
-        connectSrc: ["'self'", "http://localhost:4000"],
+       directives: 
+       {
+       defaultSrc: ["'self'"],
+       imgSrc: ["'self'", "http://localhost:4000", "data:", "blob:"],
+       connectSrc: ["'self'", "http://localhost:4000"],
       },
     },
   })
@@ -76,10 +77,11 @@ app.use(cors({
 }));
 
 // Serve static files (uploads folder)
-app.use('/uploads', (req, res, next) => {
-  res.set('Cross-Origin-Resource-Policy', 'cross-origin');
-  next();
-}, express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  setHeaders: (res) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+}));
 
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
@@ -101,7 +103,12 @@ app.use(session({
   secret: process.env.JWT_SECRET,
   resave: false,
   saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production', // true on HTTPS
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+  }
 }));
+
 
 // routes
 app.get('/', (req, res) => res.send("API Working"));
