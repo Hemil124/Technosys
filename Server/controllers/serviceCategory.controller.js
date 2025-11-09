@@ -7,17 +7,37 @@ import ServiceCategory from "../models/ServiceCategory.js";
 //   { name: "Carpentry" },
 // ];
 
+// export const getAllCategories = async (req, res) => {
+//   try {
+//     //if category is not added in DB so use default categories
+//     // let count = await ServiceCategory.countDocuments();
+
+//     // // Seed defaults if collection is empty
+//     // if (count === 0) {
+//     //   await ServiceCategory.insertMany(DEFAULT_CATEGORIES);
+//     // }
+
+//     const categories = await ServiceCategory.find({ isActive: true })
+//       .sort({ name: 1 })
+//       .select("name isActive");
+
+//     return res.json({ success: true, data: categories });
+//   } catch (error) {
+//     return res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+
 export const getAllCategories = async (req, res) => {
   try {
-    //if category is not added in DB so use default categories
-    // let count = await ServiceCategory.countDocuments();
+    let filter = {};
+    
+    // If NOT an admin, only show active categories
+    // If IS an admin, show ALL categories (both active and inactive)
+    if (req.userType !== 'admin') {
+      filter = { isActive: true };
+    }
 
-    // // Seed defaults if collection is empty
-    // if (count === 0) {
-    //   await ServiceCategory.insertMany(DEFAULT_CATEGORIES);
-    // }
-
-    const categories = await ServiceCategory.find({ isActive: true })
+    const categories = await ServiceCategory.find(filter)
       .sort({ name: 1 })
       .select("name isActive");
 

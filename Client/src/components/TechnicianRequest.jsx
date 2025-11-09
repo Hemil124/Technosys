@@ -454,12 +454,12 @@ const TechnicianRequest = () => {
   const fetchTechnicianDetails = async (id) => {
     try {
       // First try to get from existing list
-    const existingTech = technicians.find(tech => tech._id === id);
-    if (existingTech) {
-      setSelectedTechnician(existingTech);
-      setShowDetailsModal(true);
-      return;
-    }
+      const existingTech = technicians.find((tech) => tech._id === id);
+      if (existingTech) {
+        setSelectedTechnician(existingTech);
+        setShowDetailsModal(true);
+        return;
+      }
       const { data } = await axios.get(
         `${backendUrl}/api/admin/technicians/${id}`,
         {
@@ -475,7 +475,6 @@ const TechnicianRequest = () => {
       toast.error("Failed to fetch technician details");
     }
   };
-
 
   const handleApprove = async (id) => {
     try {
@@ -788,7 +787,7 @@ const TechnicianRequest = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-900">
-                          Category {tech.ServiceCategoryID}
+                          {tech.ServiceCategoryID?.name || "N/A"}
                         </div>
                         <div className="text-xs text-gray-500">
                           Bank: {tech.BankAccountNo?.slice(-4)}
@@ -1091,8 +1090,8 @@ const TechnicianRequest = () => {
                         <label className="text-sm font-medium text-gray-500">
                           Service Category
                         </label>
-                        <p className="text-gray-900">
-                          {selectedTechnician.ServiceCategoryID}
+                        <p className="text-lg text-gray-900">
+                          {selectedTechnician.ServiceCategoryID?.name || "N/A"}
                         </p>
                       </div>
                       <div>

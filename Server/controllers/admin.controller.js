@@ -31,6 +31,7 @@ export const getTechnicians = async (req, res) => {
 
     const technicians = await Technician.find(filter)
       .select("-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry")
+      .populate('ServiceCategoryID', 'name')
       .sort({ createdAt: -1 });
 
     res.json({
@@ -80,9 +81,10 @@ export const getTechnicianById = async (req, res) => {
 export const getTechnicianDetails = async (req, res) => {
   try {
     const { id } = req.params;
-    console.log("📩 Technician details request for ID:", id);
+    
 
-    const technician = await Technician.findById(id);
+    const technician = await Technician.findById(id)
+      .populate('ServiceCategoryID', 'name');
     console.log("🔍 Technician found:", technician ? "Yes" : "No");
 
     if (!technician) {
@@ -97,18 +99,247 @@ export const getTechnicianDetails = async (req, res) => {
 };
 
 
+// export const approveTechnician = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     console.log("Approving technician with ID:", id);
+
+//     // First update the technician
+//     await Technician.findByIdAndUpdate(
+//       id,
+//       {
+//         VerifyStatus: "Approved",
+//         ActiveStatus: "Active",
+//       }
+//     );
+
+//     // Then fetch the updated technician with populated fields
+//     const technician = await Technician.findById(id)
+//       .select("-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry")
+//       .populate({ 
+//         path: 'ServiceCategoryID',
+//         select: 'name'
+//       });
+
+//     console.log('Debug - Full technician data:', JSON.stringify(technician, null, 2));
+//     console.log('Debug - Service Category:', technician.ServiceCategoryID);
+
+//     if (!technician) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Technician not found",
+//       });
+//     }
+
+//     console.log("Populated technician data:", {
+//       name: technician.Name,
+//       email: technician.Email,
+//       serviceCategory: technician.ServiceCategoryID
+//     });
+
+//     // Send approval email - UNCOMMENT THIS SECTION
+//     try {
+//       console.log(`Attempting to send approval email to: ${technician.Email}`);
+
+//       await transporter.sendMail({
+//         from: process.env.SENDER_EMAIL,
+//         to: technician.Email,
+//         subject: "Your Technician Account Has Been Approved - Technosys",
+//         html: `
+//           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+//             <h2 style="color: #4F46E5; text-align: center;">🎉 Account Approved!</h2>
+//             <p>Dear <strong>${technician.Name}</strong>,</p>
+//             <p>We are pleased to inform you that your technician account has been approved by our administration team.</p>
+            
+//             <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+//               <p style="margin: 0;"><strong>Account Details:</strong></p>
+//               <ul style="margin: 10px 0;">
+//                 <li><strong>Name:</strong> ${technician.Name}</li>
+//                 <li><strong>Email:</strong> ${technician.Email}</li>
+//                 <li><strong>Mobile:</strong> ${technician.MobileNumber}</li>
+//                 <li><strong>Service Category:</strong> ${
+//                   technician.ServiceCategoryID ? technician.ServiceCategoryID.name : 'N/A'
+//                 }</li>
+//               </ul>
+//             </div>
+
+//             <p>You can now login to your account and start accepting service requests from customers.</p>
+            
+//             <div style="text-align: center; margin: 25px 0;">
+//               <a href="${
+//                 process.env.FRONTEND_URL || "http://localhost:5173"
+//               }/login" 
+//                  style="background-color: #4F46E5; color: white; padding: 12px 30px; 
+//                         text-decoration: none; border-radius: 6px; display: inline-block;">
+//                 Login to Your Account
+//               </a>
+//             </div>
+
+//             <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
+            
+//             <br/>
+//             <p>Best regards,<br/>
+//             <strong>Technosys Team</strong></p>
+            
+//             <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+//             <p style="color: #6b7280; font-size: 12px; text-align: center;">
+//               This is an automated message. Please do not reply to this email.
+//             </p>
+//           </div>
+//         `,
+//       });
+//       console.log(
+//         `✅ Approval email sent successfully to: ${technician.Email}`
+//       );
+//     } catch (emailError) {
+//       console.error("❌ Approval email error:", emailError);
+//       // Continue even if email fails
+//     }
+
+//     res.json({
+//       success: true,
+//       message: "Technician approved successfully",
+//       technician,
+//     });
+//   } catch (error) {
+//     console.error("Approve technician error:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Internal server error",
+//     });
+//   }
+// };
+
+
+
+// Reject technician
+// export const rejectTechnician = async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const { reason } = req.body;
+
+//     if (!reason || reason.trim() === "") {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Rejection reason is required",
+//       });
+//     }
+
+//     // First update the technician
+//     await Technician.findByIdAndUpdate(
+//       id,
+//       {
+//         VerifyStatus: "Rejected",
+//         ActiveStatus: "Deactive",
+//       }
+//     );
+
+//     // Then fetch the updated technician with populated fields
+//     const technician = await Technician.findById(id)
+//       .select("-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry")
+//       .populate({ 
+//         path: 'ServiceCategoryID',
+//         select: 'name'
+//       });
+
+//     console.log('Debug - Full technician data:', JSON.stringify(technician, null, 2));
+//     console.log('Debug - Service Category:', technician.ServiceCategoryID);
+
+//     if (!technician) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Technician not found",
+//       });
+//     }
+
+//     // Send rejection email
+//     try {
+//       await transporter.sendMail({
+//         from: process.env.SENDER_EMAIL,
+//         to: technician.Email,
+//         subject: "Update on Your Technician Account Application - Technosys",
+//         html: `
+//           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+//             <h2 style="color: #dc2626; text-align: center;">Application Status Update</h2>
+//             <p>Dear <strong>${technician.Name}</strong>,</p>
+//             <p>Thank you for your interest in joining Technosys as a technician in the <strong>${technician.ServiceCategoryID ? technician.ServiceCategoryID.name : 'N/A'}</strong> category.</p>
+            
+//             <p>After careful review, we regret to inform you that your technician account application has not been approved at this time.</p>
+            
+//             <div style="background-color: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0;">
+//               <p style="margin: 0; color: #dc2626;"><strong>Reason for Rejection:</strong></p>
+//               <p style="margin: 10px 0; color: #7f1d1d;">${reason}</p>
+//             </div>
+
+//             <p>If you believe this decision was made in error, or if you would like to address the concerns mentioned above, 
+//             please feel free to contact our support team for further clarification.</p>
+
+//             <p>We encourage you to review our technician requirements and apply again in the future if your circumstances change.</p>
+            
+//             <div style="text-align: center; margin: 25px 0;">
+//               <a href="${
+//                 process.env.FRONTEND_URL || "http://localhost:5173"
+//               }/contact" 
+//                  style="background-color: #6b7280; color: white; padding: 12px 30px; 
+//                         text-decoration: none; border-radius: 6px; display: inline-block;">
+//                 Contact Support
+//               </a>
+//             </div>
+
+//             <br/>
+//             <p>Best regards,<br/>
+//             <strong>Technosys Team</strong></p>
+            
+//             <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+//             <p style="color: #6b7280; font-size: 12px; text-align: center;">
+//               This is an automated message. Please do not reply to this email.
+//             </p>
+//           </div>
+//         `,
+//       });
+//       console.log(`Rejection email sent to: ${technician.Email}`);
+//     } catch (emailError) {
+//       console.error("Rejection email error:", emailError);
+//       // Continue even if email fails
+//     }
+
+//     res.json({
+//       success: true,
+//       message: "Technician rejected successfully",
+//       technician,
+//     });
+//   } catch (error) {
+//     console.error("Reject technician error:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Internal server error",
+//     });
+//   }
+// };
+
 export const approveTechnician = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log("Approving technician with ID:", id);
 
-    const technician = await Technician.findByIdAndUpdate(
+    // First update the technician
+    await Technician.findByIdAndUpdate(
       id,
       {
         VerifyStatus: "Approved",
         ActiveStatus: "Active",
-      },
-      { new: true }
-    ).select("-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry");
+      }
+    );
+
+    // Then fetch the updated technician with populated fields
+    const technician = await Technician.findById(id)
+      .select("-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry")
+      .populate({ 
+        path: 'ServiceCategoryID',
+        select: 'name'
+      });
+
+    
 
     if (!technician) {
       return res.status(404).json({
@@ -116,10 +347,13 @@ export const approveTechnician = async (req, res) => {
         message: "Technician not found",
       });
     }
-
-    // Send approval email - UNCOMMENT THIS SECTION
+    // Send approval email
     try {
-      console.log(`Attempting to send approval email to: ${technician.Email}`);
+      
+
+      // Create a safe variable for service category name
+      const serviceCategoryName = technician.ServiceCategoryID?.name || 'Not specified';
+      
 
       await transporter.sendMail({
         from: process.env.SENDER_EMAIL,
@@ -137,9 +371,7 @@ export const approveTechnician = async (req, res) => {
                 <li><strong>Name:</strong> ${technician.Name}</li>
                 <li><strong>Email:</strong> ${technician.Email}</li>
                 <li><strong>Mobile:</strong> ${technician.MobileNumber}</li>
-                <li><strong>Service Category:</strong> ${
-                  technician.ServiceCategoryID
-                }</li>
+                <li><strong>Service Category:</strong> ${serviceCategoryName}</li>
               </ul>
             </div>
 
@@ -168,12 +400,9 @@ export const approveTechnician = async (req, res) => {
           </div>
         `,
       });
-      console.log(
-        `✅ Approval email sent successfully to: ${technician.Email}`
-      );
+      console.log(`✅ Approval email sent successfully to: ${technician.Email}`);
     } catch (emailError) {
       console.error("❌ Approval email error:", emailError);
-      // Continue even if email fails
     }
 
     res.json({
@@ -189,8 +418,6 @@ export const approveTechnician = async (req, res) => {
     });
   }
 };
-
-// Reject technician
 export const rejectTechnician = async (req, res) => {
   try {
     const { id } = req.params;
@@ -203,14 +430,22 @@ export const rejectTechnician = async (req, res) => {
       });
     }
 
-    const technician = await Technician.findByIdAndUpdate(
+    // First update the technician
+    await Technician.findByIdAndUpdate(
       id,
       {
         VerifyStatus: "Rejected",
         ActiveStatus: "Deactive",
-      },
-      { new: true }
-    ).select("-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry");
+      }
+    );
+
+    // Then fetch the updated technician with populated fields
+    const technician = await Technician.findById(id)
+      .select("-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry")
+      .populate({ 
+        path: 'ServiceCategoryID',
+        select: 'name'
+      });
 
     if (!technician) {
       return res.status(404).json({
@@ -218,6 +453,9 @@ export const rejectTechnician = async (req, res) => {
         message: "Technician not found",
       });
     }
+
+    // Create a safe variable for service category name
+    const serviceCategoryName = technician.ServiceCategoryID?.name || 'Not specified';
 
     // Send rejection email
     try {
@@ -229,7 +467,7 @@ export const rejectTechnician = async (req, res) => {
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #dc2626; text-align: center;">Application Status Update</h2>
             <p>Dear <strong>${technician.Name}</strong>,</p>
-            <p>Thank you for your interest in joining Technosys as a technician.</p>
+            <p>Thank you for your interest in joining Technosys as a technician in the <strong>${serviceCategoryName}</strong> category.</p>
             
             <p>After careful review, we regret to inform you that your technician account application has not been approved at this time.</p>
             
@@ -267,7 +505,6 @@ export const rejectTechnician = async (req, res) => {
       console.log(`Rejection email sent to: ${technician.Email}`);
     } catch (emailError) {
       console.error("Rejection email error:", emailError);
-      // Continue even if email fails
     }
 
     res.json({
@@ -283,8 +520,6 @@ export const rejectTechnician = async (req, res) => {
     });
   }
 };
-
-
 
 // Get statistics
 export const getTechnicianStats = async (req, res) => {
