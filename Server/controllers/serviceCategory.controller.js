@@ -2,17 +2,11 @@ import ServiceCategory from "../models/ServiceCategory.js";
 
 export const getAllCategories = async (req, res) => {
   try {
-    let filter = {};
-    
-    // If NOT an admin, only show active categories
-    // If IS an admin, show ALL categories (both active and inactive)
-    if (req.userType !== 'admin') {
-      filter = { isActive: true };
-    }
-
-    const categories = await ServiceCategory.find(filter)
+    // Return all categories (public endpoint). Admins and non-admins will receive
+    // the full list; frontend can choose how to present active/inactive ones.
+    const categories = await ServiceCategory.find({})
       .sort({ name: 1 })
-      .select("name isActive");
+      .select("name isActive image");
 
     return res.json({ success: true, data: categories });
   } catch (error) {
@@ -26,9 +20,20 @@ export const createCategory = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Only admin can add categories' });
     }
 
-    const { name, isActive = true } = req.body;
+    const { name } = req.body;
+    let { isActive } = req.body;
+    if (typeof isActive === 'string') {
+      isActive = isActive === 'true';
+    }
+    if (isActive === undefined || isActive === null) isActive = true;
+
     if (!name || !name.trim()) {
       return res.status(400).json({ success: false, message: 'Name is required' });
+    }
+
+    // Image is mandatory for new categories
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Category image is required' });
     }
 
     // Check duplicate by name (case-insensitive)
@@ -37,7 +42,13 @@ export const createCategory = async (req, res) => {
       return res.status(409).json({ success: false, message: 'Category already exists' });
     }
 
-    const category = await ServiceCategory.create({ name: name.trim(), isActive });
+    // If an image was uploaded by multer, save its path
+    let imagePath = null;
+    if (req.file && req.file.filename) {
+      imagePath = `/uploads/categories/${req.file.filename}`;
+    }
+
+    const category = await ServiceCategory.create({ name: name.trim(), isActive, image: imagePath });
     return res.status(201).json({ success: true, data: category, message: 'Category created' });
   } catch (error) {
     // Handle unique index error
@@ -55,7 +66,11 @@ export const updateCategory = async (req, res) => {
     }
 
     const { id } = req.params;
-    const { name, isActive } = req.body;
+    const { name } = req.body;
+    let { isActive } = req.body;
+    if (typeof isActive === 'string') {
+      isActive = isActive === 'true';
+    }
 
     if (!name || !name.trim()) {
       return res.status(400).json({ success: false, message: 'Name is required' });
@@ -81,6 +96,12 @@ export const updateCategory = async (req, res) => {
     if (isActive !== undefined) {
       category.isActive = isActive;
     }
+
+    // If a new image was uploaded, update the image path
+    if (req.file && req.file.filename) {
+      category.image = `/uploads/categories/${req.file.filename}`;
+    }
+
     await category.save();
 
     return res.json({ success: true, data: category, message: 'Category updated successfully' });

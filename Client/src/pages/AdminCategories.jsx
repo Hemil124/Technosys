@@ -19,10 +19,16 @@ export const AdminCategories = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'inactive'
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [formData, setFormData] = useState({ name: "", isActive: true });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [dragActive, setDragActive] = useState(false);
+  const [imageError, setImageError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [togglingId, setTogglingId] = useState(null);
 
   // Fetch categories on component mount
   useEffect(() => {
@@ -56,10 +62,15 @@ export const AdminCategories = () => {
     }
   };
 
-  // Filter categories based on search
-  const filteredCategories = categories.filter(category =>
-    category.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter categories based on search and status filter
+  const filteredCategories = categories.filter(category => {
+    const matchesSearch = category.name.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!matchesSearch) return false;
+    if (statusFilter === 'all') return true;
+    if (statusFilter === 'active') return category.isActive;
+    if (statusFilter === 'inactive') return !category.isActive;
+    return true;
+  });
 
   // Handle form input changes
   const handleInputChange = (e) => {
@@ -85,6 +96,13 @@ export const AdminCategories = () => {
       name: category.name, 
       isActive: category.isActive 
     });
+    // set preview if image exists
+    if (category.image) {
+      // category.image is stored as '/uploads/categories/filename'
+      setImagePreview(`${backendUrl}${category.image}`);
+    } else {
+      setImagePreview(null);
+    }
     setIsModalOpen(true);
     setError("");
   };
@@ -95,6 +113,8 @@ export const AdminCategories = () => {
     setEditingCategory(null);
     setFormData({ name: "", isActive: true });
     setError("");
+    setImageFile(null);
+    setImagePreview(null);
   };
 
   // Submit category form (create or update)
@@ -106,6 +126,12 @@ export const AdminCategories = () => {
       return;
     }
 
+    // Image is mandatory for new categories, optional for updates
+    if (!editingCategory && !imageFile && !imagePreview) {
+      setError("Category image is required for new categories");
+      return;
+    }
+
     setSubmitting(true);
     setError("");
 
@@ -113,11 +139,19 @@ export const AdminCategories = () => {
       const url = editingCategory 
         ? `${backendUrl}/api/service-categories/${editingCategory._id}`
         : `${backendUrl}/api/service-categories`;
-      
       const method = editingCategory ? "put" : "post";
-      
-      const response = await axios[method](url, formData, {
-        withCredentials: true
+
+      // Use FormData to send image file when present
+      const payload = new FormData();
+      payload.append('name', formData.name);
+      payload.append('isActive', formData.isActive);
+      if (imageFile) {
+        payload.append('image', imageFile);
+      }
+
+      const response = await axios[method](url, payload, {
+        withCredentials: true,
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
 
       if (response.data.success) {
@@ -143,6 +177,7 @@ export const AdminCategories = () => {
 
   // Handle category deletion (soft delete)
   const handleDelete = async (categoryId) => {
+    // Deprecated: deletion replaced by toggle switch. Keep for compatibility.
     if (!window.confirm("Are you sure you want to deactivate this category?")) {
       return;
     }
@@ -169,6 +204,98 @@ export const AdminCategories = () => {
         "Error deleting category. Please try again."
       );
     }
+  };
+
+  const handleToggleActive = async (category) => {
+    const newStatus = !category.isActive;
+    setTogglingId(category._id);
+
+    // Optimistic UI update
+    setCategories(prev => prev.map(c => c._id === category._id ? { ...c, isActive: newStatus } : c));
+
+    try {
+      // update endpoint requires name, so send name + isActive
+      const payload = { name: category.name, isActive: newStatus };
+      const response = await axios.put(
+        `${backendUrl}/api/service-categories/${category._id}`,
+        payload,
+        { withCredentials: true }
+      );
+
+      if (response.data.success) {
+        setSuccess(newStatus ? "Category activated" : "Category deactivated");
+        setTimeout(() => setSuccess(""), 3000);
+      } else {
+        throw new Error(response.data.message || 'Failed to update status');
+      }
+    } catch (err) {
+      console.error('Toggle category error:', err);
+      setError(err.response?.data?.message || err.message || 'Error updating category status');
+      // revert optimistic change
+      setCategories(prev => prev.map(c => c._id === category._id ? { ...c, isActive: category.isActive } : c));
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    // Validate file
+    if (!file.type.startsWith("image/")) {
+      setImageError("Only image files are allowed");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setImageError("Image must be less than 2MB");
+      return;
+    }
+
+    setImageError("");
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setDragActive(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setDragActive(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragActive(false);
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!file) return;
+
+    // reuse same validation
+    if (!file.type.startsWith("image/")) {
+      setImageError("Only image files are allowed");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setImageError("Image must be less than 2MB");
+      return;
+    }
+
+    setImageError("");
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    setImageError("");
   };
 
   // Clear messages
@@ -204,6 +331,42 @@ export const AdminCategories = () => {
           <p className="text-gray-600">
             Add, edit, or deactivate service categories for your platform
           </p>
+        </div>
+
+        {/* Stats (clickable filters) */}
+        <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <button
+            type="button"
+            onClick={() => setStatusFilter('all')}
+            className={`bg-white p-4 rounded-lg border ${statusFilter === 'all' ? 'border-blue-400 shadow-sm' : 'border-gray-200'} text-left`}
+          >
+            <div className="text-2xl font-bold text-gray-900">
+              {categories.length}
+            </div>
+            <div className="text-sm text-gray-600">Total Categories</div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStatusFilter('active')}
+            className={`bg-white p-4 rounded-lg border ${statusFilter === 'active' ? 'border-blue-400 shadow-sm' : 'border-gray-200'} text-left`}
+          >
+            <div className="text-2xl font-bold text-green-600">
+              {categories.filter(c => c.isActive).length}
+            </div>
+            <div className="text-sm text-gray-600">Active Categories</div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setStatusFilter('inactive')}
+            className={`bg-white p-4 rounded-lg border ${statusFilter === 'inactive' ? 'border-blue-400 shadow-sm' : 'border-gray-200'} text-left`}
+          >
+            <div className="text-2xl font-bold text-red-600">
+              {categories.filter(c => !c.isActive).length}
+            </div>
+            <div className="text-sm text-gray-600">Inactive Categories</div>
+          </button>
         </div>
 
         {/* Success/Error Messages */}
@@ -312,9 +475,18 @@ export const AdminCategories = () => {
                   {filteredCategories.map((category) => (
                     <tr key={category._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {category.name}
-                        </div>
+                          <div className="flex items-center space-x-3">
+                            {category.image && (
+                              <img
+                                src={`${backendUrl}${category.image}`}
+                                alt={category.name}
+                                className="h-10 w-10 rounded object-cover"
+                              />
+                            )}
+                            <div className="text-sm font-medium text-gray-900">
+                              {category.name}
+                            </div>
+                          </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
@@ -336,15 +508,28 @@ export const AdminCategories = () => {
                           >
                             <Edit className="h-4 w-4" />
                           </button>
-                          {category.isActive && (
+                          {/* Toggle switch to activate/deactivate category (replaces delete) */}
+                          <div className="flex items-center space-x-3">
                             <button
-                              onClick={() => handleDelete(category._id)}
-                              className="text-red-600 hover:text-red-900 p-1 rounded transition-colors"
-                              title="Deactivate category"
+                              type="button"
+                              onClick={() => handleToggleActive(category)}
+                              disabled={togglingId === category._id}
+                              aria-pressed={category.isActive}
+                              title={category.isActive ? 'Deactivate category' : 'Activate category'}
+                              className={`relative inline-flex items-center h-6 w-11 rounded-full transition-colors focus:outline-none ${
+                                category.isActive ? 'bg-green-500' : 'bg-gray-300'
+                              } ${togglingId === category._id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <span
+                                className={`inline-block w-4 h-4 bg-white rounded-full shadow transform transition-transform ${
+                                  category.isActive ? 'translate-x-5' : 'translate-x-1'
+                                }`}
+                              />
                             </button>
-                          )}
+                            <span className="text-sm text-gray-700">
+                              {category.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -355,27 +540,7 @@ export const AdminCategories = () => {
           )}
         </div>
 
-        {/* Stats */}
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <div className="text-2xl font-bold text-gray-900">
-              {categories.length}
-            </div>
-            <div className="text-sm text-gray-600">Total Categories</div>
-          </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <div className="text-2xl font-bold text-green-600">
-              {categories.filter(c => c.isActive).length}
-            </div>
-            <div className="text-sm text-gray-600">Active Categories</div>
-          </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <div className="text-2xl font-bold text-red-600">
-              {categories.filter(c => !c.isActive).length}
-            </div>
-            <div className="text-sm text-gray-600">Inactive Categories</div>
-          </div>
-        </div>
+        
       </div>
 
       {/* Create/Edit Modal */}
@@ -404,28 +569,86 @@ export const AdminCategories = () => {
                       disabled={submitting}
                     />
                   </div>
-                  
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="isActive"
-                      name="isActive"
-                      checked={formData.isActive}
-                      onChange={handleInputChange}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      disabled={submitting}
-                    />
-                    <label htmlFor="isActive" className="ml-2 block text-sm text-gray-700">
-                      Active Category
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Category Image *
                     </label>
+                    <div
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer ${
+                        dragActive ? "border-blue-400 bg-blue-50" : "border-gray-300 hover:border-blue-400"
+                      }`}
+                    >
+                      {imageFile ? (
+                        <div className="flex items-center justify-between bg-blue-50 px-3 py-2 rounded">
+                          <span className="text-sm text-blue-700 font-medium truncate">
+                            {imageFile.name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={removeImage}
+                            className="text-red-500 hover:text-red-700 ml-2 font-bold text-lg"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ) : (
+                        <label htmlFor="category-image-input" className="cursor-pointer block">
+                          <svg
+                            className="w-10 h-10 mx-auto text-gray-400 mb-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                            />
+                          </svg>
+                          <span className="block text-blue-600 hover:text-blue-700 text-sm font-medium">
+                            Upload Category Image
+                          </span>
+                          <p className="text-xs text-gray-500 mt-1">
+                            JPG, PNG (2MB max) {!editingCategory && <span className="text-red-600 font-medium">- Required</span>}
+                          </p>
+                          <input
+                            id="category-image-input"
+                            type="file"
+                            name="image"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            disabled={submitting}
+                            className="hidden"
+                          />
+                        </label>
+                      )}
+                    </div>
+
+                    {imageError && (
+                      <p className="text-red-500 text-xs mt-2">
+                        {imageError}
+                      </p>
+                    )}
+
+                    {imagePreview && (
+                      <div className="mt-3 flex justify-center">
+                        <img src={imagePreview} alt="preview" className="h-24 w-24 object-cover rounded" />
+                      </div>
+                    )}
                   </div>
+                  
+                  {/* Category active state is managed via the table toggle; modal does not allow changing active state. New categories default to active. */}
                 </div>
 
                 <div className="mt-6 flex justify-end space-x-3">
                   <button
                     type="button"
                     onClick={handleCloseModal}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                     disabled={submitting}
                   >
                     Cancel
