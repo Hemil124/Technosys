@@ -4135,13 +4135,27 @@ export const Login = () => {
             </p>
           </div>
           <div className="mt-8 text-center">
-            <p className="text-sm opacity-80">Already have an account?</p>
-            <button
-              onClick={() => setState("Login")}
-              className="mt-2 px-6 py-2 bg-white text-indigo-700 rounded-full font-medium hover:bg-gray-100 transition-colors"
-            >
-              Sign In
-            </button>
+            {state === "Sign Up" ? (
+              <>
+                <p className="text-sm opacity-80">Already have an account?</p>
+                <button
+                  onClick={() => setState("Login")}
+                  className="mt-2 px-6 py-2 bg-white text-indigo-700 rounded-full font-medium hover:bg-gray-100 transition-colors"
+                >
+                  Sign In
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm opacity-80">Don't have an account?</p>
+                <button
+                  onClick={() => setState("Sign Up")}
+                  className="mt-2 px-6 py-2 bg-white text-indigo-700 rounded-full font-medium hover:bg-gray-100 transition-colors"
+                >
+                  Sign Up
+                </button>
+              </>
+            )}
           </div>
         </div>
 
