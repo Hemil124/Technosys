@@ -1066,7 +1066,7 @@ export const sendMobileOtp = async (req, res) => {
     if (process.env.NODE_ENV === "production") {
       // Twilio SMS
       await twilioClient.messages.create({
-        body: `Your Technosys verification code is: ${otp}`,
+        body: `Your Technosys verification code is: ${otp}.This OTP is valid for 2 minutes.`,
         from: process.env.TWILIO_PHONE_NUMBER,
         to: `+91${mobile}`,
       });
@@ -1162,7 +1162,7 @@ export const sendEmailOtp = async (req, res) => {
       from: process.env.SENDER_EMAIL,
       to: email,
       subject: "Technosys Email Verification OTP",
-      html: `<h3>Your OTP is: ${otp}</h3><p>Valid for 15 minutes</p>`,
+      html: `<h3>Your OTP is: ${otp}</h3><p>Valid for 2 minutes</p>`,
     });
 
     return res.status(200).json({

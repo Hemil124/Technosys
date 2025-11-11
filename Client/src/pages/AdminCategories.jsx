@@ -1,13 +1,17 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import { 
   Plus, 
   Edit, 
-  Trash2, 
   Search, 
-  Check, 
-  X, 
-  AlertCircle,
-  Loader2 
+  Loader2,
+  Folder,
+  FolderOpen,
+  ChevronRight,
+  ChevronDown,
+  Filter,
+  ChevronUp,
+  Grid3X3,
+  List
 } from "lucide-react";
 import { AppContext } from "../context/AppContext";
 import axios from "axios";
@@ -15,99 +19,184 @@ import { toast } from "react-toastify";
 
 export const AdminCategories = () => {
   const { backendUrl, userData } = useContext(AppContext);
+  
+  // State for both categories and sub-categories
   const [categories, setCategories] = useState([]);
+  const [subCategories, setSubCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // View state - 'service' or 'sub-service'
+  const [currentView, setCurrentView] = useState('service');
+  
+  // Service Categories State
+  const [serviceSearchTerm, setServiceSearchTerm] = useState("");
+  const [serviceStatusFilter, setServiceStatusFilter] = useState('all');
+  const [expandedCategories, setExpandedCategories] = useState(new Set());
+  
+  // Sub-Service Categories State
+  const [subServiceSearchTerm, setSubServiceSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [categorySearchTerm, setCategorySearchTerm] = useState("");
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [subServiceStatusFilter, setSubServiceStatusFilter] = useState('all');
+  const [showSubServiceFilters, setShowSubServiceFilters] = useState(false);
+  
+  // Modal states
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isSubCategoryModalOpen, setIsSubCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
-  const [formData, setFormData] = useState({ name: "", isActive: true });
+  const [editingSubCategory, setEditingSubCategory] = useState(null);
+  
+  // Form states
+  const [categoryForm, setCategoryForm] = useState({ name: "", isActive: true });
+  const [subCategoryForm, setSubCategoryForm] = useState({ 
+    name: "", 
+    serviceCategoryId: "", 
+    price: 0, 
+    coinsRequired: 0, 
+    isActive: true 
+  });
+  
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
-  const [dragActive, setDragActive] = useState(false);
-  const [imageError, setImageError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [togglingId, setTogglingId] = useState(null);
+  const categoryDropdownRef = useRef(null);
 
-  // Fetch categories on component mount
+  // Fetch all data on component mount
   useEffect(() => {
-    fetchCategories();
+    fetchAllData();
   }, []);
 
-  // Reset page to 1 when filters change
+  // Close category dropdown when clicking outside
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, statusFilter]);
+    const onDocClick = (e) => {
+      if (showCategoryDropdown && categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target)) {
+        setShowCategoryDropdown(false);
+      }
+    };
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
+  }, [showCategoryDropdown]);
 
-  const fetchCategories = async () => {
+  const fetchAllData = async () => {
     try {
       setLoading(true);
-      
-      const response = await axios.get(`${backendUrl}/api/service-categories`, {
-        withCredentials: true
-      });
-      
-      console.log("Categories API Response:", response.data);
-      
-      if (response.data.success) {
-        setCategories(response.data.data || []);
-      } else {
-        toast.error("Failed to fetch categories");
-      }
-    } catch (err) {
-      console.error("Error fetching categories:", err);
-      toast.error(
-        err.response?.data?.message || 
-        "Error fetching categories. Please try again."
-      );
+      await Promise.all([fetchCategories(), fetchSubCategories()]);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast.error("Failed to load categories data");
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter categories based on search and status filter
-  const filteredCategories = categories.filter(category => {
-    const matchesSearch = category.name.toLowerCase().includes(searchTerm.toLowerCase());
-    if (!matchesSearch) return false;
-    if (statusFilter === 'all') return true;
-    if (statusFilter === 'active') return category.isActive;
-    if (statusFilter === 'inactive') return !category.isActive;
-    return true;
-  });
-
-  // Pagination
-  const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedCategories = filteredCategories.slice(startIndex, startIndex + itemsPerPage);
-
-  const handlePageChange = (page) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get(`${backendUrl}/api/service-categories`, {
+        withCredentials: true
+      });
+      if (response.data.success) {
+        setCategories(response.data.data || []);
+      }
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+      toast.error(err.response?.data?.message || "Error fetching categories");
     }
   };
 
-  // Handle form input changes
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value
-    }));
+  const fetchSubCategories = async () => {
+    try {
+      const response = await axios.get(`${backendUrl}/api/sub-service-categories?includeInactive=true`, {
+        withCredentials: true
+      });
+      if (response.data.success) {
+        setSubCategories(response.data.data || []);
+      }
+    } catch (err) {
+      console.error("Error fetching sub-categories:", err);
+      toast.error(err.response?.data?.message || "Error fetching sub-categories");
+    }
   };
 
-  // Open modal for creating new category
-  const handleCreateNew = () => {
+  // Service Categories Functions
+  const getSubCategoriesCount = (categoryId) => {
+    return subCategories.filter(sub => sub.serviceCategoryId === categoryId).length;
+  };
+
+  const getActiveSubCategoriesCount = (categoryId) => {
+    return subCategories.filter(sub => 
+      sub.serviceCategoryId === categoryId && sub.isActive
+    ).length;
+  };
+
+  const filteredServiceCategories = categories.filter(category => {
+    const matchesSearch = category.name.toLowerCase().includes(serviceSearchTerm.toLowerCase());
+    if (!matchesSearch) return false;
+    if (serviceStatusFilter === 'all') return true;
+    if (serviceStatusFilter === 'active') return category.isActive;
+    if (serviceStatusFilter === 'inactive') return !category.isActive;
+    return true;
+  });
+
+  const toggleCategory = (categoryId) => {
+    setExpandedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+      } else {
+        newSet.add(categoryId);
+      }
+      return newSet;
+    });
+  };
+
+  // Sub-Service Categories Functions
+  const filteredSubCategories = subCategories.filter(subCategory => {
+    const matchesSearch = subCategory.name.toLowerCase().includes(subServiceSearchTerm.toLowerCase());
+    if (!matchesSearch) return false;
+
+    if (categoryFilter && subCategory.serviceCategoryId !== categoryFilter) {
+      return false;
+    }
+
+    if (subServiceStatusFilter === 'active') return subCategory.isActive;
+    if (subServiceStatusFilter === 'inactive') return !subCategory.isActive;
+    
+    return true;
+  });
+
+  const getCategoryName = (categoryId) => {
+    const category = categories.find(c => c._id === categoryId);
+    return category ? category.name : 'Unknown Category';
+  };
+
+  // Stats calculations
+  const serviceStats = {
+    total: categories.length,
+    active: categories.filter(c => c.isActive).length,
+    inactive: categories.filter(c => !c.isActive).length,
+    totalSubs: subCategories.length
+  };
+
+  const subServiceStats = {
+    total: subCategories.length,
+    active: subCategories.filter(s => s.isActive).length,
+    inactive: subCategories.filter(s => !s.isActive).length
+  };
+
+  // Modal Handlers - Service Categories
+  const handleCreateCategory = () => {
     setEditingCategory(null);
-    setFormData({ name: "", isActive: true });
-    setIsModalOpen(true);
+    setCategoryForm({ name: "", isActive: true });
+    setImageFile(null);
+    setImagePreview(null);
+    setIsCategoryModalOpen(true);
   };
 
-  // Open modal for editing category
-  const handleEdit = (category) => {
+  const handleEditCategory = (category) => {
     setEditingCategory(category);
-    setFormData({ 
+    setCategoryForm({ 
       name: category.name, 
       isActive: category.isActive 
     });
@@ -116,30 +205,18 @@ export const AdminCategories = () => {
     } else {
       setImagePreview(null);
     }
-    setIsModalOpen(true);
+    setIsCategoryModalOpen(true);
   };
 
-  // Close modal and reset form
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingCategory(null);
-    setFormData({ name: "", isActive: true });
-    setImageFile(null);
-    setImagePreview(null);
-    setImageError("");
-  };
-
-  // Submit category form (create or update)
-  const handleSubmit = async (e) => {
+  const handleSubmitCategory = async (e) => {
     e.preventDefault();
     
-    if (!formData.name.trim()) {
+    if (!categoryForm.name.trim()) {
       toast.error("Category name is required");
       return;
     }
 
-    // Image is mandatory for new categories, optional for updates
-    if (!editingCategory && !imageFile && !imagePreview) {
+    if (!editingCategory && !imageFile) {
       toast.error("Category image is required for new categories");
       return;
     }
@@ -152,10 +229,9 @@ export const AdminCategories = () => {
         : `${backendUrl}/api/service-categories`;
       const method = editingCategory ? "put" : "post";
 
-      // Use FormData to send image file when present
       const payload = new FormData();
-      payload.append('name', formData.name);
-      payload.append('isActive', formData.isActive);
+      payload.append('name', categoryForm.name);
+      payload.append('isActive', categoryForm.isActive);
       if (imageFile) {
         payload.append('image', imageFile);
       }
@@ -167,128 +243,185 @@ export const AdminCategories = () => {
 
       if (response.data.success) {
         toast.success(editingCategory ? "Category updated successfully!" : "Category created successfully!");
-        handleCloseModal();
-        fetchCategories();
-      } else {
-        toast.error(response.data.message || "Something went wrong");
+        setIsCategoryModalOpen(false);
+        fetchAllData();
       }
     } catch (err) {
-      console.error("Error saving category:", err);
-      toast.error(
-        err.response?.data?.message || 
-        "Error saving category. Please try again."
-      );
+      toast.error(err.response?.data?.message || "Error saving category");
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Handle category deletion (soft delete)
-  const handleDelete = async (categoryId) => {
-    if (!window.confirm("Are you sure you want to deactivate this category?")) {
+  // Modal Handlers - Sub Service Categories
+  const handleCreateSubCategory = () => {
+    setEditingSubCategory(null);
+    setSubCategoryForm({ 
+      name: "", 
+      serviceCategoryId: "", 
+      price: 0, 
+      coinsRequired: 0, 
+      isActive: true 
+    });
+    setImageFile(null);
+    setImagePreview(null);
+    setIsSubCategoryModalOpen(true);
+  };
+
+  const handleEditSubCategory = (subCategory) => {
+    setEditingSubCategory(subCategory);
+    setSubCategoryForm({ 
+      name: subCategory.name, 
+      serviceCategoryId: subCategory.serviceCategoryId, 
+      price: subCategory.price, 
+      coinsRequired: subCategory.coinsRequired, 
+      isActive: subCategory.isActive 
+    });
+    if (subCategory.image) {
+      setImagePreview(`${backendUrl}${subCategory.image}`);
+    } else {
+      setImagePreview(null);
+    }
+    setIsSubCategoryModalOpen(true);
+  };
+
+  const handleSubmitSubCategory = async (e) => {
+    e.preventDefault();
+    
+    if (!subCategoryForm.name.trim()) {
+      toast.error("Sub-category name is required");
       return;
     }
 
+    if (!subCategoryForm.serviceCategoryId) {
+      toast.error("Please select a parent category");
+      return;
+    }
+
+    setSubmitting(true);
+
     try {
-      const response = await axios.delete(
-        `${backendUrl}/api/service-categories/${categoryId}`,
-        { withCredentials: true }
-      );
+      const url = editingSubCategory 
+        ? `${backendUrl}/api/sub-service-categories/${editingSubCategory._id}`
+        : `${backendUrl}/api/sub-service-categories`;
+      const method = editingSubCategory ? "put" : "post";
+
+      const payload = new FormData();
+      payload.append('name', subCategoryForm.name);
+      payload.append('serviceCategoryId', subCategoryForm.serviceCategoryId);
+      payload.append('price', subCategoryForm.price);
+      payload.append('coinsRequired', subCategoryForm.coinsRequired);
+      payload.append('isActive', subCategoryForm.isActive);
+      if (imageFile) {
+        payload.append('image', imageFile);
+      }
+
+      const response = await axios[method](url, payload, {
+        withCredentials: true,
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
 
       if (response.data.success) {
-        toast.success("Category deactivated successfully!");
-        fetchCategories();
-      } else {
-        toast.error(response.data.message || "Failed to delete category");
+        toast.success(editingSubCategory ? "Sub-category updated!" : "Sub-category created!");
+        setIsSubCategoryModalOpen(false);
+        fetchAllData();
       }
     } catch (err) {
-      console.error("Error deleting category:", err);
-      toast.error(
-        err.response?.data?.message || 
-        "Error deleting category. Please try again."
-      );
+      toast.error(err.response?.data?.message || "Error saving sub-category");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleToggleActive = async (category) => {
-    const newStatus = !category.isActive;
-    setTogglingId(category._id);
+  // Toggle active status
+  // const handleToggleActive = async (item, type) => {
+  //   const newStatus = !item.isActive;
+  //   setTogglingId(item._id);
 
-    // Optimistic UI update
-    setCategories(prev => prev.map(c => c._id === category._id ? { ...c, isActive: newStatus } : c));
+  //   try {
+  //     if (type === 'category') {
+  //       const payload = { name: item.name, isActive: newStatus };
+  //       await axios.put(
+  //         `${backendUrl}/api/service-categories/${item._id}`,
+  //         payload,
+  //         { withCredentials: true }
+  //       );
+  //       setCategories(prev => prev.map(c => c._id === item._id ? { ...c, isActive: newStatus } : c));
+  //     } else {
+  //       const payload = { 
+  //         name: item.name, 
+  //         price: item.price,
+  //         coinsRequired: item.coinsRequired,
+  //         isActive: newStatus 
+  //       };
+  //       await axios.put(
+  //         `${backendUrl}/api/sub-service-categories/${item._id}`,
+  //         payload,
+  //         { withCredentials: true }
+  //       );
+  //       setSubCategories(prev => prev.map(s => s._id === item._id ? { ...s, isActive: newStatus } : s));
+  //     }
+  //     toast.success(newStatus ? "Item activated!" : "Item deactivated!");
+  //   } catch (err) {
+  //     toast.error("Error updating status");
+  //   } finally {
+  //     setTogglingId(null);
+  //   }
+  // };
 
-    try {
-      // update endpoint requires name, so send name + isActive
-      const payload = { name: category.name, isActive: newStatus };
-      const response = await axios.put(
-        `${backendUrl}/api/service-categories/${category._id}`,
+  // Toggle active status - Updated version
+const handleToggleActive = async (item, type) => {
+  const newStatus = !item.isActive;
+  setTogglingId(item._id);
+
+  try {
+    if (type === 'category') {
+      const payload = { name: item.name, isActive: newStatus };
+      await axios.put(
+        `${backendUrl}/api/service-categories/${item._id}`,
         payload,
         { withCredentials: true }
       );
-
-      if (response.data.success) {
-        toast.success(newStatus ? "Category activated successfully!" : "Category deactivated successfully!");
-      } else {
-        throw new Error(response.data.message || 'Failed to update status');
-      }
-    } catch (err) {
-      console.error('Toggle category error:', err);
-      toast.error(err.response?.data?.message || err.message || 'Error updating category status');
-      // revert optimistic change
-      setCategories(prev => prev.map(c => c._id === category._id ? { ...c, isActive: category.isActive } : c));
-    } finally {
-      setTogglingId(null);
+      
+      // Refresh all data to get updated sub-categories
+      await fetchAllData();
+      
+    } else {
+      const payload = { 
+        name: item.name, 
+        price: item.price,
+        coinsRequired: item.coinsRequired,
+        isActive: newStatus 
+      };
+      await axios.put(
+        `${backendUrl}/api/sub-service-categories/${item._id}`,
+        payload,
+        { withCredentials: true }
+      );
+      setSubCategories(prev => prev.map(s => s._id === item._id ? { ...s, isActive: newStatus } : s));
     }
-  };
+    toast.success(newStatus ? "Item activated!" : "Item deactivated!");
+  } catch (err) {
+    toast.error("Error updating status");
+  } finally {
+    setTogglingId(null);
+  }
+};
 
+  // Image handling
   const handleImageChange = (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
 
-    // Validate file
     if (!file.type.startsWith("image/")) {
-      setImageError("Only image files are allowed");
+      toast.error("Only image files are allowed");
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      setImageError("Image must be less than 2MB");
+      toast.error("Image must be less than 2MB");
       return;
     }
 
-    setImageError("");
-    setImageFile(file);
-    const reader = new FileReader();
-    reader.onload = () => setImagePreview(reader.result);
-    reader.readAsDataURL(file);
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setDragActive(true);
-  };
-
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    setDragActive(false);
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragActive(false);
-    const file = e.dataTransfer.files && e.dataTransfer.files[0];
-    if (!file) return;
-
-    // reuse same validation
-    if (!file.type.startsWith("image/")) {
-      setImageError("Only image files are allowed");
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      setImageError("Image must be less than 2MB");
-      return;
-    }
-
-    setImageError("");
     setImageFile(file);
     const reader = new FileReader();
     reader.onload = () => setImagePreview(reader.result);
@@ -298,13 +431,7 @@ export const AdminCategories = () => {
   const removeImage = () => {
     setImageFile(null);
     setImagePreview(null);
-    setImageError("");
   };
-
-  // Debug information (remove in production)
-  console.log("Current categories state:", categories);
-  console.log("Filtered categories:", filteredCategories);
-  console.log("Loading state:", loading);
 
   if (loading) {
     return (
@@ -323,169 +450,177 @@ export const AdminCategories = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Manage Categories
+            Service & Sub-Service Categories
           </h1>
           <p className="text-gray-600">
-            Add, edit, or deactivate service categories for your platform
+            Manage all service categories and their sub-categories in one place
           </p>
         </div>
 
-        {/* Stats (clickable filters) */}
-        <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <button
-            type="button"
-            onClick={() => setStatusFilter('all')}
-            className={`bg-white p-4 rounded-lg border ${statusFilter === 'all' ? 'border-blue-400 shadow-sm' : 'border-gray-200'} text-left`}
-          >
-            <div className="text-2xl font-bold text-gray-900">
-              {categories.length}
-            </div>
-            <div className="text-sm text-gray-600">Total Categories</div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setStatusFilter('active')}
-            className={`bg-white p-4 rounded-lg border ${statusFilter === 'active' ? 'border-blue-400 shadow-sm' : 'border-gray-200'} text-left`}
-          >
-            <div className="text-2xl font-bold text-green-600">
-              {categories.filter(c => c.isActive).length}
-            </div>
-            <div className="text-sm text-gray-600">Active Categories</div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setStatusFilter('inactive')}
-            className={`bg-white p-4 rounded-lg border ${statusFilter === 'inactive' ? 'border-blue-400 shadow-sm' : 'border-gray-200'} text-left`}
-          >
-            <div className="text-2xl font-bold text-red-600">
-              {categories.filter(c => !c.isActive).length}
-            </div>
-            <div className="text-sm text-gray-600">Inactive Categories</div>
-          </button>
-        </div>
-
-        {/* Actions Bar */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-            {/* Search Input */}
-            <div className="relative flex-1 w-full sm:max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search categories..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            {/* Create New Button */}
+        {/* View Toggle */}
+        <div className="mb-6">
+          <div className="bg-white rounded-lg border border-gray-200 p-1 inline-flex">
             <button
-              onClick={handleCreateNew}
-              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+              onClick={() => setCurrentView('service')}
+              className={`px-4 py-2 rounded-md flex items-center space-x-2 transition-colors ${
+                currentView === 'service' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
             >
-              <Plus className="h-4 w-4" />
-              <span>Add New Category</span>
+              <Folder className="h-4 w-4" />
+              <span>Service Categories</span>
+            </button>
+            <button
+              onClick={() => setCurrentView('sub-service')}
+              className={`px-4 py-2 rounded-md flex items-center space-x-2 transition-colors ${
+                currentView === 'sub-service' 
+                  ? 'bg-green-600 text-white' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Grid3X3 className="h-4 w-4" />
+              <span>Sub Service Categories</span>
             </button>
           </div>
         </div>
 
-        {/* Categories Grid */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          {filteredCategories.length === 0 && categories.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-gray-400 mb-4">
-                <Search className="h-12 w-12 mx-auto" />
+        {/* SERVICE CATEGORIES VIEW */}
+        {currentView === 'service' && (
+          <>
+            {/* Service Categories Stats */}
+            <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white p-4 rounded-lg border border-gray-200 text-left">
+                <div className="text-2xl font-bold text-gray-900">
+                  {serviceStats.total}
+                </div>
+                <div className="text-sm text-gray-600">Total Categories</div>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No categories found
-              </h3>
-              <p className="text-gray-500 mb-4">
-                Get started by creating your first category
-              </p>
-              <button
-                onClick={handleCreateNew}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 mx-auto"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Add New Category</span>
-              </button>
-            </div>
-          ) : filteredCategories.length === 0 && searchTerm ? (
-            <div className="text-center py-12">
-              <div className="text-gray-400 mb-4">
-                <Search className="h-12 w-12 mx-auto" />
+
+              <div className="bg-white p-4 rounded-lg border border-gray-200 text-left">
+                <div className="text-2xl font-bold text-green-600">
+                  {serviceStats.active}
+                </div>
+                <div className="text-sm text-gray-600">Active Categories</div>
               </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No matching categories found
-              </h3>
-              <p className="text-gray-500">
-                Try adjusting your search terms
-              </p>
+
+              <div className="bg-white p-4 rounded-lg border border-gray-200 text-left">
+                <div className="text-2xl font-bold text-red-600">
+                  {serviceStats.inactive}
+                </div>
+                <div className="text-sm text-gray-600">Inactive Categories</div>
+              </div>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Category Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {paginatedCategories.map((category) => (
-                    <tr key={category._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center space-x-3">
-                            {category.image && (
+
+            {/* Service Categories Actions */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+              <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+                <div className="relative flex-1 w-full sm:max-w-md">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search service categories..."
+                    value={serviceSearchTerm}
+                    onChange={(e) => setServiceSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="w-full sm:w-auto">
+                  <select
+                    value={serviceStatusFilter}
+                    onChange={(e) => setServiceStatusFilter(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="active">Active Only</option>
+                    <option value="inactive">Inactive Only</option>
+                  </select>
+                </div>
+
+                <button
+                  onClick={handleCreateCategory}
+                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Add Service Category</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Service Categories List */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              {filteredServiceCategories.length === 0 ? (
+                <div className="text-center py-12">
+                  <Folder className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    No categories found
+                  </h3>
+                  <p className="text-gray-500 mb-4">
+                    {serviceSearchTerm ? "Try adjusting your search terms" : "Get started by creating your first category"}
+                  </p>
+                  <button
+                    onClick={handleCreateCategory}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 mx-auto"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Add Service Category</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-200">
+                  {filteredServiceCategories.map((category) => {
+                    const isExpanded = expandedCategories.has(category._id);
+                    const subCount = getSubCategoriesCount(category._id);
+                    const activeSubCount = getActiveSubCategoriesCount(category._id);
+
+                    return (
+                      <div key={category._id} className="hover:bg-gray-50">
+                        {/* Category Row */}
+                        <div className="px-6 py-4 flex items-center justify-between">
+                          <div className="flex items-center space-x-3 flex-1">
+                            {category.image ? (
                               <img
                                 src={`${backendUrl}${category.image}`}
                                 alt={category.name}
-                                className="h-10 w-10 rounded object-cover"
+                                className="h-12 w-12 rounded-lg object-cover"
                               />
+                            ) : (
+                              <div className="h-12 w-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                                <Folder className="h-6 w-6 text-gray-500" />
+                              </div>
                             )}
-                            <div className="text-sm font-medium text-gray-900">
-                              {category.name}
+                            
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {category.name}
+                                </div>
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    category.isActive
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-red-100 text-red-800"
+                                  }`}
+                                >
+                                  {category.isActive ? "Active" : "Inactive"}
+                                </span>
+                              </div>
                             </div>
                           </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            category.isActive
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {category.isActive ? "Active" : "Inactive"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => handleEdit(category)}
-                            className="text-blue-600 hover:text-blue-900 p-1 rounded transition-colors"
-                            title="Edit category"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          {/* Toggle switch to activate/deactivate category (replaces delete) */}
-                          <div className="flex items-center space-x-3">
+                          
+                          <div className="flex items-center space-x-2">
                             <button
-                              type="button"
-                              onClick={() => handleToggleActive(category)}
+                              onClick={() => handleEditCategory(category)}
+                              className="text-blue-600 hover:text-blue-900 p-2 rounded transition-colors"
+                              title="Edit category"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            
+                            <button
+                              onClick={() => handleToggleActive(category, 'category')}
                               disabled={togglingId === category._id}
-                              aria-pressed={category.isActive}
-                              title={category.isActive ? 'Deactivate category' : 'Activate category'}
                               className={`relative inline-flex items-center h-6 w-11 rounded-full transition-colors focus:outline-none ${
                                 category.isActive ? 'bg-green-500' : 'bg-gray-300'
                               } ${togglingId === category._id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
@@ -496,200 +631,636 @@ export const AdminCategories = () => {
                                 }`}
                               />
                             </button>
-                            <span className="text-sm text-gray-700">
-                              {category.isActive ? 'Active' : 'Inactive'}
-                            </span>
                           </div>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Pagination Footer */}
-          {filteredCategories.length > 0 && (
-            <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between">
-              <div className="text-sm text-gray-600">
-                Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
-                <span className="font-medium">
-                  {Math.min(startIndex + itemsPerPage, filteredCategories.length)}
-                </span>{' '}
-                of <span className="font-medium">{filteredCategories.length}</span> categories
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Previous
-                </button>
-
-                {/* Page numbers */}
-                <div className="flex items-center space-x-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <button
-                      key={page}
-                      onClick={() => handlePageChange(page)}
-                      className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                        currentPage === page
-                          ? 'bg-blue-600 text-white'
-                          : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
+              )}
+            </div>
+          </>
+        )}
 
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Next
-                </button>
+        {/* SUB SERVICE CATEGORIES VIEW */}
+        {currentView === 'sub-service' && (
+          <>
+            {/* Sub Service Categories Stats */}
+            <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="text-2xl font-bold text-gray-900">
+                  {subServiceStats.total}
+                </div>
+                <div className="text-sm text-gray-600">Total Sub Categories</div>
+              </div>
+
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="text-2xl font-bold text-green-600">
+                  {subServiceStats.active}
+                </div>
+                <div className="text-sm text-gray-600">Active</div>
+              </div>
+
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="text-2xl font-bold text-red-600">
+                  {subServiceStats.inactive}
+                </div>
+                <div className="text-sm text-gray-600">Inactive</div>
               </div>
             </div>
-          )}
-        </div>
 
-        
-      </div>
-
-      {/* Create/Edit Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                {editingCategory ? "Edit Category" : "Create New Category"}
-              </h2>
-              
-              <form onSubmit={handleSubmit}>
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                      Category Name *
-                    </label>
+            {/* Sub Service Categories Actions */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+              <div className="flex flex-col gap-4">
+                {/* Top Row - Search and Add Button */}
+                <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+                  <div className="relative flex-1 w-full sm:max-w-md">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <input
                       type="text"
-                      id="name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Enter category name"
-                      disabled={submitting}
+                      placeholder="Search sub-categories..."
+                      value={subServiceSearchTerm}
+                      onChange={(e) => setSubServiceSearchTerm(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Category Image *
-                    </label>
-                    <div
-                      onDragOver={handleDragOver}
-                      onDragLeave={handleDragLeave}
-                      onDrop={handleDrop}
-                      className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer ${
-                        dragActive ? "border-blue-400 bg-blue-50" : "border-gray-300 hover:border-blue-400"
-                      }`}
+
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <button
+                      onClick={() => setShowSubServiceFilters(!showSubServiceFilters)}
+                      className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                     >
-                      {imageFile ? (
-                        <div className="flex items-center justify-between bg-blue-50 px-3 py-2 rounded">
-                          <span className="text-sm text-blue-700 font-medium truncate">
-                            {imageFile.name}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={removeImage}
-                            className="text-red-500 hover:text-red-700 ml-2 font-bold text-lg"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ) : (
-                        <label htmlFor="category-image-input" className="cursor-pointer block">
-                          <svg
-                            className="w-10 h-10 mx-auto text-gray-400 mb-2"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                            />
-                          </svg>
-                          <span className="block text-blue-600 hover:text-blue-700 text-sm font-medium">
-                            Upload Category Image
-                          </span>
-                          <p className="text-xs text-gray-500 mt-1">
-                            JPG, PNG (2MB max) {!editingCategory && <span className="text-red-600 font-medium">- Required</span>}
-                          </p>
+                      <Filter className="h-4 w-4" />
+                      <span>Filters</span>
+                      {showSubServiceFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </button>
+                    <button
+                      onClick={handleCreateSubCategory}
+                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Add Sub Category</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Filters Row */}
+                {showSubServiceFilters && (
+                  <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-gray-200">
+                    {/* Category Filter Dropdown - Searchable */}
+                    <div className="flex-1 relative">
+                      <label htmlFor="categoryFilter" className="block text-sm font-medium text-gray-700 mb-1">
+                        Filter by Category
+                      </label>
+                        <div className="relative" ref={categoryDropdownRef}>
                           <input
-                            id="category-image-input"
-                            type="file"
-                            name="image"
-                            accept="image/*"
-                            onChange={handleImageChange}
-                            disabled={submitting}
-                            className="hidden"
+                            type="text"
+                            placeholder="Search or select category..."
+                            value={categorySearchTerm}
+                            onChange={(e) => {
+                              setCategorySearchTerm(e.target.value);
+                              setShowCategoryDropdown(true);
+                            }}
+                            onFocus={() => setShowCategoryDropdown(true)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           />
-                        </label>
-                      )}
+
+                          {/* Dropdown Menu */}
+                          {showCategoryDropdown && (
+                            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                              <div
+                                onClick={() => {
+                                  setCategoryFilter("");
+                                  setCategorySearchTerm("");
+                                  setShowCategoryDropdown(false);
+                                }}
+                                className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-gray-700"
+                              >
+                                All Categories
+                              </div>
+                              {categories
+                                .filter(c => c.isActive && c.name.toLowerCase().includes(categorySearchTerm.toLowerCase()))
+                                .map(category => (
+                                  <div
+                                    key={category._id}
+                                    onClick={() => {
+                                      setCategoryFilter(category._id);
+                                      setCategorySearchTerm(category.name);
+                                      setShowCategoryDropdown(false);
+                                    }}
+                                    className={`px-3 py-2 hover:bg-blue-50 cursor-pointer ${
+                                      categoryFilter === category._id ? 'bg-blue-100 text-blue-900 font-medium' : 'text-gray-700'
+                                    }`}
+                                  >
+                                    {category.name}
+                                  </div>
+                                ))}
+                            </div>
+                          )}
+                        </div>
                     </div>
 
-                    {imageError && (
-                      <p className="text-red-500 text-xs mt-2">
-                        {imageError}
-                      </p>
-                    )}
-
-                    {imagePreview && (
-                      <div className="mt-3 flex justify-center">
-                        <img src={imagePreview} alt="preview" className="h-24 w-24 object-cover rounded" />
-                      </div>
-                    )}
+                    {/* Status Filter */}
+                    <div className="flex-1">
+                      <label htmlFor="subServiceStatusFilter" className="block text-sm font-medium text-gray-700 mb-1">
+                        Filter by Status
+                      </label>
+                      <select
+                        id="subServiceStatusFilter"
+                        value={subServiceStatusFilter}
+                        onChange={(e) => setSubServiceStatusFilter(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="all">All Status</option>
+                        <option value="active">Active Only</option>
+                        <option value="inactive">Inactive Only</option>
+                      </select>
+                    </div>
                   </div>
-                  
-                  {/* Category active state is managed via the table toggle; modal does not allow changing active state. New categories default to active. */}
+                )}
+              </div>
+            </div>
+
+            {/* Sub Service Categories List */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              {filteredSubCategories.length === 0 ? (
+                <div className="text-center py-12">
+                  <Grid3X3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    No sub-categories found
+                  </h3>
+                  <p className="text-gray-500 mb-4">
+                    {subServiceSearchTerm || categoryFilter || subServiceStatusFilter !== 'all' 
+                      ? "Try adjusting your filters" 
+                      : "Get started by creating your first sub-category"
+                    }
+                  </p>
+                  <button
+                    onClick={handleCreateSubCategory}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 mx-auto"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Add Sub Category</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-200">
+                  {filteredSubCategories.map((subCategory) => (
+                    <div key={subCategory._id} className="hover:bg-gray-50">
+                      <div className="px-6 py-4 flex items-center justify-between">
+                        <div className="flex items-center space-x-3 flex-1">
+                          {subCategory.image ? (
+                            <img
+                              src={`${backendUrl}${subCategory.image}`}
+                              alt={subCategory.name}
+                              className="h-12 w-12 rounded-lg object-cover"
+                            />
+                          ) : (
+                            <div className="h-12 w-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                              <Grid3X3 className="h-6 w-6 text-gray-500" />
+                            </div>
+                          )}
+                          
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3">
+                              <div className="text-sm font-medium text-gray-900">
+                                {subCategory.name}
+                              </div>
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  subCategory.isActive
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
+                                }`}
+                              >
+                                {subCategory.isActive ? "Active" : "Inactive"}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              Parent: {getCategoryName(subCategory.serviceCategoryId)} • 
+                              ₹{subCategory.price} • {subCategory.coinsRequired} coins
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => handleEditSubCategory(subCategory)}
+                            className="text-blue-600 hover:text-blue-900 p-2 rounded transition-colors"
+                            title="Edit sub-category"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          
+                          <button
+                            onClick={() => handleToggleActive(subCategory, 'subCategory')}
+                            disabled={togglingId === subCategory._id}
+                            className={`relative inline-flex items-center h-6 w-11 rounded-full transition-colors focus:outline-none ${
+                              subCategory.isActive ? 'bg-green-500' : 'bg-gray-300'
+                            } ${togglingId === subCategory._id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                          >
+                            <span
+                              className={`inline-block w-4 h-4 bg-white rounded-full shadow transform transition-transform ${
+                                subCategory.isActive ? 'translate-x-5' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Service Category Modal */}
+        {isCategoryModalOpen && (
+          <CategoryModal
+            categoryForm={categoryForm}
+            setCategoryForm={setCategoryForm}
+            imagePreview={imagePreview}
+            handleImageChange={handleImageChange}
+            removeImage={removeImage}
+            handleSubmit={handleSubmitCategory}
+            handleClose={() => setIsCategoryModalOpen(false)}
+            editingCategory={editingCategory}
+            submitting={submitting}
+          />
+        )}
+
+        {/* Sub Category Modal */}
+        {isSubCategoryModalOpen && (
+          <SubCategoryModal
+            subCategoryForm={subCategoryForm}
+            setSubCategoryForm={setSubCategoryForm}
+            categories={categories}
+            imagePreview={imagePreview}
+            handleImageChange={handleImageChange}
+            removeImage={removeImage}
+            handleSubmit={handleSubmitSubCategory}
+            handleClose={() => setIsSubCategoryModalOpen(false)}
+            editingSubCategory={editingSubCategory}
+            submitting={submitting}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Modal Components
+const CategoryModal = ({
+  categoryForm,
+  setCategoryForm,
+  imagePreview,
+  handleImageChange,
+  removeImage,
+  handleSubmit,
+  handleClose,
+  editingCategory,
+  submitting
+}) => {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div className="p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            {editingCategory ? "Edit Category" : "Create New Category"}
+          </h2>
+          
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                  Category Name *
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={categoryForm.name}
+                  onChange={(e) => setCategoryForm({...categoryForm, name: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter category name"
+                  disabled={submitting}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Category Image {!editingCategory && "*"}
+                </label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors cursor-pointer">
+                  {imagePreview ? (
+                    <div className="flex items-center justify-between bg-blue-50 px-3 py-2 rounded">
+                      <span className="text-sm text-blue-700 font-medium truncate">
+                        Image selected
+                      </span>
+                      <button
+                        type="button"
+                        onClick={removeImage}
+                        className="text-red-500 hover:text-red-700 ml-2 font-bold text-lg"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <label htmlFor="category-image-input" className="cursor-pointer block">
+                      <svg
+                        className="w-10 h-10 mx-auto text-gray-400 mb-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                        />
+                      </svg>
+                      <span className="block text-blue-600 hover:text-blue-700 text-sm font-medium">
+                        Upload Category Image
+                      </span>
+                      <p className="text-xs text-gray-500 mt-1">
+                        JPG, PNG (2MB max) {!editingCategory && <span className="text-red-600 font-medium">- Required</span>}
+                      </p>
+                      <input
+                        id="category-image-input"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        disabled={submitting}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
                 </div>
 
-                <div className="mt-6 flex justify-end space-x-3">
-                  <button
-                    type="button"
-                    onClick={handleCloseModal}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-                    disabled={submitting}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center space-x-2 transition-colors disabled:opacity-50"
-                  >
-                    {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                    <span>
-                      {submitting 
-                        ? (editingCategory ? "Updating..." : "Creating...")
-                        : (editingCategory ? "Update Category" : "Create Category")
-                      }
-                    </span>
-                  </button>
-                </div>
-              </form>
+                {imagePreview && (
+                  <div className="mt-3 flex justify-center">
+                    <img src={imagePreview} alt="preview" className="h-24 w-24 object-cover rounded" />
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={handleClose}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                disabled={submitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center space-x-2 transition-colors disabled:opacity-50"
+              >
+                {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                <span>
+                  {submitting 
+                    ? (editingCategory ? "Updating..." : "Creating...")
+                    : (editingCategory ? "Update Category" : "Create Category")
+                  }
+                </span>
+              </button>
+            </div>
+          </form>
         </div>
-      )}
+      </div>
+    </div>
+  );
+};
+
+const SubCategoryModal = ({
+  subCategoryForm,
+  setSubCategoryForm,
+  categories,
+  imagePreview,
+  handleImageChange,
+  removeImage,
+  handleSubmit,
+  handleClose,
+  editingSubCategory,
+  submitting
+}) => {
+  const [modalCategorySearch, setModalCategorySearch] = useState("");
+  const [showModalCategoryDropdown, setShowModalCategoryDropdown] = useState(false);
+  const modalCategoryRef = useRef(null);
+
+  // initialize modal category search when editing
+  useEffect(() => {
+    if (subCategoryForm.serviceCategoryId) {
+      const selected = categories.find(c => c._id === subCategoryForm.serviceCategoryId);
+      if (selected) setModalCategorySearch(selected.name);
+    } else {
+      setModalCategorySearch("");
+    }
+  }, [subCategoryForm.serviceCategoryId, categories]);
+
+  // close dropdown on outside click
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (showModalCategoryDropdown && modalCategoryRef.current && !modalCategoryRef.current.contains(e.target)) {
+        setShowModalCategoryDropdown(false);
+      }
+    };
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
+  }, [showModalCategoryDropdown]);
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div className="p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            {editingSubCategory ? "Edit Sub-Category" : "Create New Sub-Category"}
+          </h2>
+          
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="parentCategory" className="block text-sm font-medium text-gray-700 mb-1">
+                  Parent Category *
+                </label>
+                <div className="relative" ref={modalCategoryRef}>
+                  <input
+                    type="text"
+                    placeholder="Search or select category..."
+                    value={modalCategorySearch}
+                    onChange={(e) => {
+                      setModalCategorySearch(e.target.value);
+                      setShowModalCategoryDropdown(true);
+                    }}
+                    onFocus={() => setShowModalCategoryDropdown(true)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    disabled={submitting}
+                  />
+
+                  {/* Dropdown Menu */}
+                  {showModalCategoryDropdown && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                      {categories
+                        .filter(c => c.isActive && c.name.toLowerCase().includes(modalCategorySearch.toLowerCase()))
+                        .map(category => (
+                          <div
+                            key={category._id}
+                            onClick={() => {
+                              setSubCategoryForm({...subCategoryForm, serviceCategoryId: category._id});
+                              setModalCategorySearch(category.name);
+                              setShowModalCategoryDropdown(false);
+                            }}
+                            className={`px-3 py-2 hover:bg-blue-50 cursor-pointer ${
+                              subCategoryForm.serviceCategoryId === category._id ? 'bg-blue-100 text-blue-900 font-medium' : 'text-gray-700'
+                            }`}
+                          >
+                            {category.name}
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="subCategoryName" className="block text-sm font-medium text-gray-700 mb-1">
+                  Sub-Category Name *
+                </label>
+                <input
+                  type="text"
+                  id="subCategoryName"
+                  value={subCategoryForm.name}
+                  onChange={(e) => setSubCategoryForm({...subCategoryForm, name: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter sub-category name"
+                  disabled={submitting}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
+                    Price (₹)
+                  </label>
+                  <input
+                    type="number"
+                    id="price"
+                    value={subCategoryForm.price}
+                    onChange={(e) => setSubCategoryForm({...subCategoryForm, price: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    disabled={submitting}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="coinsRequired" className="block text-sm font-medium text-gray-700 mb-1">
+                    Coins Required
+                  </label>
+                  <input
+                    type="number"
+                    id="coinsRequired"
+                    value={subCategoryForm.coinsRequired}
+                    onChange={(e) => setSubCategoryForm({...subCategoryForm, coinsRequired: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="0"
+                    min="0"
+                    disabled={submitting}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Sub-Category Image
+                </label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors cursor-pointer">
+                  {imagePreview ? (
+                    <div className="flex items-center justify-between bg-blue-50 px-3 py-2 rounded">
+                      <span className="text-sm text-blue-700 font-medium truncate">
+                        Image selected
+                      </span>
+                      <button
+                        type="button"
+                        onClick={removeImage}
+                        className="text-red-500 hover:text-red-700 ml-2 font-bold text-lg"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <label htmlFor="subcategory-image-input" className="cursor-pointer block">
+                      <svg
+                        className="w-10 h-10 mx-auto text-gray-400 mb-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                        />
+                      </svg>
+                      <span className="block text-blue-600 hover:text-blue-700 text-sm font-medium">
+                        Upload Sub-Category Image
+                      </span>
+                      <p className="text-xs text-gray-500 mt-1">
+                        JPG, PNG (2MB max)
+                      </p>
+                      <input
+                        id="subcategory-image-input"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        disabled={submitting}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
+
+                {imagePreview && (
+                  <div className="mt-3 flex justify-center">
+                    <img src={imagePreview} alt="preview" className="h-24 w-24 object-cover rounded" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={handleClose}
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                disabled={submitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg flex items-center space-x-2 transition-colors disabled:opacity-50"
+              >
+                {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                <span>
+                  {submitting 
+                    ? (editingSubCategory ? "Updating..." : "Creating...")
+                    : (editingSubCategory ? "Update Sub-Category" : "Create Sub-Category")
+                  }
+                </span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   );
 };

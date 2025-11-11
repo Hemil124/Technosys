@@ -1,4 +1,3 @@
-// src/components/CustomerNavbar.jsx
 import React, { useContext, useState, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { AppContext } from "../context/AppContext";
@@ -9,8 +8,7 @@ import { assets } from "../assets/assets";
 
 const CustomerNavbar = () => {
   const navigate = useNavigate();
-  const { userData, setIsLoggedIn, setUserData, backendUrl } =
-    useContext(AppContext);
+  const { userData, setIsLoggedIn, setUserData, backendUrl } = useContext(AppContext);
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -50,7 +48,7 @@ const CustomerNavbar = () => {
       <div className="w-full bg-gray-900 text-white fixed top-0 z-50 shadow-md">
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            
+
             {/* Left - Logo */}
             <div
               onClick={() => navigate("/customer/dashboard")}
@@ -58,23 +56,6 @@ const CustomerNavbar = () => {
             >
               <img src={assets.navbarlogo} alt="Logo" className="w-10 h-10" />
             </div>
-
-            {/* Middle - Booked Services */}
-            <nav className="hidden md:flex space-x-1">
-              <NavLink
-                to="/customer/bookings"
-                className={({ isActive }) =>
-                  `flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                    isActive
-                      ? "bg-blue-600 text-white shadow-md"
-                      : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                  }`
-                }
-              >
-                <History size={18} className="mr-2" />
-                Booked Services
-              </NavLink>
-            </nav>
 
             {/* Right - Profile Dropdown */}
             <div className="relative profile-menu">
@@ -95,6 +76,16 @@ const CustomerNavbar = () => {
                     <User size={16} className="mr-3" />
                     Profile
                   </NavLink>
+
+                  <NavLink
+                    to="/customer/bookings"
+                    onClick={() => setProfileMenuOpen(false)}
+                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                  >
+                    <History size={16} className="mr-3" />
+                    My Bookings
+                  </NavLink>
+
                   <NavLink
                     to="/customer/settings"
                     onClick={() => setProfileMenuOpen(false)}
@@ -103,6 +94,7 @@ const CustomerNavbar = () => {
                     <Settings size={16} className="mr-3" />
                     Settings
                   </NavLink>
+
                   <button
                     onClick={() => {
                       logout();
@@ -131,18 +123,25 @@ const CustomerNavbar = () => {
             <div className="md:hidden bg-gray-800 border-t border-gray-700">
               <div className="px-2 py-3 space-y-1">
                 <NavLink
+                  to="/customer/profile"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
+                >
+                  <User size={18} className="mr-3" /> Profile
+                </NavLink>
+                <NavLink
                   to="/customer/bookings"
                   onClick={() => setMobileMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center px-3 py-2 rounded-md text-base font-medium transition-all duration-200 ${
-                      isActive
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "text-gray-300 hover:bg-gray-700 hover:text-white"
-                    }`
-                  }
+                  className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
                 >
-                  <History size={18} className="mr-3" />
-                  Booked Services
+                  <History size={18} className="mr-3" /> My Bookings
+                </NavLink>
+                <NavLink
+                  to="/customer/settings"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
+                >
+                  <Settings size={18} className="mr-3" /> Settings
                 </NavLink>
                 <button
                   onClick={() => {
