@@ -32,6 +32,9 @@ export const AdminCategories = () => {
   const [serviceSearchTerm, setServiceSearchTerm] = useState("");
   const [serviceStatusFilter, setServiceStatusFilter] = useState('all');
   const [expandedCategories, setExpandedCategories] = useState(new Set());
+  // Pagination for service categories
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(7);
   
   // Sub-Service Categories State
   const [subServiceSearchTerm, setSubServiceSearchTerm] = useState("");
@@ -40,6 +43,9 @@ export const AdminCategories = () => {
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [subServiceStatusFilter, setSubServiceStatusFilter] = useState('all');
   const [showSubServiceFilters, setShowSubServiceFilters] = useState(false);
+  // Pagination for sub-service categories
+  const [currentSubPage, setCurrentSubPage] = useState(1);
+  const [subItemsPerPage, setSubItemsPerPage] = useState(7);
   
   // Modal states
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -139,6 +145,22 @@ export const AdminCategories = () => {
     return true;
   });
 
+  // Pagination calculations for service categories
+  const totalPages = Math.max(1, Math.ceil(filteredServiceCategories.length / itemsPerPage));
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedServiceCategories = filteredServiceCategories.slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset to first page when search/filter/category list changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [serviceSearchTerm, serviceStatusFilter, categories]);
+
+  // Ensure current page is within bounds when filtered list or items per page changes
+  useEffect(() => {
+    const newTotal = Math.max(1, Math.ceil(filteredServiceCategories.length / itemsPerPage));
+    if (currentPage > newTotal) setCurrentPage(newTotal);
+  }, [filteredServiceCategories.length, itemsPerPage, currentPage]);
+
   const toggleCategory = (categoryId) => {
     setExpandedCategories(prev => {
       const newSet = new Set(prev);
@@ -165,6 +187,22 @@ export const AdminCategories = () => {
     
     return true;
   });
+
+  // Pagination calculations for sub-service categories
+  const totalSubPages = Math.max(1, Math.ceil(filteredSubCategories.length / subItemsPerPage));
+  const subStartIndex = (currentSubPage - 1) * subItemsPerPage;
+  const paginatedSubCategories = filteredSubCategories.slice(subStartIndex, subStartIndex + subItemsPerPage);
+
+  // Reset to first page when sub-service filters/search/list changes
+  useEffect(() => {
+    setCurrentSubPage(1);
+  }, [subServiceSearchTerm, categoryFilter, subServiceStatusFilter, subCategories]);
+
+  // Ensure current sub page is within bounds when filtered list or items per page changes
+  useEffect(() => {
+    const newTotal = Math.max(1, Math.ceil(filteredSubCategories.length / subItemsPerPage));
+    if (currentSubPage > newTotal) setCurrentSubPage(newTotal);
+  }, [filteredSubCategories.length, subItemsPerPage, currentSubPage]);
 
   const getCategoryName = (categoryId) => {
     const category = categories.find(c => c._id === categoryId);
@@ -569,7 +607,7 @@ const handleToggleActive = async (item, type) => {
                 </div>
               ) : (
                 <div className="divide-y divide-gray-200">
-                  {filteredServiceCategories.map((category) => {
+                  {paginatedServiceCategories.map((category) => {
                     const isExpanded = expandedCategories.has(category._id);
                     const subCount = getSubCategoriesCount(category._id);
                     const activeSubCount = getActiveSubCategoriesCount(category._id);
@@ -636,6 +674,51 @@ const handleToggleActive = async (item, type) => {
                       </div>
                     );
                   })}
+                </div>
+              )}
+              {/* Pagination Footer */}
+              {filteredServiceCategories.length > 0 && (
+                <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
+                    <span className="font-medium">{Math.min(startIndex + itemsPerPage, filteredServiceCategories.length)}</span>{' '}
+                    of <span className="font-medium">{filteredServiceCategories.length}</span> categories
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Previous
+                    </button>
+
+                    {/* Page numbers */}
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                            currentPage === page
+                              ? 'bg-blue-600 text-white'
+                              : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -805,7 +888,7 @@ const handleToggleActive = async (item, type) => {
                 </div>
               ) : (
                 <div className="divide-y divide-gray-200">
-                  {filteredSubCategories.map((subCategory) => (
+                  {paginatedSubCategories.map((subCategory) => (
                     <div key={subCategory._id} className="hover:bg-gray-50">
                       <div className="px-6 py-4 flex items-center justify-between">
                         <div className="flex items-center space-x-3 flex-1">
@@ -871,6 +954,51 @@ const handleToggleActive = async (item, type) => {
                   ))}
                 </div>
               )}
+              {/* Pagination Footer for Sub-Categories */}
+              {filteredSubCategories.length > 0 && (
+                <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between">
+                  <div className="text-sm text-gray-600">
+                    Showing <span className="font-medium">{subStartIndex + 1}</span> to{' '}
+                    <span className="font-medium">{Math.min(subStartIndex + subItemsPerPage, filteredSubCategories.length)}</span>{' '}
+                    of <span className="font-medium">{filteredSubCategories.length}</span> sub-categories
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setCurrentSubPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentSubPage === 1}
+                      className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Previous
+                    </button>
+
+                    {/* Page numbers */}
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: totalSubPages }, (_, i) => i + 1).map(page => (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentSubPage(page)}
+                          className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                            currentSubPage === page
+                              ? 'bg-blue-600 text-white'
+                              : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={() => setCurrentSubPage(prev => Math.min(totalSubPages, prev + 1))}
+                      disabled={currentSubPage === totalSubPages}
+                      className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}
@@ -922,6 +1050,30 @@ const CategoryModal = ({
   editingCategory,
   submitting
 }) => {
+  const [dragActive, setDragActive] = useState(false);
+
+  const onDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(true);
+  };
+
+  const onDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+  };
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) {
+      // forward as synthetic event expected by handleImageChange
+      handleImageChange({ target: { files: [file] } });
+    }
+  };
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
@@ -952,7 +1104,13 @@ const CategoryModal = ({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Category Image {!editingCategory && "*"}
                 </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors cursor-pointer">
+                <div
+                  onDragOver={onDragOver}
+                  onDragEnter={onDragOver}
+                  onDragLeave={onDragLeave}
+                  onDrop={onDrop}
+                  className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer ${dragActive ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-blue-400'}`}
+                >
                   {imagePreview ? (
                     <div className="flex items-center justify-between bg-blue-50 px-3 py-2 rounded">
                       <span className="text-sm text-blue-700 font-medium truncate">
@@ -985,7 +1143,7 @@ const CategoryModal = ({
                         Upload Category Image
                       </span>
                       <p className="text-xs text-gray-500 mt-1">
-                        JPG, PNG (2MB max) {!editingCategory && <span className="text-red-600 font-medium">- Required</span>}
+                        Drop image here or click to upload — JPG, PNG (2MB max) {!editingCategory && <span className="text-red-600 font-medium">- Required</span>}
                       </p>
                       <input
                         id="category-image-input"
@@ -1052,6 +1210,29 @@ const SubCategoryModal = ({
   const [modalCategorySearch, setModalCategorySearch] = useState("");
   const [showModalCategoryDropdown, setShowModalCategoryDropdown] = useState(false);
   const modalCategoryRef = useRef(null);
+  const [dragActive, setDragActive] = useState(false);
+
+  const onDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(true);
+  };
+
+  const onDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+  };
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) {
+      handleImageChange({ target: { files: [file] } });
+    }
+  };
 
   // initialize modal category search when editing
   useEffect(() => {
@@ -1180,7 +1361,13 @@ const SubCategoryModal = ({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Sub-Category Image
                 </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors cursor-pointer">
+                <div
+                  onDragOver={onDragOver}
+                  onDragEnter={onDragOver}
+                  onDragLeave={onDragLeave}
+                  onDrop={onDrop}
+                  className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer ${dragActive ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-blue-400'}`}
+                >
                   {imagePreview ? (
                     <div className="flex items-center justify-between bg-blue-50 px-3 py-2 rounded">
                       <span className="text-sm text-blue-700 font-medium truncate">
@@ -1213,7 +1400,7 @@ const SubCategoryModal = ({
                         Upload Sub-Category Image
                       </span>
                       <p className="text-xs text-gray-500 mt-1">
-                        JPG, PNG (2MB max)
+                        Drop image here or click to upload — JPG, PNG (2MB max)
                       </p>
                       <input
                         id="subcategory-image-input"
