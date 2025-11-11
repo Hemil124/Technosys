@@ -51,6 +51,19 @@ import { AdminFeedbacks } from "./pages/AdminFeedbacks";
 import { AdminSettings } from "./pages/AdminSettings";
 import AdminCustomerList from "./pages/AdminCustomerList";
 import AdminTechnicianList from "./pages/AdminTechnicianList";
+import TechnicianLayout from "./components/TechnicianLayout";
+import TechnicianAvailability from "./pages/TechnicianAvailability";
+import TechnicianBookings from "./pages/TechnicianBookings";
+import TechnicianSubscription from "./pages/TechnicianSubscription";
+import TechnicianFeedbacks from "./pages/TechnicianFeedbacks";
+import TechnicianProfile from "./pages/TechnicianProfile";
+import TechnicianSettings from "./pages/TechnicianSettings";
+import CustomerProfile from "./pages/CustomerProfile";
+import CustomerBookings from "./pages/CustomerBookings";
+import CustomerSettings from "./pages/CustomerSettings";
+import CustomerLayout from "./components/CustomerLayout";
+import CustomerDashboard from "./pages/CustomerDashboard";
+import TechnicianDashboard from "./pages/TechnicianDashboard";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, role }) => {
@@ -82,7 +95,7 @@ const ProtectedRoute = ({ children, role }) => {
   if (role && userData?.role !== role) {
     // Redirect to correct dashboard based on user role
     if (userData?.role === "admin") return <Navigate to="/admin" />;
-    if (userData?.role === "technician") return <Navigate to="/technicion" />;
+    if (userData?.role === "technician") return <Navigate to="/technician" />;
     if (userData?.role === "customer") return <Navigate to="/customer" />;
 
     return <Navigate to="/" />;
@@ -145,7 +158,7 @@ const AuthRedirectHandler = () => {
         if (userData?.role === "admin") {
           navigate("/admin");
         } else if (userData?.role === "technician") {
-          navigate("/technicion");
+          navigate("/technician");
         } else if (userData?.role === "customer") {
           console.log("Redirecting to customer");
           navigate("/customer");
@@ -218,23 +231,41 @@ const App = () => {
 
         {/* 👨‍🔧 Technician Panel */}
         <Route
-          path="/technicion"
+          path="/technician"
           element={
             <ProtectedRoute role="technician">
-              <Technicion />
+              <TechnicianLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<TechnicianDashboard />} />
+          <Route path="availability" element={<TechnicianAvailability />} />
+          <Route path="bookings" element={<TechnicianBookings />} />
+          <Route path="subscription" element={<TechnicianSubscription />} />
+          <Route path="feedbacks" element={<TechnicianFeedbacks />} />
+          <Route path="profile" element={<TechnicianProfile />} />
+          <Route path="settings" element={<TechnicianSettings />} />
+        </Route>
+
 
         {/* 👥 Customer Panel */}
         <Route
           path="/customer"
           element={
             <ProtectedRoute role="customer">
-              <Customer />
+              <CustomerLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<CustomerDashboard />} />
+          <Route path="profile" element={<CustomerProfile />} />
+          <Route path="bookings" element={<CustomerBookings />} />
+          <Route path="settings" element={<CustomerSettings />} />
+        </Route>
+
+
 
         {/* ⚙️ Temp page (optional) */}
         <Route path="/temp" element={<TempPage />} />

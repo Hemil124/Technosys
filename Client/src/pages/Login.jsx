@@ -560,7 +560,7 @@
 //           if (data.userType === "admin") {
 //             navigate("/admin"); // Admins go to admin dashboard
 //           } else if (data.userType === "technician") {
-//             navigate("/technicion"); // Technicians go to home
+//             navigate("/technician"); // Technicians go to home
 //           } else {
 //             navigate("/"); // Fallback for any other role
 //           }
@@ -2505,7 +2505,7 @@
 //           if (data.userType === "admin") {
 //             navigate("/admin"); // Admins go to admin dashboard
 //           } else if (data.userType === "technician") {
-//             navigate("/technicion"); // Technicians go to home
+//             navigate("/technician"); // Technicians go to home
 //           } else {
 //             navigate("/"); // Fallback for any other role
 //           }
@@ -4073,7 +4073,7 @@ export const Login = () => {
           if (data.userType === "admin") {
             navigate("/admin"); // Admins go to admin dashboard
           } else if (data.userType === "technician") {
-            navigate("/technicion"); // Technicians go to home
+            navigate("/technician"); // Technicians go to home
           } else {
             navigate("/"); // Fallback for any other role
           }
