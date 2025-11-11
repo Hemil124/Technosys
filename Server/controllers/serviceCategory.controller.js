@@ -147,18 +147,17 @@ import SubServiceCategory from "../models/SubServiceCategory.js"; // Add this im
 
 export const getAllCategories = async (req, res) => {
   try {
+    // Return all categories (public endpoint). Admins and non-admins will receive
+    // the full list; frontend can choose how to present active/inactive ones.
     const categories = await ServiceCategory.find({})
       .sort({ name: 1 })
       .select("name isActive image");
 
-    // ✅ Simplified response for frontend
-    return res.json({ categories });
+    return res.json({ success: true, data: categories });
   } catch (error) {
-    console.error("Error fetching categories:", error);
-    return res.status(500).json({ message: "Failed to fetch categories" });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
-
 
 export const createCategory = async (req, res) => {
   try {
