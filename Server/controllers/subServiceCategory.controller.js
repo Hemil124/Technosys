@@ -8,20 +8,22 @@ export const getAllSubCategories = async (req, res) => {
     if (req.query.serviceCategoryId) {
       filter.serviceCategoryId = req.query.serviceCategoryId;
     }
-    // Only return active subcategories by default for public listing
-    if (req.query.includeInactive !== 'true') {
+    if (req.query.includeInactive !== "true") {
       filter.isActive = true;
     }
 
-    const subs = await SubServiceCategory.find(filter)
+    const subCategories = await SubServiceCategory.find(filter)
       .sort({ name: 1 })
       .select("name price coinsRequired serviceCategoryId image isActive");
 
-    return res.json({ success: true, data: subs });
+    // ✅ Simplified response for frontend
+    return res.json({ subCategories });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    console.error("Error fetching subcategories:", error);
+    return res.status(500).json({ message: "Failed to fetch subcategories" });
   }
 };
+
 
 export const getSubCategory = async (req, res) => {
   try {

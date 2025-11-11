@@ -109,6 +109,7 @@ app.get('/', (req, res) => res.send("API Working"));
 app.use('/api/auth', authRouter);
 app.use('/api/user', userRoutesr);
 app.use("/api/admin", adminRoutes);
+
 app.use('/api/service-categories', serviceCategoryRoutes);
 app.use('/api/sub-service-categories', subServiceCategoryRoutes);
 

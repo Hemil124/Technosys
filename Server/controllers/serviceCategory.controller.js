@@ -2,17 +2,18 @@ import ServiceCategory from "../models/ServiceCategory.js";
 
 export const getAllCategories = async (req, res) => {
   try {
-    // Return all categories (public endpoint). Admins and non-admins will receive
-    // the full list; frontend can choose how to present active/inactive ones.
     const categories = await ServiceCategory.find({})
       .sort({ name: 1 })
       .select("name isActive image");
 
-    return res.json({ success: true, data: categories });
+    // ✅ Simplified response for frontend
+    return res.json({ categories });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    console.error("Error fetching categories:", error);
+    return res.status(500).json({ message: "Failed to fetch categories" });
   }
 };
+
 
 export const createCategory = async (req, res) => {
   try {
