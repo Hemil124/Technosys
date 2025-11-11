@@ -9,17 +9,18 @@ import {
   AlertCircle,
   Loader2 
 } from "lucide-react";
-import { AppContext } from "../context/AppContext"; // Adjust path as needed
+import { AppContext } from "../context/AppContext";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 export const AdminCategories = () => {
   const { backendUrl, userData } = useContext(AppContext);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'inactive'
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(5);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [formData, setFormData] = useState({ name: "", isActive: true });
@@ -35,25 +36,29 @@ export const AdminCategories = () => {
     fetchCategories();
   }, []);
 
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
+
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      setError("");
       
       const response = await axios.get(`${backendUrl}/api/service-categories`, {
         withCredentials: true
       });
       
-      console.log("Categories API Response:", response.data); // Debug log
+      console.log("Categories API Response:", response.data);
       
       if (response.data.success) {
         setCategories(response.data.data || []);
       } else {
-        setError("Failed to fetch categories");
+        toast.error("Failed to fetch categories");
       }
     } catch (err) {
       console.error("Error fetching categories:", err);
-      setError(
+      toast.error(
         err.response?.data?.message || 
         "Error fetching categories. Please try again."
       );
@@ -72,6 +77,17 @@ export const AdminCategories = () => {
     return true;
   });
 
+  // Pagination
+  const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedCategories = filteredCategories.slice(startIndex, startIndex + itemsPerPage);
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
   // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -86,7 +102,6 @@ export const AdminCategories = () => {
     setEditingCategory(null);
     setFormData({ name: "", isActive: true });
     setIsModalOpen(true);
-    setError("");
   };
 
   // Open modal for editing category
@@ -96,15 +111,12 @@ export const AdminCategories = () => {
       name: category.name, 
       isActive: category.isActive 
     });
-    // set preview if image exists
     if (category.image) {
-      // category.image is stored as '/uploads/categories/filename'
       setImagePreview(`${backendUrl}${category.image}`);
     } else {
       setImagePreview(null);
     }
     setIsModalOpen(true);
-    setError("");
   };
 
   // Close modal and reset form
@@ -112,9 +124,9 @@ export const AdminCategories = () => {
     setIsModalOpen(false);
     setEditingCategory(null);
     setFormData({ name: "", isActive: true });
-    setError("");
     setImageFile(null);
     setImagePreview(null);
+    setImageError("");
   };
 
   // Submit category form (create or update)
@@ -122,18 +134,17 @@ export const AdminCategories = () => {
     e.preventDefault();
     
     if (!formData.name.trim()) {
-      setError("Category name is required");
+      toast.error("Category name is required");
       return;
     }
 
     // Image is mandatory for new categories, optional for updates
     if (!editingCategory && !imageFile && !imagePreview) {
-      setError("Category image is required for new categories");
+      toast.error("Category image is required for new categories");
       return;
     }
 
     setSubmitting(true);
-    setError("");
 
     try {
       const url = editingCategory 
@@ -155,18 +166,15 @@ export const AdminCategories = () => {
       });
 
       if (response.data.success) {
-        setSuccess(editingCategory ? "Category updated successfully!" : "Category created successfully!");
+        toast.success(editingCategory ? "Category updated successfully!" : "Category created successfully!");
         handleCloseModal();
         fetchCategories();
-        
-        // Clear success message after 3 seconds
-        setTimeout(() => setSuccess(""), 3000);
       } else {
-        setError(response.data.message || "Something went wrong");
+        toast.error(response.data.message || "Something went wrong");
       }
     } catch (err) {
       console.error("Error saving category:", err);
-      setError(
+      toast.error(
         err.response?.data?.message || 
         "Error saving category. Please try again."
       );
@@ -177,7 +185,6 @@ export const AdminCategories = () => {
 
   // Handle category deletion (soft delete)
   const handleDelete = async (categoryId) => {
-    // Deprecated: deletion replaced by toggle switch. Keep for compatibility.
     if (!window.confirm("Are you sure you want to deactivate this category?")) {
       return;
     }
@@ -189,17 +196,14 @@ export const AdminCategories = () => {
       );
 
       if (response.data.success) {
-        setSuccess("Category deactivated successfully!");
+        toast.success("Category deactivated successfully!");
         fetchCategories();
-        
-        // Clear success message after 3 seconds
-        setTimeout(() => setSuccess(""), 3000);
       } else {
-        setError(response.data.message || "Failed to delete category");
+        toast.error(response.data.message || "Failed to delete category");
       }
     } catch (err) {
       console.error("Error deleting category:", err);
-      setError(
+      toast.error(
         err.response?.data?.message || 
         "Error deleting category. Please try again."
       );
@@ -223,14 +227,13 @@ export const AdminCategories = () => {
       );
 
       if (response.data.success) {
-        setSuccess(newStatus ? "Category activated" : "Category deactivated");
-        setTimeout(() => setSuccess(""), 3000);
+        toast.success(newStatus ? "Category activated successfully!" : "Category deactivated successfully!");
       } else {
         throw new Error(response.data.message || 'Failed to update status');
       }
     } catch (err) {
       console.error('Toggle category error:', err);
-      setError(err.response?.data?.message || err.message || 'Error updating category status');
+      toast.error(err.response?.data?.message || err.message || 'Error updating category status');
       // revert optimistic change
       setCategories(prev => prev.map(c => c._id === category._id ? { ...c, isActive: category.isActive } : c));
     } finally {
@@ -298,12 +301,6 @@ export const AdminCategories = () => {
     setImageError("");
   };
 
-  // Clear messages
-  const clearMessages = () => {
-    setError("");
-    setSuccess("");
-  };
-
   // Debug information (remove in production)
   console.log("Current categories state:", categories);
   console.log("Filtered categories:", filteredCategories);
@@ -368,33 +365,6 @@ export const AdminCategories = () => {
             <div className="text-sm text-gray-600">Inactive Categories</div>
           </button>
         </div>
-
-        {/* Success/Error Messages */}
-        {success && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-2">
-            <Check className="h-5 w-5 text-green-600" />
-            <span className="text-green-800">{success}</span>
-            <button 
-              onClick={clearMessages}
-              className="ml-auto text-green-600 hover:text-green-800"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
-            <AlertCircle className="h-5 w-5 text-red-600" />
-            <span className="text-red-800">{error}</span>
-            <button 
-              onClick={clearMessages}
-              className="ml-auto text-red-600 hover:text-red-800"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
 
         {/* Actions Bar */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
@@ -472,7 +442,7 @@ export const AdminCategories = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredCategories.map((category) => (
+                  {paginatedCategories.map((category) => (
                     <tr key={category._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center space-x-3">
@@ -536,6 +506,54 @@ export const AdminCategories = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Pagination Footer */}
+          {filteredCategories.length > 0 && (
+            <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
+                <span className="font-medium">
+                  {Math.min(startIndex + itemsPerPage, filteredCategories.length)}
+                </span>{' '}
+                of <span className="font-medium">{filteredCategories.length}</span> categories
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Previous
+                </button>
+
+                {/* Page numbers */}
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                        currentPage === page
+                          ? 'bg-blue-600 text-white'
+                          : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </div>
