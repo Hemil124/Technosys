@@ -1,32 +1,5 @@
 import ServiceCategory from "../models/ServiceCategory.js";
 
-// Default seed data
-// const DEFAULT_CATEGORIES = [
-//   { name: "Plumbing" },
-//   { name: "Electrical" },
-//   { name: "Carpentry" },
-// ];
-
-// export const getAllCategories = async (req, res) => {
-//   try {
-//     //if category is not added in DB so use default categories
-//     // let count = await ServiceCategory.countDocuments();
-
-//     // // Seed defaults if collection is empty
-//     // if (count === 0) {
-//     //   await ServiceCategory.insertMany(DEFAULT_CATEGORIES);
-//     // }
-
-//     const categories = await ServiceCategory.find({ isActive: true })
-//       .sort({ name: 1 })
-//       .select("name isActive");
-
-//     return res.json({ success: true, data: categories });
-//   } catch (error) {
-//     return res.status(500).json({ success: false, message: error.message });
-//   }
-// };
-
 export const getAllCategories = async (req, res) => {
   try {
     let filter = {};

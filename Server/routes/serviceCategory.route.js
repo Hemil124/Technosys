@@ -5,7 +5,7 @@ import userAuth from "../middleware/userAuth.js";
 const router = express.Router();
 
 // GET /api/service-categories - Public (list active categories)
-router.get("/", getAllCategories);
+router.get("/", userAuth,getAllCategories);
 
 // POST /api/service-categories - Admin only (create category)
 router.post("/", userAuth, createCategory);
