@@ -16,6 +16,7 @@ import userRoutesr from "./routes/user.route.js";
 import adminRoutes from "./routes/admin.route.js";
 import adminCreationRoute from "./routes/adminCreation.route.js";
 import serviceCategoryRoutes from "./routes/serviceCategory.route.js";
+import subServiceCategoryRoutes from "./routes/subServiceCategory.route.js";
 import path from 'path';
 import { fileURLToPath } from 'url';
 import "./config/passport.js";
@@ -109,6 +110,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/user', userRoutesr);
 app.use("/api/admin", adminRoutes);
 app.use('/api/service-categories', serviceCategoryRoutes);
+app.use('/api/sub-service-categories', subServiceCategoryRoutes);
 
 // one-time admin creation route
 app.use("/api/admin-setup", adminCreationRoute);
