@@ -1,5 +1,5 @@
 import React from "react";
-import TechnicianSidebar from "./TechnicianSidebar";
+import TechnicianSidebar from "./TechnicianNavbar";
 import { Outlet } from "react-router-dom";
 
 const TechnicianLayout = () => {

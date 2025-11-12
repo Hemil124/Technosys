@@ -372,79 +372,43 @@ export const AdminCategories = () => {
   };
 
   // Toggle active status
-  // const handleToggleActive = async (item, type) => {
-  //   const newStatus = !item.isActive;
-  //   setTogglingId(item._id);
+  const handleToggleActive = async (item, type) => {
+    const newStatus = !item.isActive;
+    setTogglingId(item._id);
 
-  //   try {
-  //     if (type === 'category') {
-  //       const payload = { name: item.name, isActive: newStatus };
-  //       await axios.put(
-  //         `${backendUrl}/api/service-categories/${item._id}`,
-  //         payload,
-  //         { withCredentials: true }
-  //       );
-  //       setCategories(prev => prev.map(c => c._id === item._id ? { ...c, isActive: newStatus } : c));
-  //     } else {
-  //       const payload = { 
-  //         name: item.name, 
-  //         price: item.price,
-  //         coinsRequired: item.coinsRequired,
-  //         isActive: newStatus 
-  //       };
-  //       await axios.put(
-  //         `${backendUrl}/api/sub-service-categories/${item._id}`,
-  //         payload,
-  //         { withCredentials: true }
-  //       );
-  //       setSubCategories(prev => prev.map(s => s._id === item._id ? { ...s, isActive: newStatus } : s));
-  //     }
-  //     toast.success(newStatus ? "Item activated!" : "Item deactivated!");
-  //   } catch (err) {
-  //     toast.error("Error updating status");
-  //   } finally {
-  //     setTogglingId(null);
-  //   }
-  // };
-
-  // Toggle active status - Updated version
-const handleToggleActive = async (item, type) => {
-  const newStatus = !item.isActive;
-  setTogglingId(item._id);
-
-  try {
-    if (type === 'category') {
-      const payload = { name: item.name, isActive: newStatus };
-      await axios.put(
-        `${backendUrl}/api/service-categories/${item._id}`,
-        payload,
-        { withCredentials: true }
-      );
-      
-      // Refresh all data to get updated sub-categories
-      await fetchAllData();
-      
-    } else {
-      const payload = { 
-        name: item.name, 
-        price: item.price,
-        coinsRequired: item.coinsRequired,
-        isActive: newStatus 
-      };
-      await axios.put(
-        `${backendUrl}/api/sub-service-categories/${item._id}`,
-        payload,
-        { withCredentials: true }
-      );
-      setSubCategories(prev => prev.map(s => s._id === item._id ? { ...s, isActive: newStatus } : s));
+    try {
+      if (type === 'category') {
+        const payload = { name: item.name, isActive: newStatus };
+        await axios.put(
+          `${backendUrl}/api/service-categories/${item._id}`,
+          payload,
+          { withCredentials: true }
+        );
+        
+        // Refresh all data to get updated sub-categories
+        await fetchAllData();
+        
+      } else {
+        const payload = { 
+          name: item.name, 
+          price: item.price,
+          coinsRequired: item.coinsRequired,
+          isActive: newStatus 
+        };
+        await axios.put(
+          `${backendUrl}/api/sub-service-categories/${item._id}`,
+          payload,
+          { withCredentials: true }
+        );
+        setSubCategories(prev => prev.map(s => s._id === item._id ? { ...s, isActive: newStatus } : s));
+      }
+      toast.success(newStatus ? "Item activated!" : "Item deactivated!");
+    } catch (err) {
+      toast.error("Error updating status");
+    } finally {
+      setTogglingId(null);
     }
-    toast.success(newStatus ? "Item activated!" : "Item deactivated!");
-  } catch (err) {
-    toast.error("Error updating status");
-  } finally {
-    setTogglingId(null);
-  }
-};
+  };
 
   // Image handling
   const handleImageChange = (e) => {
@@ -1005,448 +969,311 @@ const handleToggleActive = async (item, type) => {
 
         {/* Service Category Modal */}
         {isCategoryModalOpen && (
-          <CategoryModal
-            categoryForm={categoryForm}
-            setCategoryForm={setCategoryForm}
-            imagePreview={imagePreview}
-            handleImageChange={handleImageChange}
-            removeImage={removeImage}
-            handleSubmit={handleSubmitCategory}
-            handleClose={() => setIsCategoryModalOpen(false)}
-            editingCategory={editingCategory}
-            submitting={submitting}
-          />
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            onClick={() => setIsCategoryModalOpen(false)}
+          >
+            <div 
+              className="bg-white rounded-lg shadow-xl max-w-md w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                  {editingCategory ? "Edit Category" : "Create New Category"}
+                </h2>
+                
+                <form onSubmit={handleSubmitCategory}>
+                  <div className="space-y-4">
+                    <div>
+                      <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                        Category Name *
+                      </label>
+                      <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        value={categoryForm.name}
+                        onChange={(e) => setCategoryForm({...categoryForm, name: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter category name"
+                        disabled={submitting}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Category Image {!editingCategory && "*"}
+                      </label>
+                      <div
+                        className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer border-gray-300 hover:border-blue-400`}
+                      >
+                        {imagePreview ? (
+                          <div className="flex items-center justify-between bg-blue-50 px-3 py-2 rounded">
+                            <span className="text-sm text-blue-700 font-medium truncate">
+                              Image selected
+                            </span>
+                            <button
+                              type="button"
+                              onClick={removeImage}
+                              className="text-red-500 hover:text-red-700 ml-2 font-bold text-lg"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ) : (
+                          <label htmlFor="category-image-input" className="cursor-pointer block">
+                            <svg
+                              className="w-10 h-10 mx-auto text-gray-400 mb-2"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                              />
+                            </svg>
+                            <span className="block text-blue-600 hover:text-blue-700 text-sm font-medium">
+                              Upload Category Image
+                            </span>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Drop image here or click to upload — JPG, PNG (2MB max) {!editingCategory && <span className="text-red-600 font-medium">- Required</span>}
+                            </p>
+                            <input
+                              id="category-image-input"
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageChange}
+                              disabled={submitting}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                      </div>
+
+                      {imagePreview && (
+                        <div className="mt-3 flex justify-center">
+                          <img src={imagePreview} alt="preview" className="h-24 w-24 object-cover rounded" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex justify-end space-x-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsCategoryModalOpen(false)}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                      disabled={submitting}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center space-x-2 transition-colors disabled:opacity-50"
+                    >
+                      {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                      <span>
+                        {submitting 
+                          ? (editingCategory ? "Updating..." : "Creating...")
+                          : (editingCategory ? "Update Category" : "Create Category")
+                        }
+                      </span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Sub Category Modal */}
         {isSubCategoryModalOpen && (
-          <SubCategoryModal
-            subCategoryForm={subCategoryForm}
-            setSubCategoryForm={setSubCategoryForm}
-            categories={categories}
-            imagePreview={imagePreview}
-            handleImageChange={handleImageChange}
-            removeImage={removeImage}
-            handleSubmit={handleSubmitSubCategory}
-            handleClose={() => setIsSubCategoryModalOpen(false)}
-            editingSubCategory={editingSubCategory}
-            submitting={submitting}
-          />
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Modal Components
-const CategoryModal = ({
-  categoryForm,
-  setCategoryForm,
-  imagePreview,
-  handleImageChange,
-  removeImage,
-  handleSubmit,
-  handleClose,
-  editingCategory,
-  submitting
-}) => {
-  const [dragActive, setDragActive] = useState(false);
-
-  const onDragOver = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(true);
-  };
-
-  const onDragLeave = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-  };
-
-  const onDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-    if (file) {
-      // forward as synthetic event expected by handleImageChange
-      handleImageChange({ target: { files: [file] } });
-    }
-  };
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-        <div className="p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            {editingCategory ? "Edit Category" : "Create New Category"}
-          </h2>
-          
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Category Name *
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={categoryForm.name}
-                  onChange={(e) => setCategoryForm({...categoryForm, name: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter category name"
-                  disabled={submitting}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category Image {!editingCategory && "*"}
-                </label>
-                <div
-                  onDragOver={onDragOver}
-                  onDragEnter={onDragOver}
-                  onDragLeave={onDragLeave}
-                  onDrop={onDrop}
-                  className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer ${dragActive ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-blue-400'}`}
-                >
-                  {imagePreview ? (
-                    <div className="flex items-center justify-between bg-blue-50 px-3 py-2 rounded">
-                      <span className="text-sm text-blue-700 font-medium truncate">
-                        Image selected
-                      </span>
-                      <button
-                        type="button"
-                        onClick={removeImage}
-                        className="text-red-500 hover:text-red-700 ml-2 font-bold text-lg"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ) : (
-                    <label htmlFor="category-image-input" className="cursor-pointer block">
-                      <svg
-                        className="w-10 h-10 mx-auto text-gray-400 mb-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+            onClick={() => setIsSubCategoryModalOpen(false)}
+          >
+            <div 
+              className="bg-white rounded-lg shadow-xl max-w-md w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                  {editingSubCategory ? "Edit Sub-Category" : "Create New Sub-Category"}
+                </h2>
+                
+                <form onSubmit={handleSubmitSubCategory}>
+                  <div className="space-y-4">
+                    <div>
+                      <label htmlFor="parentCategory" className="block text-sm font-medium text-gray-700 mb-1">
+                        Parent Category *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Search or select category..."
+                          value={subCategoryForm.serviceCategoryId ? categories.find(c => c._id === subCategoryForm.serviceCategoryId)?.name || "" : ""}
+                          readOnly
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50"
+                          disabled={submitting}
                         />
-                      </svg>
-                      <span className="block text-blue-600 hover:text-blue-700 text-sm font-medium">
-                        Upload Category Image
-                      </span>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Drop image here or click to upload — JPG, PNG (2MB max) {!editingCategory && <span className="text-red-600 font-medium">- Required</span>}
-                      </p>
+                        <select
+                          value={subCategoryForm.serviceCategoryId}
+                          onChange={(e) => setSubCategoryForm({...subCategoryForm, serviceCategoryId: e.target.value})}
+                          className="absolute inset-0 w-full opacity-0 cursor-pointer"
+                          disabled={submitting}
+                        >
+                          <option value="">Select a category</option>
+                          {categories.filter(c => c.isActive).map(category => (
+                            <option key={category._id} value={category._id}>
+                              {category.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="subCategoryName" className="block text-sm font-medium text-gray-700 mb-1">
+                        Sub-Category Name *
+                      </label>
                       <input
-                        id="category-image-input"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageChange}
+                        type="text"
+                        id="subCategoryName"
+                        value={subCategoryForm.name}
+                        onChange={(e) => setSubCategoryForm({...subCategoryForm, name: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter sub-category name"
                         disabled={submitting}
-                        className="hidden"
                       />
-                    </label>
-                  )}
-                </div>
+                    </div>
 
-                {imagePreview && (
-                  <div className="mt-3 flex justify-center">
-                    <img src={imagePreview} alt="preview" className="h-24 w-24 object-cover rounded" />
-                  </div>
-                )}
-              </div>
-            </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
+                          Price (₹)
+                        </label>
+                        <input
+                          type="number"
+                          id="price"
+                          value={subCategoryForm.price}
+                          onChange={(e) => setSubCategoryForm({...subCategoryForm, price: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="0.00"
+                          min="0"
+                          step="0.01"
+                          disabled={submitting}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="coinsRequired" className="block text-sm font-medium text-gray-700 mb-1">
+                          Coins Required
+                        </label>
+                        <input
+                          type="number"
+                          id="coinsRequired"
+                          value={subCategoryForm.coinsRequired}
+                          onChange={(e) => setSubCategoryForm({...subCategoryForm, coinsRequired: e.target.value})}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="0"
+                          min="0"
+                          disabled={submitting}
+                        />
+                      </div>
+                    </div>
 
-            <div className="mt-6 flex justify-end space-x-3">
-              <button
-                type="button"
-                onClick={handleClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-                disabled={submitting}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center space-x-2 transition-colors disabled:opacity-50"
-              >
-                {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                <span>
-                  {submitting 
-                    ? (editingCategory ? "Updating..." : "Creating...")
-                    : (editingCategory ? "Update Category" : "Create Category")
-                  }
-                </span>
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const SubCategoryModal = ({
-  subCategoryForm,
-  setSubCategoryForm,
-  categories,
-  imagePreview,
-  handleImageChange,
-  removeImage,
-  handleSubmit,
-  handleClose,
-  editingSubCategory,
-  submitting
-}) => {
-  const [modalCategorySearch, setModalCategorySearch] = useState("");
-  const [showModalCategoryDropdown, setShowModalCategoryDropdown] = useState(false);
-  const modalCategoryRef = useRef(null);
-  const [dragActive, setDragActive] = useState(false);
-
-  const onDragOver = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(true);
-  };
-
-  const onDragLeave = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-  };
-
-  const onDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-    if (file) {
-      handleImageChange({ target: { files: [file] } });
-    }
-  };
-
-  // initialize modal category search when editing
-  useEffect(() => {
-    if (subCategoryForm.serviceCategoryId) {
-      const selected = categories.find(c => c._id === subCategoryForm.serviceCategoryId);
-      if (selected) setModalCategorySearch(selected.name);
-    } else {
-      setModalCategorySearch("");
-    }
-  }, [subCategoryForm.serviceCategoryId, categories]);
-
-  // close dropdown on outside click
-  useEffect(() => {
-    const onDocClick = (e) => {
-      if (showModalCategoryDropdown && modalCategoryRef.current && !modalCategoryRef.current.contains(e.target)) {
-        setShowModalCategoryDropdown(false);
-      }
-    };
-    document.addEventListener('click', onDocClick);
-    return () => document.removeEventListener('click', onDocClick);
-  }, [showModalCategoryDropdown]);
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-        <div className="p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            {editingSubCategory ? "Edit Sub-Category" : "Create New Sub-Category"}
-          </h2>
-          
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="parentCategory" className="block text-sm font-medium text-gray-700 mb-1">
-                  Parent Category *
-                </label>
-                <div className="relative" ref={modalCategoryRef}>
-                  <input
-                    type="text"
-                    placeholder="Search or select category..."
-                    value={modalCategorySearch}
-                    onChange={(e) => {
-                      setModalCategorySearch(e.target.value);
-                      setShowModalCategoryDropdown(true);
-                    }}
-                    onFocus={() => setShowModalCategoryDropdown(true)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    disabled={submitting}
-                  />
-
-                  {/* Dropdown Menu */}
-                  {showModalCategoryDropdown && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-                      {categories
-                        .filter(c => c.isActive && c.name.toLowerCase().includes(modalCategorySearch.toLowerCase()))
-                        .map(category => (
-                          <div
-                            key={category._id}
-                            onClick={() => {
-                              setSubCategoryForm({...subCategoryForm, serviceCategoryId: category._id});
-                              setModalCategorySearch(category.name);
-                              setShowModalCategoryDropdown(false);
-                            }}
-                            className={`px-3 py-2 hover:bg-blue-50 cursor-pointer ${
-                              subCategoryForm.serviceCategoryId === category._id ? 'bg-blue-100 text-blue-900 font-medium' : 'text-gray-700'
-                            }`}
-                          >
-                            {category.name}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Sub-Category Image
+                      </label>
+                      <div
+                        className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer border-gray-300 hover:border-blue-400`}
+                      >
+                        {imagePreview ? (
+                          <div className="flex items-center justify-between bg-blue-50 px-3 py-2 rounded">
+                            <span className="text-sm text-blue-700 font-medium truncate">
+                              Image selected
+                            </span>
+                            <button
+                              type="button"
+                              onClick={removeImage}
+                              className="text-red-500 hover:text-red-700 ml-2 font-bold text-lg"
+                            >
+                              ×
+                            </button>
                           </div>
-                        ))}
+                        ) : (
+                          <label htmlFor="subcategory-image-input" className="cursor-pointer block">
+                            <svg
+                              className="w-10 h-10 mx-auto text-gray-400 mb-2"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                              />
+                            </svg>
+                            <span className="block text-blue-600 hover:text-blue-700 text-sm font-medium">
+                              Upload Sub-Category Image
+                            </span>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Drop image here or click to upload — JPG, PNG (2MB max)
+                            </p>
+                            <input
+                              id="subcategory-image-input"
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageChange}
+                              disabled={submitting}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                      </div>
+
+                      {imagePreview && (
+                        <div className="mt-3 flex justify-center">
+                          <img src={imagePreview} alt="preview" className="h-24 w-24 object-cover rounded" />
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="subCategoryName" className="block text-sm font-medium text-gray-700 mb-1">
-                  Sub-Category Name *
-                </label>
-                <input
-                  type="text"
-                  id="subCategoryName"
-                  value={subCategoryForm.name}
-                  onChange={(e) => setSubCategoryForm({...subCategoryForm, name: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Enter sub-category name"
-                  disabled={submitting}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-                    Price (₹)
-                  </label>
-                  <input
-                    type="number"
-                    id="price"
-                    value={subCategoryForm.price}
-                    onChange={(e) => setSubCategoryForm({...subCategoryForm, price: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                    disabled={submitting}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="coinsRequired" className="block text-sm font-medium text-gray-700 mb-1">
-                    Coins Required
-                  </label>
-                  <input
-                    type="number"
-                    id="coinsRequired"
-                    value={subCategoryForm.coinsRequired}
-                    onChange={(e) => setSubCategoryForm({...subCategoryForm, coinsRequired: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="0"
-                    min="0"
-                    disabled={submitting}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Sub-Category Image
-                </label>
-                <div
-                  onDragOver={onDragOver}
-                  onDragEnter={onDragOver}
-                  onDragLeave={onDragLeave}
-                  onDrop={onDrop}
-                  className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer ${dragActive ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-blue-400'}`}
-                >
-                  {imagePreview ? (
-                    <div className="flex items-center justify-between bg-blue-50 px-3 py-2 rounded">
-                      <span className="text-sm text-blue-700 font-medium truncate">
-                        Image selected
-                      </span>
-                      <button
-                        type="button"
-                        onClick={removeImage}
-                        className="text-red-500 hover:text-red-700 ml-2 font-bold text-lg"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ) : (
-                    <label htmlFor="subcategory-image-input" className="cursor-pointer block">
-                      <svg
-                        className="w-10 h-10 mx-auto text-gray-400 mb-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                        />
-                      </svg>
-                      <span className="block text-blue-600 hover:text-blue-700 text-sm font-medium">
-                        Upload Sub-Category Image
-                      </span>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Drop image here or click to upload — JPG, PNG (2MB max)
-                      </p>
-                      <input
-                        id="subcategory-image-input"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageChange}
-                        disabled={submitting}
-                        className="hidden"
-                      />
-                    </label>
-                  )}
-                </div>
-
-                {imagePreview && (
-                  <div className="mt-3 flex justify-center">
-                    <img src={imagePreview} alt="preview" className="h-24 w-24 object-cover rounded" />
                   </div>
-                )}
+
+                  <div className="mt-6 flex justify-end space-x-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsSubCategoryModalOpen(false)}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                      disabled={submitting}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg flex items-center space-x-2 transition-colors disabled:opacity-50"
+                    >
+                      {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                      <span>
+                        {submitting 
+                          ? (editingSubCategory ? "Updating..." : "Creating...")
+                          : (editingSubCategory ? "Update Sub-Category" : "Create Sub-Category")
+                        }
+                      </span>
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
-
-            <div className="mt-6 flex justify-end space-x-3">
-              <button
-                type="button"
-                onClick={handleClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-                disabled={submitting}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg flex items-center space-x-2 transition-colors disabled:opacity-50"
-              >
-                {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                <span>
-                  {submitting 
-                    ? (editingSubCategory ? "Updating..." : "Creating...")
-                    : (editingSubCategory ? "Update Sub-Category" : "Create Sub-Category")
-                  }
-                </span>
-              </button>
-            </div>
-          </form>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

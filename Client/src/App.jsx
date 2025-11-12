@@ -44,7 +44,7 @@ import { LoginCustomer } from "./pages/LoginCustomer";
 import { Customer } from "./pages/Customer";
 import { TempPage } from "./pages/TempPage";
 import AdminLayout from "./components/AdminLayout";
-import TechnicianRequest from "./components/TechnicianRequest";
+import TechnicianRequest from "./pages/AdminTechnicianRequest";
 import TechnicianDetails from "./pages/TechnicianDetails";
 import { AdminCategories } from "./pages/AdminCategories";
 import { AdminFeedbacks } from "./pages/AdminFeedbacks";
@@ -64,6 +64,8 @@ import CustomerSettings from "./pages/CustomerSettings";
 import CustomerLayout from "./components/CustomerLayout";
 import CustomerDashboard from "./pages/CustomerDashboard";
 import TechnicianDashboard from "./pages/TechnicianDashboard";
+import AdminTechnicianCompliant from "./pages/AdminTechnicianCompliant";
+import AdminSubscriptions from "./pages/AdminSubscriptions";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, role }) => {
@@ -221,9 +223,12 @@ const App = () => {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<Admin />} />
           <Route path="technicians" element={<AdminTechnicianList />} />
+          <Route path="technician-requests" element={<TechnicianRequest />} />
+          <Route path="technician-complaints" element={<AdminTechnicianCompliant />} />
           <Route path="technicians/:id" element={<TechnicianDetails />} />
           <Route path="customers" element={<AdminCustomerList />} />
           <Route path="categories" element={<AdminCategories />} />
+          <Route path="subscriptions" element={<AdminSubscriptions />} />
           <Route path="feedbacks" element={<AdminFeedbacks />} />
           <Route path="settings" element={<AdminSettings />} />
 
