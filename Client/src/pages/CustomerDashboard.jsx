@@ -1,225 +1,469 @@
-import React, { useState, useEffect } from "react";
+// src/pages/customer/CustomerDashboard.jsx
+import React, { useState, useEffect, useContext, useRef } from "react";
 import axios from "axios";
-import { Search, ArrowLeft, MapPin } from "lucide-react";
+import { MapPin, ChevronDown, User, LogOut, Settings, List } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Autoplay, Pagination, Navigation } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/pagination";
+import "swiper/css/navigation";
+import { AppContext } from "../context/AppContext";
+import { assets } from "../assets/assets"; // your navbar logo import
+
+// banners (10 images) - adjust paths if your structure is different
+import banner1 from "../assets/banners/banner1.jpg";
+import banner2 from "../assets/banners/banner2.jpg";
+import banner3 from "../assets/banners/banner3.jpg";
+import banner4 from "../assets/banners/banner4.jpg";
+import banner5 from "../assets/banners/banner5.jpg";
+import banner6 from "../assets/banners/banner6.jpg";
+import banner7 from "../assets/banners/banner7.jpg";
+import banner8 from "../assets/banners/banner8.jpg";
+import banner9 from "../assets/banners/banner9.jpg";
+import banner10 from "../assets/banners/banner10.jpg";
+
+const topBanners = [banner1, banner2, banner3, banner4, banner5];
+const bottomBanners = [banner6, banner7, banner8, banner9, banner10];
+
+const backendUrl = "http://localhost:4000"; // update if different
 
 const CustomerDashboard = () => {
+  const navigate = useNavigate();
+  const { isLoggedIn, userData, setIsLoggedIn, setUserData } = useContext(AppContext);
+
   const [categories, setCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
+
+  // Search + suggestions
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const backendUrl = "http://localhost:4000";
-  const navigate = useNavigate();
+  // Profile menu
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef();
 
-  // Fetch main categories
+  // fetch categories on mount
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const { data } = await axios.get(`${backendUrl}/api/service-categories`);
+        // support both variants: { categories: [] } or { data: [] }
         setCategories(data.categories || data.data || []);
-      } catch (error) {
-        console.error("Error fetching categories:", error);
+      } catch (err) {
+        console.error("Fetch categories error:", err);
       }
     };
     fetchCategories();
   }, []);
 
-  // Fetch subcategories
+  // fetch subcategories for selected category
   const fetchSubCategories = async (categoryId) => {
     try {
       const { data } = await axios.get(
         `${backendUrl}/api/sub-service-categories?serviceCategoryId=${categoryId}`
       );
       setSubCategories(data.subCategories || data.data || []);
-    } catch (error) {
-      console.error("Error fetching subcategories:", error);
+    } catch (err) {
+      console.error("Fetch subcategories:", err);
     }
   };
 
-  // Combined search suggestions (categories + subcategories)
+  // combined search suggestions (categories + subcategories)
   const handleSearchChange = async (e) => {
-    const query = e.target.value;
-    setSearchQuery(query);
+    const q = e.target.value;
+    setSearchQuery(q);
     setShowSuggestions(true);
 
-    if (query.trim() === "") {
+    if (!q.trim()) {
       setSuggestions([]);
       return;
     }
 
     try {
-      // Filter categories and subcategories locally (fast)
-      const categoryMatches = categories.filter((cat) =>
-        cat.name.toLowerCase().includes(query.toLowerCase())
+      // local category matches
+      const catMatches = categories.filter((c) =>
+        c.name.toLowerCase().includes(q.toLowerCase())
       );
 
-      // Fetch all subcategories once and cache (optional optimization)
-      const { data } = await axios.get(`${backendUrl}/api/sub-service-categories`);
-      const subMatches = data.subCategories?.filter((sub) =>
-        sub.name.toLowerCase().includes(query.toLowerCase())
+      // fetch all subcategories (server returns active ones)
+      const res = await axios.get(`${backendUrl}/api/sub-service-categories`);
+      const subs = res.data.subCategories || res.data.data || [];
+      const subMatches = subs.filter((s) =>
+        s.name.toLowerCase().includes(q.toLowerCase())
       );
 
-      // Combine both types
       const combined = [
-        ...categoryMatches.map((c) => ({ type: "category", name: c.name, id: c._id })),
-        ...(subMatches || []).map((s) => ({
-          type: "subcategory",
+        ...catMatches.map((c) => ({ type: "category", name: c.name, id: c._id })),
+        ...subMatches.map((s) => ({
+          type: "service",
           name: s.name,
           id: s._id,
           price: s.price,
         })),
       ];
 
-      setSuggestions(combined.slice(0, 8)); // Limit to top 8 suggestions
-    } catch (error) {
-      console.error("Error fetching suggestions:", error);
+      setSuggestions(combined.slice(0, 8));
+    } catch (err) {
+      console.error("Error fetching suggestions:", err);
     }
   };
 
-  // Filter categories for display grid
-  const filteredCategories = categories.filter((cat) =>
-    cat.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // click outside to close profile menu / suggestions
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  // logout helper
+  const handleLogout = async () => {
+    try {
+      await axios.post(`${backendUrl}/api/auth/logout`, {}, { withCredentials: true });
+    } catch (err) {
+      // ignore server error, still proceed to local logout
+      console.warn("Logout request error:", err);
+    }
+    setIsLoggedIn(false);
+    setUserData(null);
+    navigate("/login-customer");
+  };
+
+  // helper: open category view
+  const openCategory = async (cat) => {
+    setSelectedCategory(cat);
+    await fetchSubCategories(cat._id);
+    window.scrollTo({ top: 380, behavior: "smooth" }); // bring into view
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 relative">
-      {/* Header */}
-      <div className="bg-white py-6 shadow-md relative">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center px-4">
-          <h1 className="text-3xl font-bold text-gray-800 mb-3 md:mb-0">
-            Home Services at Your Doorstep
-          </h1>
-
-          {/* Search Bar */}
-          <div className="relative w-full md:w-1/2">
-            <div className="flex items-center bg-gray-100 rounded-full px-4 py-2">
-              <Search className="text-gray-500 mr-2" size={18} />
-              <input
-                type="text"
-                placeholder="Search for 'Salon', 'Cleaning', 'AC Repair'..."
-                className="bg-transparent w-full outline-none text-gray-700"
-                value={searchQuery}
-                onChange={handleSearchChange}
-                onFocus={() => setShowSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+    <div className="min-h-screen bg-gray-50 font-inter">
+      {/* =========================
+            Premium Navbar (white)
+         ========================= */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
+          <div className="h-20 flex items-center justify-between">
+            {/* left - logo */}
+            <div
+              className="flex items-center gap-3 cursor-pointer"
+              onClick={() => navigate("/customer/dashboard")}
+            >
+              <img
+                src={assets?.navbarlogo || "/favicon.ico"}
+                alt="logo"
+                className="w-10 h-10 rounded-full object-cover"
               />
+              <div className="hidden md:block">
+                <span className="text-lg font-semibold text-slate-800">Technosys</span>
+                <div className="text-xs text-gray-500">Home Services</div>
+              </div>
             </div>
 
-            {/* Suggestions Dropdown */}
-            {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute mt-2 bg-white rounded-lg shadow-lg border border-gray-200 w-full z-50 max-h-60 overflow-y-auto animate-fade-in">
-                {suggestions.map((item, index) => (
-                  <div
-                    key={index}
-                    onClick={() => {
-                      setShowSuggestions(false);
-                      setSearchQuery(item.name);
-                      if (item.type === "category") {
-                        const selected = categories.find((c) => c._id === item.id);
-                        setSelectedCategory(selected);
-                        fetchSubCategories(item.id);
-                      } else {
-                        navigate(`/customer/service/${item.id}`);
-                      }
-                    }}
-                    className="px-4 py-2 hover:bg-blue-50 cursor-pointer flex justify-between items-center"
-                  >
-                    <span className="text-gray-800">{item.name}</span>
-                    <span className="text-xs text-gray-500">
-                      {item.type === "category" ? "Category" : "Service"}
-                    </span>
+            {/* center - search (compact on small screens) */}
+            <div className="flex-1 px-4">
+              <div className="relative max-w-2xl mx-auto">
+                <input
+                  type="text"
+                  aria-label="Search services"
+                  placeholder="Search for 'Plumber', 'Salon', 'Cleaning'..."
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  onFocus={() => setShowSuggestions(true)}
+                  className="w-full bg-gray-100 rounded-full py-3 px-4 shadow-inner text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-sky-200 outline-none transition"
+                />
+                {/* suggestions dropdown */}
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-100 z-50 max-h-64 overflow-auto">
+                    {suggestions.map((it, idx) => (
+                      <div
+                        key={idx}
+                        onMouseDown={() => {
+                          // onMouseDown to prevent blur before click
+                          setShowSuggestions(false);
+                          setSearchQuery(it.name);
+                          if (it.type === "category") {
+                            const cat = categories.find((c) => c._id === it.id);
+                            openCategory(cat);
+                          } else {
+                            navigate(`/customer/service/${it.id}`);
+                          }
+                        }}
+                        className="px-4 py-3 hover:bg-sky-50 flex justify-between items-center cursor-pointer"
+                      >
+                        <div className="text-gray-800">{it.name}</div>
+                        <div className="text-xs text-gray-400">
+                          {it.type === "category" ? "Category" : "Service"}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            )}
+            </div>
+
+            {/* right - profile / bookings */}
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => (isLoggedIn ? navigate("/customer/bookings") : navigate("/login-customer"))}
+                className="hidden sm:inline-flex items-center gap-2 bg-sky-600 text-white px-4 py-2 rounded-full hover:bg-sky-700 transition"
+              >
+                My Bookings
+              </button>
+
+              {/* profile */}
+              <div className="relative" ref={profileRef}>
+                <button
+                  onClick={() => setProfileOpen((s) => !s)}
+                  className="w-9 h-9 rounded-full bg-sky-600 text-white flex items-center justify-center font-medium shadow"
+                >
+                  {isLoggedIn ? (userData?.name?.charAt(0).toUpperCase() || "U") : <User size={16} />}
+                </button>
+
+                {profileOpen && (
+                  <div className="absolute right-0 mt-3 w-48 bg-white rounded-lg shadow-lg border border-gray-100 z-50 overflow-hidden">
+                    {isLoggedIn ? (
+                      <>
+                        <div
+                          onClick={() => {
+                            navigate("/customer/profile");
+                            setProfileOpen(false);
+                          }}
+                          className="px-4 py-3 hover:bg-sky-50 cursor-pointer flex items-center gap-2"
+                        >
+                          <User size={16} /> Profile
+                        </div>
+                        <div
+                          onClick={() => {
+                            navigate("/customer/settings");
+                            setProfileOpen(false);
+                          }}
+                          className="px-4 py-3 hover:bg-sky-50 cursor-pointer flex items-center gap-2"
+                        >
+                          <Settings size={16} /> Settings
+                        </div>
+                        <div
+                          onClick={() => {
+                            handleLogout();
+                            setProfileOpen(false);
+                          }}
+                          className="px-4 py-3 hover:bg-red-50 cursor-pointer flex items-center gap-2 text-red-600"
+                        >
+                          <LogOut size={16} /> Logout
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div
+                          onClick={() => {
+                            navigate("/login-customer");
+                            setProfileOpen(false);
+                          }}
+                          className="px-4 py-3 hover:bg-sky-50 cursor-pointer flex items-center gap-2"
+                        >
+                          <User size={16} /> Login / Signup
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Location */}
-      <div className="flex justify-center items-center gap-2 mt-4 text-gray-700 text-sm">
-        <MapPin size={16} className="text-blue-600" />
-        <span>Surat, Gujarat</span>
-      </div>
+      {/* spacer to avoid navbar overlap */}
+      <div className="h-20" />
 
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {selectedCategory ? (
-          <>
-            <button
-              onClick={() => {
-                setSelectedCategory(null);
-                setSubCategories([]);
-              }}
-              className="flex items-center text-gray-600 mb-4 hover:text-gray-900"
-            >
-              <ArrowLeft className="mr-1" size={16} /> Back to Categories
-            </button>
-
-            <h2 className="text-2xl font-semibold mb-6 text-gray-800 text-center">
-              {selectedCategory.name} Services
-            </h2>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-              {subCategories.map((sub) => (
+      {/* =========================
+            HERO (top banners)
+         ========================= */}
+      <main className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
+        <section className="relative">
+          <Swiper
+            modules={[Autoplay, Pagination, Navigation]}
+            autoplay={{ delay: 4500, disableOnInteraction: false }}
+            pagination={{ clickable: true }}
+            navigation
+            loop
+            className="rounded-2xl overflow-hidden"
+            style={{ height: 460 }}
+          >
+            {topBanners.map((src, i) => (
+              <SwiperSlide key={i}>
                 <div
-                  key={sub._id}
-                  className="bg-white rounded-xl shadow-md hover:shadow-lg transition p-4 cursor-pointer text-center"
-                  onClick={() => navigate(`/customer/service/${sub._id}`)}
+                  className="w-full h-full bg-center bg-cover flex items-center justify-center relative"
+                  style={{ backgroundImage: `url(${src})` }}
                 >
-                  <img
-                    src={`${backendUrl}${sub.image}`}
-                    alt={sub.name}
-                    className="w-16 h-16 mx-auto mb-3 object-cover rounded-full"
-                  />
-                  <p className="font-medium text-gray-800">{sub.name}</p>
-                  <p className="text-sm text-gray-500 mt-1">₹{sub.price}</p>
+                  <div className="absolute inset-0 bg-black/35" />
+                  <div className="relative z-10 text-center px-6 py-8">
+                    <h1 className="text-4xl md:text-5xl lg:text-5xl font-semibold text-white drop-shadow">
+                      Home Services You Can Trust
+                    </h1>
+                    <p className="text-white/90 mt-3 mb-6 max-w-2xl mx-auto">
+                      Reliable. Affordable. Professional. Book verified technicians for your home.
+                    </p>
+                    <div className="flex justify-center gap-3">
+                      <button
+                        onClick={() => (isLoggedIn ? navigate("/customer/bookings") : navigate("/login-customer"))}
+                        className="bg-white text-sky-700 py-3 px-6 rounded-full font-medium shadow hover:scale-[1.02] transition transform"
+                      >
+                        {isLoggedIn ? "Book a Service" : "Get Started"}
+                      </button>
+                      <button
+                        onClick={() => window.scrollTo({ top: 720, behavior: "smooth" })}
+                        className="border border-white/30 text-white py-3 px-4 rounded-full hover:bg-white/10 transition"
+                      >
+                        Browse Categories
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              ))}
-              {subCategories.length === 0 && (
-                <p className="text-center text-gray-500 col-span-full">
-                  No sub-services available in this category.
-                </p>
-              )}
-            </div>
-          </>
-        ) : (
-          <>
-            <h2 className="text-2xl font-semibold mb-6 text-gray-800 text-center">
-              What are you looking for?
-            </h2>
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        </section>
+
+        {/* small location row */}
+        <div className="flex items-center justify-center text-gray-600 mt-6">
+          <MapPin className="text-sky-600" /> <span className="ml-2">Surat, Gujarat</span>
+        </div>
+
+        {/* =========================
+            Categories (grid)
+         ========================= */}
+        <section className="mt-10 bg-white rounded-2xl p-8 shadow-sm">
+          <h2 className="text-2xl font-semibold text-slate-800 text-center mb-6">Popular Categories</h2>
+
+          {!selectedCategory ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-              {filteredCategories.map((cat) => (
-                <div
+              {categories.map((cat) => (
+                <button
                   key={cat._id}
-                  onClick={() => {
-                    setSelectedCategory(cat);
-                    fetchSubCategories(cat._id);
-                  }}
-                  className="bg-white rounded-xl shadow-md hover:shadow-lg transition p-4 cursor-pointer text-center group"
+                  onClick={() => openCategory(cat)}
+                  className="bg-white shadow-sm hover:shadow-md rounded-xl py-6 px-4 flex flex-col items-center gap-3 transition transform hover:-translate-y-1"
                 >
-                  <img
-                    src={`${backendUrl}${cat.image}`}
-                    alt={cat.name}
-                    className="w-16 h-16 mx-auto mb-3 object-cover rounded-full group-hover:scale-110 transition-transform"
-                  />
-                  <p className="font-medium text-gray-800">{cat.name}</p>
-                </div>
+                  <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-50 flex items-center justify-center border">
+                    {/* category image or fallback */}
+                    <img
+                      src={cat.image ? `${backendUrl}${cat.image}` : "/placeholder-circle.png"}
+                      alt={cat.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="text-gray-800 font-medium">{cat.name}</div>
+                </button>
               ))}
             </div>
-          </>
-        )}
-      </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-6">
+                <button
+                  onClick={() => {
+                    setSelectedCategory(null);
+                    setSubCategories([]);
+                  }}
+                  className="text-sm text-sky-600 hover:underline flex items-center gap-2"
+                >
+                  <span className="inline-block rotate-180">➜</span> Back to categories
+                </button>
+                <div className="text-lg font-semibold">{selectedCategory.name} services</div>
+              </div>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-gray-400 text-center py-6 mt-10">
-        <p className="text-sm">
-          © {new Date().getFullYear()} Technosys | Designed with ❤️ by Team 12
-        </p>
-      </footer>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                {subCategories.length > 0 ? (
+                  subCategories.map((s) => (
+                    <div
+                      key={s._id}
+                      onClick={() => (isLoggedIn ? navigate(`/customer/service/${s._id}`) : navigate("/login-customer"))}
+                      className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md cursor-pointer transition transform hover:-translate-y-1"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 rounded-md overflow-hidden bg-gray-100">
+                          <img src={s.image ? `${backendUrl}${s.image}` : "/placeholder-rect.png"} alt={s.name} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-800">{s.name}</div>
+                          <div className="text-sm text-gray-500">₹{s.price}</div>
+                        </div>
+                        <div className="text-sky-600 font-semibold">Book →</div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-full text-center text-gray-500 py-8">No services available.</div>
+                )}
+              </div>
+            </>
+          )}
+        </section>
+
+        {/* =========================
+            How It Works + Testimonials
+         ========================= */}
+        <section className="mt-10 grid md:grid-cols-2 gap-6">
+          <div className="bg-white rounded-2xl p-8 shadow-sm">
+            <h3 className="text-xl font-semibold mb-4">How Technosys Works</h3>
+            <ol className="space-y-4 text-gray-600">
+              <li>1. Book a service → choose the service and slot</li>
+              <li>2. Get verified professionals at home</li>
+              <li>3. Pay after service and rate the technician</li>
+            </ol>
+          </div>
+          <div className="bg-white rounded-2xl p-8 shadow-sm">
+            <h3 className="text-xl font-semibold mb-4">What customers say</h3>
+            <div className="space-y-4 text-gray-700">
+              <blockquote className="italic">"Quick and professional plumber visit — five stars!"</blockquote>
+              <div className="text-sm text-gray-500">— A happy customer</div>
+            </div>
+          </div>
+        </section>
+
+        {/* =========================
+           Bottom banners slider (discover more)
+         ========================= */}
+        <section className="mt-10">
+          <h3 className="text-2xl font-semibold text-slate-800 mb-4 text-center">Discover More Services</h3>
+          <Swiper
+            modules={[Autoplay, Pagination]}
+            autoplay={{ delay: 2800, disableOnInteraction: false }}
+            pagination={{ clickable: true }}
+            breakpoints={{
+              640: { slidesPerView: 2 },
+              1024: { slidesPerView: 3 },
+            }}
+            className="rounded-2xl"
+            spaceBetween={16}
+          >
+            {bottomBanners.map((src, i) => (
+              <SwiperSlide key={i}>
+                <div
+                  className="h-56 bg-cover bg-center rounded-xl overflow-hidden relative"
+                  style={{ backgroundImage: `url(${src})` }}
+                >
+                  <div className="absolute inset-0 bg-black/30 flex items-end p-4">
+                    <div className="text-white font-semibold">Professional Home Services</div>
+                  </div>
+                </div>
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        </section>
+
+        {/* footer */}
+        <footer className="mt-12 bg-white rounded-2xl p-6 shadow-sm text-center">
+          <div className="max-w-3xl mx-auto">
+            <p className="text-gray-700">© {new Date().getFullYear()} Technosys — Built with ❤️</p>
+          </div>
+        </footer>
+      </main>
     </div>
   );
 };
