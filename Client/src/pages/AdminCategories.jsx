@@ -58,8 +58,8 @@ export const AdminCategories = () => {
   const [subCategoryForm, setSubCategoryForm] = useState({ 
     name: "", 
     serviceCategoryId: "", 
-    price: 0, 
-    coinsRequired: 0, 
+    price: "", 
+    coinsRequired: "", 
     isActive: true 
   });
   
@@ -297,8 +297,8 @@ export const AdminCategories = () => {
     setSubCategoryForm({ 
       name: "", 
       serviceCategoryId: "", 
-      price: 0, 
-      coinsRequired: 0, 
+      price: "", 
+      coinsRequired: "", 
       isActive: true 
     });
     setImageFile(null);

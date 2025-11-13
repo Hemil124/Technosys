@@ -21,6 +21,7 @@ import technicianAvailabilityRoutes from "./routes/technicianAvailability.route.
 import path from 'path';
 import { fileURLToPath } from 'url';
 import "./config/passport.js";
+import subscriptionPackageRoutes from "./routes/subscriptionPackage.route.js";
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -113,7 +114,7 @@ app.use("/api/admin", adminRoutes);
 app.use('/api/service-categories', serviceCategoryRoutes);
 app.use('/api/sub-service-categories', subServiceCategoryRoutes);
 app.use('/api/technician-availability', technicianAvailabilityRoutes);
-
+app.use('/api/subscription-packages', subscriptionPackageRoutes);
 // one-time admin creation route
 app.use("/api/admin-setup", adminCreationRoute);
 
