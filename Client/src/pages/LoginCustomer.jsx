@@ -712,7 +712,7 @@ export function LoginCustomer() {
                 </p>
                 
                 {/* Countdown Timer */}
-                {timeLeft > 0 ? (
+                {/* {timeLeft > 0 ? (
                   <div className="flex items-center justify-center space-x-2 mt-3">
                     <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                     <p className="text-red-400 text-sm font-medium">
@@ -725,7 +725,7 @@ export function LoginCustomer() {
                       OTP has expired
                     </p>
                   </div>
-                )}
+                )} */}
               </div>
 
               {/* OTP Input Fields */}
