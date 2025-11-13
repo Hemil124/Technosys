@@ -4307,12 +4307,13 @@ export const Login = () => {
                         onChange={handleMobileChange}
                         onBlur={() => setTouched({ ...touched, mobile: true })}
                         value={mobile}
-                        className="w-full bg-transparent text-sm outline-none text-gray-700 placeholder-gray-500"
+                        className="w-full bg-transparent text-sm outline-none text-gray-700 placeholder-gray-500 disabled:opacity-60 disabled:cursor-not-allowed"
                         type="tel"
                         inputMode="numeric"
                         pattern="[0-9]*"
                         placeholder="10-digit mobile number"
                         maxLength={10}
+                        disabled={isMobileVerified}
                         required
                       />
                     </div>
@@ -4670,9 +4671,10 @@ export const Login = () => {
                       onChange={handleEmailChange}
                       onBlur={() => setTouched({ ...touched, email: true })}
                       value={email}
-                      className="w-full text-sm bg-transparent outline-none text-gray-700 placeholder-gray-500"
+                      className="w-full text-sm bg-transparent outline-none text-gray-700 placeholder-gray-500 disabled:opacity-60 disabled:cursor-not-allowed"
                       type="email"
                       placeholder="Enter your email"
+                      disabled={isEmailVerified}
                       required
                     />
                   </div>
