@@ -8,6 +8,8 @@ import {
   updateSubscriptionPackage,
   deleteSubscriptionPackage,
   togglePackageStatus
+  ,purchaseSubscription,
+  getSubscriptionHistory
 } from "../controllers/subscriptionPackage.controller.js";
 import userAuth from "../middleware/userAuth.js";
 
@@ -36,7 +38,30 @@ const packageValidationRules = [
 
 // Public routes
 router.get("/", getAllSubscriptionPackages);
+
+// Technician purchase history (must come before ":id" route)
+router.get("/history", userAuth, (req, res, next) => {
+  if (req.userType !== 'technician') {
+    return res.status(403).json({
+      success: false,
+      message: "Access denied. Technician privileges required."
+    });
+  }
+  next();
+}, getSubscriptionHistory);
+
 router.get("/:id", getSubscriptionPackage);
+
+// Technician purchase route
+router.post("/:id/purchase", userAuth, (req, res, next) => {
+  if (req.userType !== 'technician') {
+    return res.status(403).json({
+      success: false,
+      message: "Access denied. Technician privileges required."
+    });
+  }
+  next();
+}, purchaseSubscription);
 
 // Admin protected routes
 router.post("/", userAuth, (req, res, next) => {

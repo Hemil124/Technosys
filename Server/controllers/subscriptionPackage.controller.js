@@ -1,6 +1,8 @@
 // controllers/subscriptionPackage.controller.js
 import SubscriptionPackage from "../models/SubscriptionPackage.js";
 import { validationResult } from "express-validator";
+import SubscriptionHistory from "../models/SubscriptionHistory.js";
+import TechnicianWallet from "../models/TechnicianWallet.js";
 
 // @desc    Get all subscription packages
 // @route   GET /api/subscription-packages
@@ -248,5 +250,84 @@ export const togglePackageStatus = async (req, res) => {
       success: false,
       message: error.message || "Internal server error"
     });
+  }
+};
+
+// @desc    Purchase a subscription package (technician)
+// @route   POST /api/subscription-packages/:id/purchase
+// @access  Technician only
+export const purchaseSubscription = async (req, res) => {
+  try {
+    if (!req.userType || req.userType !== 'technician') {
+      return res.status(403).json({ success: false, message: 'Access denied. Technician only.' });
+    }
+
+    const packageId = req.params.id;
+    const subscriptionPackage = await SubscriptionPackage.findById(packageId);
+
+    if (!subscriptionPackage || !subscriptionPackage.isActive) {
+      return res.status(404).json({ success: false, message: 'Subscription package not found or not active' });
+    }
+
+    const technicianId = req.userId;
+
+    // Create subscription history record
+    const history = new SubscriptionHistory({
+      TechnicianID: technicianId,
+      PackageID: subscriptionPackage._id,
+      PurchasedAt: new Date()
+    });
+
+    await history.save();
+
+    // Update or create technician wallet
+    const coinsToAdd = subscriptionPackage.coins || 0;
+
+    const updatedWallet = await TechnicianWallet.findOneAndUpdate(
+      { TechnicianID: technicianId },
+      {
+        $inc: { BalanceCoins: coinsToAdd },
+        $set: { LastUpdate: new Date() }
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    // If upsert created a document without BalanceCoins initialized, ensure default applied
+    if (!updatedWallet.BalanceCoins && updatedWallet.BalanceCoins !== 0) {
+      updatedWallet.BalanceCoins = coinsToAdd;
+      updatedWallet.LastUpdate = new Date();
+      await updatedWallet.save();
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Subscription purchased successfully',
+      data: { history, wallet: updatedWallet }
+    });
+  } catch (error) {
+    console.error('Purchase subscription error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Internal server error' });
+  }
+};
+
+// @desc    Get subscription purchase history for technician
+// @route   GET /api/subscription-packages/history
+// @access  Technician only
+export const getSubscriptionHistory = async (req, res) => {
+  try {
+    if (!req.userType || req.userType !== 'technician') {
+      return res.status(403).json({ success: false, message: 'Access denied. Technician only.' });
+    }
+
+    const technicianId = req.userId;
+
+    const history = await SubscriptionHistory.find({ TechnicianID: technicianId })
+      .populate({ path: 'PackageID', select: 'name coins price description' })
+      .sort({ PurchasedAt: -1 });
+
+    return res.status(200).json({ success: true, message: 'Purchase history retrieved', data: history });
+  } catch (error) {
+    console.error('Get subscription history error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Internal server error' });
   }
 };

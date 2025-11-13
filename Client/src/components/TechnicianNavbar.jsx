@@ -22,6 +22,24 @@ const TechnicianSidebar = () => {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [coinBalance, setCoinBalance] = useState(null);
+
+  // Fetch technician wallet balance
+  useEffect(() => {
+    const fetchWallet = async () => {
+      try {
+        if (!userData) return;
+        const res = await axios.get(`${backendUrl}/api/user/wallet`, { withCredentials: true });
+        if (res.data && res.data.success) {
+          setCoinBalance(res.data.data?.BalanceCoins ?? 0);
+        }
+      } catch (err) {
+        console.error('Failed to fetch wallet', err?.response?.data || err.message);
+      }
+    };
+
+    fetchWallet();
+  }, [backendUrl, userData]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -96,6 +114,11 @@ const TechnicianSidebar = () => {
 
             {/* Right - Profile menu */}
             <div className="flex items-center space-x-3">
+              {/* Coin balance badge (shown before profile) */}
+              <div className="hidden sm:flex items-center px-3 py-1 rounded-md bg-white text-gray-900" title="Coin Balance">
+                <div style={{ fontWeight: 600, marginRight: 8 }}>{coinBalance ?? 0}</div>
+                <div style={{ fontSize: 12, color: '#6b7280' }}>coins</div>
+              </div>
               {/* Mobile menu toggle */}
               <button
                 onClick={() => setMenuOpen(!menuOpen)}

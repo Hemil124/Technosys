@@ -157,3 +157,22 @@ export const getUserData = async (req, res) => {
     return res.json({ success: false, message: error.message });
   }
 };
+
+// @desc    Get technician wallet balance
+// @route   GET /api/user/wallet
+// @access  Technician only
+export const getTechnicianWallet = async (req, res) => {
+  try {
+    if (!req.userType || req.userType !== 'technician') {
+      return res.status(403).json({ success: false, message: 'Access denied. Technician only.' });
+    }
+
+    const TechnicianWallet = (await import('../models/TechnicianWallet.js')).default;
+
+    const wallet = await TechnicianWallet.findOne({ TechnicianID: req.userId }).select('BalanceCoins LastUpdate');
+
+    return res.json({ success: true, data: wallet || { BalanceCoins: 0 } });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
