@@ -6,12 +6,9 @@ import {
   Loader2,
   Package,
   CreditCard,
-  DollarSign,
-  Coins,
   Filter,
   ChevronUp,
   ChevronDown,
-  Trash2,
   ToggleLeft,
   ToggleRight
 } from "lucide-react";
@@ -26,7 +23,6 @@ export default function AdminSubscriptions() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState('all');
-  const [showFilters, setShowFilters] = useState(false);
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -94,9 +90,7 @@ export default function AdminSubscriptions() {
   const stats = {
     total: packages.length,
     active: packages.filter(p => p.isActive).length,
-    inactive: packages.filter(p => !p.isActive).length,
-    totalCoins: packages.reduce((sum, pkg) => sum + pkg.coins, 0),
-    totalRevenue: packages.reduce((sum, pkg) => sum + pkg.price, 0)
+    inactive: packages.filter(p => !p.isActive).length
   };
 
   // Modal handlers
@@ -195,25 +189,7 @@ export default function AdminSubscriptions() {
     }
   };
 
-  const handleDeletePackage = async (pkg) => {
-    if (!window.confirm(`Are you sure you want to delete "${pkg.name}"? This action cannot be undone.`)) {
-      return;
-    }
 
-    try {
-      const response = await axios.delete(
-        `${backendUrl}/api/subscription-packages/${pkg._id}`,
-        { withCredentials: true }
-      );
-
-      if (response.data.success) {
-        toast.success("Package deleted successfully!");
-        fetchPackages();
-      }
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Error deleting package");
-    }
-  };
 
   if (loading) {
     return (
@@ -240,7 +216,7 @@ export default function AdminSubscriptions() {
         </div>
 
         {/* Stats Cards */}
-        <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="bg-white p-4 rounded-lg border border-gray-200 text-left">
             <div className="flex items-center justify-between">
               <div>
@@ -268,24 +244,12 @@ export default function AdminSubscriptions() {
           <div className="bg-white p-4 rounded-lg border border-gray-200 text-left">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-2xl font-bold text-purple-600">
-                  {stats.totalCoins}
+                <div className="text-2xl font-bold text-red-600">
+                  {stats.inactive}
                 </div>
-                <div className="text-sm text-gray-600">Total Coins</div>
+                <div className="text-sm text-gray-600">Inactive Packages</div>
               </div>
-              <Coins className="h-8 w-8 text-purple-600" />
-            </div>
-          </div>
-
-          <div className="bg-white p-4 rounded-lg border border-gray-200 text-left">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold text-orange-600">
-                  ₹{stats.totalRevenue.toLocaleString()}
-                </div>
-                <div className="text-sm text-gray-600">Total Value</div>
-              </div>
-              <DollarSign className="h-8 w-8 text-orange-600" />
+              <ToggleLeft className="h-8 w-8 text-red-600" />
             </div>
           </div>
         </div>
@@ -304,15 +268,20 @@ export default function AdminSubscriptions() {
               />
             </div>
 
-            <div className="flex gap-2 w-full sm:w-auto">
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+            <div className="flex gap-2 w-full sm:w-auto items-center">
+              {/* <label htmlFor="statusFilter" className="text-sm font-medium text-gray-700">
+                Status:
+              </label> */}
+              <select
+                id="statusFilter"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
               >
-                <Filter className="h-4 w-4" />
-                <span>Filters</span>
-                {showFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </button>
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
               <button
                 onClick={handleCreatePackage}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
@@ -322,27 +291,6 @@ export default function AdminSubscriptions() {
               </button>
             </div>
           </div>
-
-          {/* Filters Row */}
-          {showFilters && (
-            <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-gray-200">
-              <div className="flex-1">
-                <label htmlFor="statusFilter" className="block text-sm font-medium text-gray-700 mb-1">
-                  Filter by Status
-                </label>
-                <select
-                  id="statusFilter"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="all">All Status</option>
-                  <option value="active">Active Only</option>
-                  <option value="inactive">Inactive Only</option>
-                </select>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Packages List */}
@@ -399,12 +347,8 @@ export default function AdminSubscriptions() {
                         )}
                         <div className="flex items-center space-x-4 mt-2">
                           <div className="flex items-center space-x-1 text-sm text-gray-600">
-                            <Coins className="h-4 w-4 text-purple-500" />
-                            <span>{pkg.coins.toLocaleString()} coins</span>
-                          </div>
-                          <div className="flex items-center space-x-1 text-sm text-gray-600">
-                            <DollarSign className="h-4 w-4 text-green-500" />
-                            <span>₹{pkg.price.toLocaleString()}</span>
+                            <span className="text-lg font-bold text-green-500">₹</span>
+                            <span>{pkg.price.toLocaleString()}</span>
                           </div>
                         </div>
                       </div>
@@ -432,14 +376,6 @@ export default function AdminSubscriptions() {
                             pkg.isActive ? 'translate-x-5' : 'translate-x-1'
                           }`}
                         />
-                      </button>
-
-                      <button
-                        onClick={() => handleDeletePackage(pkg)}
-                        className="text-red-600 hover:text-red-900 p-2 rounded transition-colors"
-                        title="Delete package"
-                      >
-                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
@@ -498,7 +434,7 @@ export default function AdminSubscriptions() {
         {/* Create/Edit Package Modal */}
         {isModalOpen && (
           <div 
-            className="fixed inset-0 bg-gray-500 bg-opacity-10 backdrop-blur-[1px] flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-[1px] flex items-center justify-center p-4 z-50"
             onClick={() => setIsModalOpen(false)}
           >
             <div 
@@ -574,20 +510,6 @@ export default function AdminSubscriptions() {
                         rows="3"
                         disabled={submitting}
                       />
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="isActive"
-                        checked={packageForm.isActive}
-                        onChange={(e) => setPackageForm({...packageForm, isActive: e.target.checked})}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        disabled={submitting}
-                      />
-                      <label htmlFor="isActive" className="text-sm font-medium text-gray-700">
-                        Active Package
-                      </label>
                     </div>
                   </div>
 

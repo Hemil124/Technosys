@@ -5,13 +5,16 @@ import {
   Search, 
   Loader2,
   Folder,
+  Package,
   FolderOpen,
   ChevronRight,
   ChevronDown,
   Filter,
   ChevronUp,
   Grid3X3,
-  List
+  List,
+  ToggleRight,
+  ToggleLeft
 } from "lucide-react";
 import { AppContext } from "../context/AppContext";
 import axios from "axios";
@@ -493,24 +496,39 @@ export const AdminCategories = () => {
             {/* Service Categories Stats */}
             <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-white p-4 rounded-lg border border-gray-200 text-left">
-                <div className="text-2xl font-bold text-gray-900">
-                  {serviceStats.total}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {serviceStats.total}
+                    </div>
+                    <div className="text-sm text-gray-600">Total Categories</div>
+                  </div>
+                  <Package className="h-8 w-8 text-blue-600" />
                 </div>
-                <div className="text-sm text-gray-600">Total Categories</div>
               </div>
 
               <div className="bg-white p-4 rounded-lg border border-gray-200 text-left">
-                <div className="text-2xl font-bold text-green-600">
-                  {serviceStats.active}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-2xl font-bold text-green-600">
+                      {serviceStats.active}
+                    </div>
+                    <div className="text-sm text-gray-600">Active Categories</div>
+                  </div>
+                  <ToggleRight className="h-8 w-8 text-green-600" />
                 </div>
-                <div className="text-sm text-gray-600">Active Categories</div>
               </div>
 
               <div className="bg-white p-4 rounded-lg border border-gray-200 text-left">
-                <div className="text-2xl font-bold text-red-600">
-                  {serviceStats.inactive}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-2xl font-bold text-red-600">
+                      {serviceStats.inactive}
+                    </div>
+                    <div className="text-sm text-gray-600">Inactive Categories</div>
+                  </div>
+                  <ToggleLeft className="h-8 w-8 text-red-600" />
                 </div>
-                <div className="text-sm text-gray-600">Inactive Categories</div>
               </div>
             </div>
 
@@ -528,25 +546,25 @@ export const AdminCategories = () => {
                   />
                 </div>
 
-                <div className="w-full sm:w-auto">
+                <div className="flex gap-2 w-full sm:w-auto items-center">
                   <select
                     value={serviceStatusFilter}
                     onChange={(e) => setServiceStatusFilter(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                   >
                     <option value="all">All Status</option>
                     <option value="active">Active Only</option>
                     <option value="inactive">Inactive Only</option>
                   </select>
-                </div>
 
-                <button
-                  onClick={handleCreateCategory}
-                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Add Service Category</span>
-                </button>
+                  <button
+                    onClick={handleCreateCategory}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Add Service Category</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -694,25 +712,40 @@ export const AdminCategories = () => {
           <>
             {/* Sub Service Categories Stats */}
             <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="text-2xl font-bold text-gray-900">
-                  {subServiceStats.total}
+              <div className="bg-white p-4 rounded-lg border border-gray-200 text-left">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-2xl font-bold text-gray-900">
+                      {subServiceStats.total}
+                    </div>
+                    <div className="text-sm text-gray-600">Total Sub Categories</div>
+                  </div>
+                  <FolderOpen className="h-8 w-8 text-blue-600" />
                 </div>
-                <div className="text-sm text-gray-600">Total Sub Categories</div>
               </div>
 
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="text-2xl font-bold text-green-600">
-                  {subServiceStats.active}
+              <div className="bg-white p-4 rounded-lg border border-gray-200 text-left">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-2xl font-bold text-green-600">
+                      {subServiceStats.active}
+                    </div>
+                    <div className="text-sm text-gray-600">Active</div>
+                  </div>
+                  <ToggleRight className="h-8 w-8 text-green-600" />
                 </div>
-                <div className="text-sm text-gray-600">Active</div>
               </div>
 
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="text-2xl font-bold text-red-600">
-                  {subServiceStats.inactive}
+              <div className="bg-white p-4 rounded-lg border border-gray-200 text-left">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-2xl font-bold text-red-600">
+                      {subServiceStats.inactive}
+                    </div>
+                    <div className="text-sm text-gray-600">Inactive</div>
+                  </div>
+                  <ToggleLeft className="h-8 w-8 text-red-600" />
                 </div>
-                <div className="text-sm text-gray-600">Inactive</div>
               </div>
             </div>
 
