@@ -10,6 +10,8 @@ import {
   togglePackageStatus
   ,purchaseSubscription,
   getSubscriptionHistory
+  ,createRazorpayOrder,
+  verifyRazorpayPayment
 } from "../controllers/subscriptionPackage.controller.js";
 import userAuth from "../middleware/userAuth.js";
 
@@ -62,6 +64,28 @@ router.post("/:id/purchase", userAuth, (req, res, next) => {
   }
   next();
 }, purchaseSubscription);
+
+// Create Razorpay order (technician)
+router.post('/:id/create-order', userAuth, (req, res, next) => {
+  if (req.userType !== 'technician') {
+    return res.status(403).json({ success: false, message: 'Access denied. Technician privileges required.' });
+  }
+  next();
+}, createRazorpayOrder);
+
+// Razorpay health check (helps debug env/config)
+router.get('/razorpay-health', (req, res) => {
+  const ok = !!(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
+  return res.status(200).json({ success: true, message: 'Razorpay health', data: { configured: ok } });
+});
+
+// Verify Razorpay payment (technician)
+router.post('/verify-payment', userAuth, (req, res, next) => {
+  if (req.userType !== 'technician') {
+    return res.status(403).json({ success: false, message: 'Access denied. Technician privileges required.' });
+  }
+  next();
+}, verifyRazorpayPayment);
 
 // Admin protected routes
 router.post("/", userAuth, (req, res, next) => {

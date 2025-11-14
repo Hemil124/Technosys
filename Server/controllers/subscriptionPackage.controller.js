@@ -3,6 +3,14 @@ import SubscriptionPackage from "../models/SubscriptionPackage.js";
 import { validationResult } from "express-validator";
 import SubscriptionHistory from "../models/SubscriptionHistory.js";
 import TechnicianWallet from "../models/TechnicianWallet.js";
+import SubscriptionPayment from "../models/SubscriptionPayment.js";
+import Razorpay from "razorpay";
+import crypto from "crypto";
+
+const razorpayInstance = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
 
 // @desc    Get all subscription packages
 // @route   GET /api/subscription-packages
@@ -328,6 +336,169 @@ export const getSubscriptionHistory = async (req, res) => {
     return res.status(200).json({ success: true, message: 'Purchase history retrieved', data: history });
   } catch (error) {
     console.error('Get subscription history error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Internal server error' });
+  }
+};
+    
+// @desc    Create Razorpay order for a subscription package (technician)
+// @route   POST /api/subscription-packages/:id/create-order
+// @access  Technician only
+export const createRazorpayOrder = async (req, res) => {
+  try {
+    if (!req.userType || req.userType !== 'technician') {
+      return res.status(403).json({ success: false, message: 'Access denied. Technician only.' });
+    }
+
+    const packageId = req.params.id;
+    const subscriptionPackage = await SubscriptionPackage.findById(packageId);
+
+    if (!subscriptionPackage || !subscriptionPackage.isActive) {
+      return res.status(404).json({ success: false, message: 'Subscription package not found or not active' });
+    }
+
+    // Ensure Razorpay keys are present
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      console.error('Razorpay keys not configured in env');
+      return res.status(500).json({ success: false, message: 'Razorpay keys not configured on server' });
+    }
+
+    const amount = Math.round((subscriptionPackage.price || 0) * 100); // amount in paise
+
+    // Build a short receipt id (Razorpay requires <= 40 chars)
+    const rawReceipt = `rcpt_${req.userId}_${Date.now()}`;
+    let receipt = rawReceipt;
+    if (receipt.length > 40) {
+      // try a compact form using last 8 chars of userId and last 6 of timestamp
+      receipt = `rcpt_${String(req.userId).slice(-8)}_${String(Date.now()).slice(-6)}`;
+    }
+    if (receipt.length > 40) {
+      // fallback to a short random hex string
+      receipt = `rcpt_${crypto.randomBytes(8).toString('hex')}`;
+    }
+
+    const orderOptions = {
+      amount,
+      currency: 'INR',
+      receipt,
+      payment_capture: 1,
+    };
+
+    let order;
+    try {
+      order = await razorpayInstance.orders.create(orderOptions);
+    } catch (provErr) {
+      // log provider error details for debugging (avoid leaking secrets)
+      try {
+        console.error('Razorpay provider error creating order:', provErr && provErr.message ? provErr.message : provErr);
+        // log full object for debugging (this stays server-side)
+        console.error('Razorpay provider full error:', provErr);
+      } catch (logErr) {
+        console.error('Error logging provider error', logErr);
+      }
+
+      // Try to extract safe detail fields
+      const provDetail = provErr?.error?.description || provErr?.error || provErr?.message || (typeof provErr === 'string' ? provErr : undefined);
+
+      return res.status(502).json({
+        success: false,
+        message: 'Failed to create payment order with provider',
+        detail: provDetail
+      });
+    }
+
+    // Create pending payment record
+    const payment = new SubscriptionPayment({
+      TechnicianID: req.userId,
+      PackageID: subscriptionPackage._id,
+      Amount: subscriptionPackage.price,
+      Method: 'Razorpay',
+      Status: 'Pending',
+      ProviderOrderId: order.id,
+    });
+
+    await payment.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Razorpay order created',
+      data: { order, paymentId: payment._id },
+      key: process.env.RAZORPAY_KEY_ID
+    });
+  } catch (error) {
+    console.error('Create Razorpay order error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Internal server error' });
+  }
+};
+
+// @desc    Verify Razorpay payment signature and finalize subscription
+// @route   POST /api/subscription-packages/verify-payment
+// @access  Technician only
+export const verifyRazorpayPayment = async (req, res) => {
+  try {
+    if (!req.userType || req.userType !== 'technician') {
+      return res.status(403).json({ success: false, message: 'Access denied. Technician only.' });
+    }
+
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, paymentId } = req.body;
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !paymentId) {
+      return res.status(400).json({ success: false, message: 'Incomplete payment verification data' });
+    }
+
+    // verify signature
+    const generated_signature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest('hex');
+
+    const paymentRecord = await SubscriptionPayment.findById(paymentId);
+    if (!paymentRecord) {
+      return res.status(404).json({ success: false, message: 'Payment record not found' });
+    }
+
+    if (generated_signature !== razorpay_signature) {
+      paymentRecord.Status = 'Failed';
+      paymentRecord.ProviderPaymentId = razorpay_payment_id;
+      paymentRecord.ProviderSignature = razorpay_signature;
+      await paymentRecord.save();
+
+      return res.status(400).json({ success: false, message: 'Payment signature verification failed' });
+    }
+
+    // Signature valid -> mark success and create history + update wallet
+    paymentRecord.Status = 'Success';
+    paymentRecord.ProviderPaymentId = razorpay_payment_id;
+    paymentRecord.ProviderSignature = razorpay_signature;
+    await paymentRecord.save();
+
+    // Create subscription history
+    const history = new SubscriptionHistory({
+      TechnicianID: req.userId,
+      PackageID: paymentRecord.PackageID,
+      PurchasedAt: new Date()
+    });
+    await history.save();
+
+    // Update payment record with history id
+    paymentRecord.HistoryID = history._id;
+    await paymentRecord.save();
+
+    // Update or create technician wallet
+    const subscriptionPackage = await SubscriptionPackage.findById(paymentRecord.PackageID);
+    const coinsToAdd = subscriptionPackage?.coins || 0;
+
+    const updatedWallet = await TechnicianWallet.findOneAndUpdate(
+      { TechnicianID: req.userId },
+      {
+        $inc: { BalanceCoins: coinsToAdd },
+        $set: { LastUpdate: new Date() }
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    return res.status(200).json({ success: true, message: 'Payment verified and subscription applied', data: { history, wallet: updatedWallet, payment: paymentRecord } });
+  } catch (error) {
+    console.error('Verify Razorpay payment error:', error);
     return res.status(500).json({ success: false, message: error.message || 'Internal server error' });
   }
 };

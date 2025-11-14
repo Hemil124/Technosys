@@ -64,25 +64,87 @@ export default function TechnicianSubscription() {
       alert("Please login as a technician to purchase.");
       return;
     }
-
     const ok = window.confirm(`Buy '${pkg.name}' for ${pkg.coins} coins (price: ${pkg.price})?`);
     if (!ok) return;
 
     try {
       setBuyingId(pkg._id);
-      const res = await axios.post(`${backendUrl}/api/subscription-packages/${pkg._id}/purchase`, {}, {
-        withCredentials: true,
+
+      // 1) create razorpay order on server
+      const createRes = await axios.post(`${backendUrl}/api/subscription-packages/${pkg._id}/create-order`, {}, { withCredentials: true });
+      if (!createRes.data || !createRes.data.success) {
+        // show server-provided message if available
+        const serverMsg = createRes.data?.message || 'Failed to create payment order';
+        const detail = createRes.data?.detail;
+        alert(detail ? `${serverMsg}: ${detail}` : serverMsg);
+        setBuyingId(null);
+        return;
+      }
+
+      const { order, paymentId } = createRes.data.data || {};
+      const key = createRes.data.key;
+
+      if (!order || !key) {
+        alert('Failed to create payment order (missing order or key)');
+        setBuyingId(null);
+        return;
+      }
+
+      // load razorpay script
+      const loadScript = (src) => new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[src="${src}"]`);
+        if (existing) return resolve(true);
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = () => resolve(true);
+        script.onerror = () => reject(new Error('Razorpay SDK failed to load'));
+        document.body.appendChild(script);
       });
 
-      const data = res.data;
-      alert(data.message || "Subscription purchased successfully");
+      await loadScript('https://checkout.razorpay.com/v1/checkout.js');
 
-      // Refresh history so the new purchase appears
-      await fetchHistory();
-      setBuyingId(null);
+      const options = {
+        key,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'Technosys',
+        description: pkg.name,
+        order_id: order.id,
+        handler: async function (response) {
+          try {
+            // response contains razorpay_order_id, razorpay_payment_id, razorpay_signature
+            const verifyRes = await axios.post(`${backendUrl}/api/subscription-packages/verify-payment`, {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              paymentId
+            }, { withCredentials: true });
+
+            if (verifyRes.data && verifyRes.data.success) {
+              alert(verifyRes.data.message || 'Payment successful and subscription applied');
+              await fetchHistory();
+            } else {
+              alert(verifyRes.data.message || 'Payment verification failed');
+            }
+          } catch (err) {
+            console.error('Verify error', err?.response || err);
+            alert(err?.response?.data?.message || 'Payment verification failed');
+          } finally {
+            setBuyingId(null);
+          }
+        },
+        prefill: {
+          name: userData?.name || '',
+          email: userData?.email || ''
+        },
+        theme: { color: '#2563eb' }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+
     } catch (err) {
       setBuyingId(null);
-      // axios wraps errors, unwrap message if available
       const msg = err?.response?.data?.message || err.message || "Purchase error";
       alert(msg);
     }
