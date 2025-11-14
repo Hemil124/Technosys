@@ -76,7 +76,7 @@ export const AppContextProvider = ({ children }) => {
       s.on('disconnect', () => console.log('Realtime: disconnected'));
 
       return () => {
-        try { s.disconnect(); } catch (e) {}
+        try { s.disconnect(); } catch (e) { }
         socketRef.current = null;
       };
     } catch (err) {
@@ -86,7 +86,7 @@ export const AppContextProvider = ({ children }) => {
 
   // Subscribe to realtime DB changes for a model. Use modelName='*' for all events.
   const realtimeSubscribe = (modelName, cb) => {
-    if (!modelName || typeof cb !== 'function') return () => {};
+    if (!modelName || typeof cb !== 'function') return () => { };
     const map = subscribersRef.current;
     if (!map[modelName]) map[modelName] = new Set();
     map[modelName].add(cb);
@@ -98,6 +98,19 @@ export const AppContextProvider = ({ children }) => {
     if (!map[modelName]) return;
     map[modelName].delete(cb);
     if (map[modelName].size === 0) delete map[modelName];
+  };
+  const fetchUserData = async () => {
+    try {
+      const res = await axios.get(`${backendUrl}/api/auth/me`, {
+        withCredentials: true,
+      });
+
+      if (res.data.success) {
+        setUserData(res.data.user);
+      }
+    } catch (err) {
+      console.log("User refresh failed");
+    }
   };
 
   const getUserData = async () => {
@@ -123,17 +136,20 @@ export const AppContextProvider = ({ children }) => {
   };
 
   const value = {
-    backendUrl,
-    isLoggedIn,
-    setIsLoggedIn,
-    userData,
-    setUserData,
-    getUserData,
-    loadingUser,
-    realtimeSubscribe,
-    realtimeUnsubscribe,
-    socket: socketRef.current,
-  };
+  backendUrl,
+  isLoggedIn,
+  setIsLoggedIn,
+  userData,
+  setUserData,
+  getUserData,
+  fetchUserData,       // ⭐ ADD THIS
+  loadingUser,
+  realtimeSubscribe,
+  realtimeUnsubscribe,
+  socket: socketRef.current,
+};
+
+
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };

@@ -15,7 +15,7 @@ export const getAllSubCategories = async (req, res) => {
 
     const subs = await SubServiceCategory.find(filter)
       .sort({ name: 1 })
-      .select("name price coinsRequired serviceCategoryId image isActive");
+      .select("name description price coinsRequired serviceCategoryId image isActive");
 
     return res.json({ success: true, data: subs });
   } catch (error) {
@@ -41,7 +41,7 @@ export const createSubCategory = async (req, res) => {
     }
 
     const { name, serviceCategoryId, price } = req.body;
-    let { coinsRequired } = req.body;
+    let { coinsRequired, description } = req.body;
     if (typeof coinsRequired === 'string') coinsRequired = Number(coinsRequired);
 
     if (!name || !name.trim()) return res.status(400).json({ success: false, message: 'Name is required' });
@@ -66,6 +66,7 @@ export const createSubCategory = async (req, res) => {
     const sub = await SubServiceCategory.create({
       name: name.trim(),
       serviceCategoryId,
+      description: description ? String(description).trim() : "",
       price: price ? Number(price) : 0,
       coinsRequired: Number(coinsRequired || 0),
       image: imagePath,
@@ -86,7 +87,7 @@ export const updateSubCategory = async (req, res) => {
 
     const { id } = req.params;
     const { name, price } = req.body;
-    let { coinsRequired } = req.body;
+    let { coinsRequired, description } = req.body;
     if (typeof coinsRequired === 'string') coinsRequired = Number(coinsRequired);
 
     const sub = await SubServiceCategory.findById(id);
@@ -105,6 +106,7 @@ export const updateSubCategory = async (req, res) => {
 
     if (price !== undefined) sub.price = Number(price);
     if (coinsRequired !== undefined) sub.coinsRequired = Number(coinsRequired);
+    if (description !== undefined) sub.description = String(description || "").trim();
 
     if (req.file && req.file.filename) {
       sub.image = `/uploads/subcategories/${req.file.filename}`;

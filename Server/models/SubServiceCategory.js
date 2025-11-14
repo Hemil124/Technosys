@@ -9,9 +9,11 @@ const subServiceCategorySchema = new mongoose.Schema(
       ref: "ServiceCategory",
       required: true,
     },
-  price: { type: Number, required: true, default: 0 },
-  // Number of coins required from customer to accept a booking for this sub-service
-  coinsRequired: { type: Number, required: true, default: 0 },
+    // Optional description for the sub-service
+    description: { type: String, default: "", maxlength: 1000 },
+    price: { type: Number, required: true, default: 0 },
+    // Number of coins required from customer to accept a booking for this sub-service
+    coinsRequired: { type: Number, required: true, default: 0 },
     isActive: { type: Boolean, default: true },
     // Optional image path (served from /uploads/categories or similar)
     image: { type: String, default: null },

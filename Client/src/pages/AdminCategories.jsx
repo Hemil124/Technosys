@@ -63,6 +63,7 @@ export const AdminCategories = () => {
     serviceCategoryId: "",
     price: "",
     coinsRequired: "",
+    description: "",
     isActive: true
   });
 
@@ -316,6 +317,7 @@ export const AdminCategories = () => {
       serviceCategoryId: subCategory.serviceCategoryId,
       price: subCategory.price,
       coinsRequired: subCategory.coinsRequired,
+      description: subCategory.description || "",
       isActive: subCategory.isActive
     });
     if (subCategory.image) {
@@ -351,6 +353,7 @@ export const AdminCategories = () => {
       payload.append('name', subCategoryForm.name);
       payload.append('serviceCategoryId', subCategoryForm.serviceCategoryId);
       payload.append('price', subCategoryForm.price);
+      payload.append('description', subCategoryForm.description || "");
       payload.append('coinsRequired', subCategoryForm.coinsRequired);
       payload.append('isActive', subCategoryForm.isActive);
       if (imageFile) {
@@ -954,6 +957,11 @@ const Pagination = ({ page, totalPages, onPageChange }) => {
                               Parent: {getCategoryName(subCategory.serviceCategoryId)} •
                               ₹{subCategory.price} • {subCategory.coinsRequired} coins
                             </div>
+                            {subCategory.description && (
+                              <div className="text-sm text-gray-600 mt-2 line-clamp-2">
+                                {subCategory.description}
+                              </div>
+                            )}
                           </div>
                         </div>
 
@@ -1179,6 +1187,21 @@ const Pagination = ({ page, totalPages, onPageChange }) => {
                         onChange={(e) => setSubCategoryForm({ ...subCategoryForm, name: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Enter sub-category name"
+                        disabled={submitting}
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="subCategoryDescription" className="block text-sm font-medium text-gray-700 mb-1">
+                        Description
+                      </label>
+                      <textarea
+                        id="subCategoryDescription"
+                        value={subCategoryForm.description}
+                        onChange={(e) => setSubCategoryForm({ ...subCategoryForm, description: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Short description about this sub-category (optional)"
+                        rows={3}
                         disabled={submitting}
                       />
                     </div>
