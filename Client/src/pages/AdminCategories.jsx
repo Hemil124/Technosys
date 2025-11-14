@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext, useRef } from "react";
-import { 
-  Plus, 
-  Edit, 
-  Search, 
+import {
+  Plus,
+  Edit,
+  Search,
   Loader2,
   Folder,
   Package,
@@ -22,15 +22,15 @@ import { toast } from "react-toastify";
 
 export const AdminCategories = () => {
   const { backendUrl, userData } = useContext(AppContext);
-  
+
   // State for both categories and sub-categories
   const [categories, setCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // View state - 'service' or 'sub-service'
   const [currentView, setCurrentView] = useState('service');
-  
+
   // Service Categories State
   const [serviceSearchTerm, setServiceSearchTerm] = useState("");
   const [serviceStatusFilter, setServiceStatusFilter] = useState('all');
@@ -38,7 +38,7 @@ export const AdminCategories = () => {
   // Pagination for service categories
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(7);
-  
+
   // Sub-Service Categories State
   const [subServiceSearchTerm, setSubServiceSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -49,23 +49,23 @@ export const AdminCategories = () => {
   // Pagination for sub-service categories
   const [currentSubPage, setCurrentSubPage] = useState(1);
   const [subItemsPerPage, setSubItemsPerPage] = useState(7);
-  
+
   // Modal states
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isSubCategoryModalOpen, setIsSubCategoryModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [editingSubCategory, setEditingSubCategory] = useState(null);
-  
+
   // Form states
   const [categoryForm, setCategoryForm] = useState({ name: "", isActive: true });
-  const [subCategoryForm, setSubCategoryForm] = useState({ 
-    name: "", 
-    serviceCategoryId: "", 
-    price: "", 
-    coinsRequired: "", 
-    isActive: true 
+  const [subCategoryForm, setSubCategoryForm] = useState({
+    name: "",
+    serviceCategoryId: "",
+    price: "",
+    coinsRequired: "",
+    isActive: true
   });
-  
+
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -134,7 +134,7 @@ export const AdminCategories = () => {
   };
 
   const getActiveSubCategoriesCount = (categoryId) => {
-    return subCategories.filter(sub => 
+    return subCategories.filter(sub =>
       sub.serviceCategoryId === categoryId && sub.isActive
     ).length;
   };
@@ -187,7 +187,7 @@ export const AdminCategories = () => {
 
     if (subServiceStatusFilter === 'active') return subCategory.isActive;
     if (subServiceStatusFilter === 'inactive') return !subCategory.isActive;
-    
+
     return true;
   });
 
@@ -237,9 +237,9 @@ export const AdminCategories = () => {
 
   const handleEditCategory = (category) => {
     setEditingCategory(category);
-    setCategoryForm({ 
-      name: category.name, 
-      isActive: category.isActive 
+    setCategoryForm({
+      name: category.name,
+      isActive: category.isActive
     });
     if (category.image) {
       setImagePreview(`${backendUrl}${category.image}`);
@@ -251,7 +251,7 @@ export const AdminCategories = () => {
 
   const handleSubmitCategory = async (e) => {
     e.preventDefault();
-    
+
     if (!categoryForm.name.trim()) {
       toast.error("Category name is required");
       return;
@@ -265,7 +265,7 @@ export const AdminCategories = () => {
     setSubmitting(true);
 
     try {
-      const url = editingCategory 
+      const url = editingCategory
         ? `${backendUrl}/api/service-categories/${editingCategory._id}`
         : `${backendUrl}/api/service-categories`;
       const method = editingCategory ? "put" : "post";
@@ -297,12 +297,12 @@ export const AdminCategories = () => {
   // Modal Handlers - Sub Service Categories
   const handleCreateSubCategory = () => {
     setEditingSubCategory(null);
-    setSubCategoryForm({ 
-      name: "", 
-      serviceCategoryId: "", 
-      price: "", 
-      coinsRequired: "", 
-      isActive: true 
+    setSubCategoryForm({
+      name: "",
+      serviceCategoryId: "",
+      price: "",
+      coinsRequired: "",
+      isActive: true
     });
     setImageFile(null);
     setImagePreview(null);
@@ -311,12 +311,12 @@ export const AdminCategories = () => {
 
   const handleEditSubCategory = (subCategory) => {
     setEditingSubCategory(subCategory);
-    setSubCategoryForm({ 
-      name: subCategory.name, 
-      serviceCategoryId: subCategory.serviceCategoryId, 
-      price: subCategory.price, 
-      coinsRequired: subCategory.coinsRequired, 
-      isActive: subCategory.isActive 
+    setSubCategoryForm({
+      name: subCategory.name,
+      serviceCategoryId: subCategory.serviceCategoryId,
+      price: subCategory.price,
+      coinsRequired: subCategory.coinsRequired,
+      isActive: subCategory.isActive
     });
     if (subCategory.image) {
       setImagePreview(`${backendUrl}${subCategory.image}`);
@@ -328,7 +328,7 @@ export const AdminCategories = () => {
 
   const handleSubmitSubCategory = async (e) => {
     e.preventDefault();
-    
+
     if (!subCategoryForm.name.trim()) {
       toast.error("Sub-category name is required");
       return;
@@ -342,7 +342,7 @@ export const AdminCategories = () => {
     setSubmitting(true);
 
     try {
-      const url = editingSubCategory 
+      const url = editingSubCategory
         ? `${backendUrl}/api/sub-service-categories/${editingSubCategory._id}`
         : `${backendUrl}/api/sub-service-categories`;
       const method = editingSubCategory ? "put" : "post";
@@ -387,16 +387,16 @@ export const AdminCategories = () => {
           payload,
           { withCredentials: true }
         );
-        
+
         // Refresh all data to get updated sub-categories
         await fetchAllData();
-        
+
       } else {
-        const payload = { 
-          name: item.name, 
+        const payload = {
+          name: item.name,
           price: item.price,
           coinsRequired: item.coinsRequired,
-          isActive: newStatus 
+          isActive: newStatus
         };
         await axios.put(
           `${backendUrl}/api/sub-service-categories/${item._id}`,
@@ -449,6 +449,80 @@ export const AdminCategories = () => {
     );
   }
 
+
+ // 🔥 PREMIUM Pagination (Black Active Button)
+const Pagination = ({ page, totalPages, onPageChange }) => {
+  const getPages = () => {
+    let pages = [];
+
+    // Always show page 1
+    pages.push(1);
+
+    if (page > 3) pages.push("left-gap");
+
+    // Middle pages
+    for (let p = page - 1; p <= page + 1; p++) {
+      if (p > 1 && p < totalPages) pages.push(p);
+    }
+
+    if (page < totalPages - 2) pages.push("right-gap");
+
+    if (totalPages > 1) pages.push(totalPages);
+
+    return pages;
+  };
+
+  return (
+    <div className="flex items-center justify-center gap-2 mt-4 select-none">
+      
+      {/* PREV */}
+      <button
+        onClick={() => onPageChange(Math.max(1, page - 1))}
+        disabled={page === 1}
+        className={`px-4 py-2 rounded-xl border text-sm transition-all duration-200
+          ${page === 1 
+            ? "opacity-40 cursor-not-allowed" 
+            : "hover:bg-gray-100 shadow-sm"}`}
+      >
+        Prev
+      </button>
+
+      {/* PAGE BUTTONS */}
+      {getPages().map((p, i) =>
+        p === "left-gap" || p === "right-gap" ? (
+          <span key={i} className="px-3 py-2 text-gray-500">…</span>
+        ) : (
+          <button
+            key={i}
+            onClick={() => onPageChange(p)}
+            className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm border transition-all
+              ${p === page 
+                ? "bg-gray-900 text-white shadow-md scale-110 border-gray-900" 
+                : "hover:bg-gray-100 text-gray-700 border-gray-300"}`}
+          >
+            {p}
+          </button>
+        )
+      )}
+
+      {/* NEXT */}
+      <button
+        onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+        disabled={page === totalPages}
+        className={`px-4 py-2 rounded-xl border text-sm transition-all duration-200
+          ${page === totalPages 
+            ? "opacity-40 cursor-not-allowed" 
+            : "hover:bg-gray-100 shadow-sm"}`}
+      >
+        Next
+      </button>
+
+    </div>
+  );
+};
+
+
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
@@ -467,22 +541,20 @@ export const AdminCategories = () => {
           <div className="bg-white rounded-lg border border-gray-200 p-1 inline-flex">
             <button
               onClick={() => setCurrentView('service')}
-              className={`px-4 py-2 rounded-md flex items-center space-x-2 transition-colors ${
-                currentView === 'service' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-4 py-2 rounded-md flex items-center space-x-2 transition-colors ${currentView === 'service'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-600 hover:text-gray-900'
+                }`}
             >
               <Folder className="h-4 w-4" />
               <span>Service Categories</span>
             </button>
             <button
               onClick={() => setCurrentView('sub-service')}
-              className={`px-4 py-2 rounded-md flex items-center space-x-2 transition-colors ${
-                currentView === 'sub-service' 
-                  ? 'bg-green-600 text-white' 
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-4 py-2 rounded-md flex items-center space-x-2 transition-colors ${currentView === 'sub-service'
+                ? 'bg-green-600 text-white'
+                : 'text-gray-600 hover:text-gray-900'
+                }`}
             >
               <Grid3X3 className="h-4 w-4" />
               <span>Sub Service Categories</span>
@@ -610,25 +682,24 @@ export const AdminCategories = () => {
                                 <Folder className="h-6 w-6 text-gray-500" />
                               </div>
                             )}
-                            
+
                             <div className="flex-1">
                               <div className="flex items-center space-x-3">
                                 <div className="text-sm font-medium text-gray-900">
                                   {category.name}
                                 </div>
                                 <span
-                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                    category.isActive
-                                      ? "bg-green-100 text-green-800"
-                                      : "bg-red-100 text-red-800"
-                                  }`}
+                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${category.isActive
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
+                                    }`}
                                 >
                                   {category.isActive ? "Active" : "Inactive"}
                                 </span>
                               </div>
                             </div>
                           </div>
-                          
+
                           <div className="flex items-center space-x-2">
                             <button
                               onClick={() => handleEditCategory(category)}
@@ -637,18 +708,16 @@ export const AdminCategories = () => {
                             >
                               <Edit className="h-4 w-4" />
                             </button>
-                            
+
                             <button
                               onClick={() => handleToggleActive(category, 'category')}
                               disabled={togglingId === category._id}
-                              className={`relative inline-flex items-center h-6 w-11 rounded-full transition-colors focus:outline-none ${
-                                category.isActive ? 'bg-green-500' : 'bg-gray-300'
-                              } ${togglingId === category._id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                              className={`relative inline-flex items-center h-6 w-11 rounded-full transition-colors focus:outline-none ${category.isActive ? 'bg-green-500' : 'bg-gray-300'
+                                } ${togglingId === category._id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                             >
                               <span
-                                className={`inline-block w-4 h-4 bg-white rounded-full shadow transform transition-transform ${
-                                  category.isActive ? 'translate-x-5' : 'translate-x-1'
-                                }`}
+                                className={`inline-block w-4 h-4 bg-white rounded-full shadow transform transition-transform ${category.isActive ? 'translate-x-5' : 'translate-x-1'
+                                  }`}
                               />
                             </button>
                           </div>
@@ -660,49 +729,16 @@ export const AdminCategories = () => {
               )}
               {/* Pagination Footer */}
               {filteredServiceCategories.length > 0 && (
-                <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between">
-                  <div className="text-sm text-gray-600">
-                    Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
-                    <span className="font-medium">{Math.min(startIndex + itemsPerPage, filteredServiceCategories.length)}</span>{' '}
-                    of <span className="font-medium">{filteredServiceCategories.length}</span> categories
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                      className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      Previous
-                    </button>
-
-                    {/* Page numbers */}
-                    <div className="flex items-center space-x-1">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                            currentPage === page
-                              ? 'bg-blue-600 text-white'
-                              : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      ))}
-                    </div>
-
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                      disabled={currentPage === totalPages}
-                      className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      Next
-                    </button>
-                  </div>
+                <div className="py-6 bg-white flex justify-center">
+                  <Pagination
+                    page={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={(p) => setCurrentPage(p)}
+                  />
                 </div>
               )}
+
+
             </div>
           </>
         )}
@@ -792,52 +828,51 @@ export const AdminCategories = () => {
                       <label htmlFor="categoryFilter" className="block text-sm font-medium text-gray-700 mb-1">
                         Filter by Category
                       </label>
-                        <div className="relative" ref={categoryDropdownRef}>
-                          <input
-                            type="text"
-                            placeholder="Search or select category..."
-                            value={categorySearchTerm}
-                            onChange={(e) => {
-                              setCategorySearchTerm(e.target.value);
-                              setShowCategoryDropdown(true);
-                            }}
-                            onFocus={() => setShowCategoryDropdown(true)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          />
+                      <div className="relative" ref={categoryDropdownRef}>
+                        <input
+                          type="text"
+                          placeholder="Search or select category..."
+                          value={categorySearchTerm}
+                          onChange={(e) => {
+                            setCategorySearchTerm(e.target.value);
+                            setShowCategoryDropdown(true);
+                          }}
+                          onFocus={() => setShowCategoryDropdown(true)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
 
-                          {/* Dropdown Menu */}
-                          {showCategoryDropdown && (
-                            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
-                              <div
-                                onClick={() => {
-                                  setCategoryFilter("");
-                                  setCategorySearchTerm("");
-                                  setShowCategoryDropdown(false);
-                                }}
-                                className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-gray-700"
-                              >
-                                All Categories
-                              </div>
-                              {categories
-                                .filter(c => c.isActive && c.name.toLowerCase().includes(categorySearchTerm.toLowerCase()))
-                                .map(category => (
-                                  <div
-                                    key={category._id}
-                                    onClick={() => {
-                                      setCategoryFilter(category._id);
-                                      setCategorySearchTerm(category.name);
-                                      setShowCategoryDropdown(false);
-                                    }}
-                                    className={`px-3 py-2 hover:bg-blue-50 cursor-pointer ${
-                                      categoryFilter === category._id ? 'bg-blue-100 text-blue-900 font-medium' : 'text-gray-700'
-                                    }`}
-                                  >
-                                    {category.name}
-                                  </div>
-                                ))}
+                        {/* Dropdown Menu */}
+                        {showCategoryDropdown && (
+                          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                            <div
+                              onClick={() => {
+                                setCategoryFilter("");
+                                setCategorySearchTerm("");
+                                setShowCategoryDropdown(false);
+                              }}
+                              className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-gray-700"
+                            >
+                              All Categories
                             </div>
-                          )}
-                        </div>
+                            {categories
+                              .filter(c => c.isActive && c.name.toLowerCase().includes(categorySearchTerm.toLowerCase()))
+                              .map(category => (
+                                <div
+                                  key={category._id}
+                                  onClick={() => {
+                                    setCategoryFilter(category._id);
+                                    setCategorySearchTerm(category.name);
+                                    setShowCategoryDropdown(false);
+                                  }}
+                                  className={`px-3 py-2 hover:bg-blue-50 cursor-pointer ${categoryFilter === category._id ? 'bg-blue-100 text-blue-900 font-medium' : 'text-gray-700'
+                                    }`}
+                                >
+                                  {category.name}
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Status Filter */}
@@ -870,8 +905,8 @@ export const AdminCategories = () => {
                     No sub-categories found
                   </h3>
                   <p className="text-gray-500 mb-4">
-                    {subServiceSearchTerm || categoryFilter || subServiceStatusFilter !== 'all' 
-                      ? "Try adjusting your filters" 
+                    {subServiceSearchTerm || categoryFilter || subServiceStatusFilter !== 'all'
+                      ? "Try adjusting your filters"
                       : "Get started by creating your first sub-category"
                     }
                   </p>
@@ -900,29 +935,28 @@ export const AdminCategories = () => {
                               <Grid3X3 className="h-6 w-6 text-gray-500" />
                             </div>
                           )}
-                          
+
                           <div className="flex-1">
                             <div className="flex items-center space-x-3">
                               <div className="text-sm font-medium text-gray-900">
                                 {subCategory.name}
                               </div>
                               <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  subCategory.isActive
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-red-100 text-red-800"
-                                }`}
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${subCategory.isActive
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                                  }`}
                               >
                                 {subCategory.isActive ? "Active" : "Inactive"}
                               </span>
                             </div>
                             <div className="text-xs text-gray-500 mt-1">
-                              Parent: {getCategoryName(subCategory.serviceCategoryId)} • 
+                              Parent: {getCategoryName(subCategory.serviceCategoryId)} •
                               ₹{subCategory.price} • {subCategory.coinsRequired} coins
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center space-x-2">
                           <button
                             onClick={() => handleEditSubCategory(subCategory)}
@@ -931,18 +965,16 @@ export const AdminCategories = () => {
                           >
                             <Edit className="h-4 w-4" />
                           </button>
-                          
+
                           <button
                             onClick={() => handleToggleActive(subCategory, 'subCategory')}
                             disabled={togglingId === subCategory._id}
-                            className={`relative inline-flex items-center h-6 w-11 rounded-full transition-colors focus:outline-none ${
-                              subCategory.isActive ? 'bg-green-500' : 'bg-gray-300'
-                            } ${togglingId === subCategory._id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                            className={`relative inline-flex items-center h-6 w-11 rounded-full transition-colors focus:outline-none ${subCategory.isActive ? 'bg-green-500' : 'bg-gray-300'
+                              } ${togglingId === subCategory._id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                           >
                             <span
-                              className={`inline-block w-4 h-4 bg-white rounded-full shadow transform transition-transform ${
-                                subCategory.isActive ? 'translate-x-5' : 'translate-x-1'
-                              }`}
+                              className={`inline-block w-4 h-4 bg-white rounded-full shadow transform transition-transform ${subCategory.isActive ? 'translate-x-5' : 'translate-x-1'
+                                }`}
                             />
                           </button>
                         </div>
@@ -953,60 +985,27 @@ export const AdminCategories = () => {
               )}
               {/* Pagination Footer for Sub-Categories */}
               {filteredSubCategories.length > 0 && (
-                <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between">
-                  <div className="text-sm text-gray-600">
-                    Showing <span className="font-medium">{subStartIndex + 1}</span> to{' '}
-                    <span className="font-medium">{Math.min(subStartIndex + subItemsPerPage, filteredSubCategories.length)}</span>{' '}
-                    of <span className="font-medium">{filteredSubCategories.length}</span> sub-categories
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => setCurrentSubPage(prev => Math.max(1, prev - 1))}
-                      disabled={currentSubPage === 1}
-                      className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      Previous
-                    </button>
-
-                    {/* Page numbers */}
-                    <div className="flex items-center space-x-1">
-                      {Array.from({ length: totalSubPages }, (_, i) => i + 1).map(page => (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentSubPage(page)}
-                          className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
-                            currentSubPage === page
-                              ? 'bg-blue-600 text-white'
-                              : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      ))}
-                    </div>
-
-                    <button
-                      onClick={() => setCurrentSubPage(prev => Math.min(totalSubPages, prev + 1))}
-                      disabled={currentSubPage === totalSubPages}
-                      className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      Next
-                    </button>
-                  </div>
+                <div className="py-6 bg-white flex justify-center  ">
+                  <Pagination
+                    page={currentSubPage}
+                    totalPages={totalSubPages}
+                    onPageChange={(p) => setCurrentSubPage(p)}
+                  />
                 </div>
               )}
+
+
             </div>
           </>
         )}
 
         {/* Service Category Modal */}
         {isCategoryModalOpen && (
-          <div 
+          <div
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
             onClick={() => setIsCategoryModalOpen(false)}
           >
-            <div 
+            <div
               className="bg-white rounded-lg shadow-xl max-w-md w-full"
               onClick={(e) => e.stopPropagation()}
             >
@@ -1014,7 +1013,7 @@ export const AdminCategories = () => {
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">
                   {editingCategory ? "Edit Category" : "Create New Category"}
                 </h2>
-                
+
                 <form onSubmit={handleSubmitCategory}>
                   <div className="space-y-4">
                     <div>
@@ -1026,13 +1025,13 @@ export const AdminCategories = () => {
                         id="name"
                         name="name"
                         value={categoryForm.name}
-                        onChange={(e) => setCategoryForm({...categoryForm, name: e.target.value})}
+                        onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Enter category name"
                         disabled={submitting}
                       />
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Category Image {!editingCategory && "*"}
@@ -1110,7 +1109,7 @@ export const AdminCategories = () => {
                     >
                       {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                       <span>
-                        {submitting 
+                        {submitting
                           ? (editingCategory ? "Updating..." : "Creating...")
                           : (editingCategory ? "Update Category" : "Create Category")
                         }
@@ -1125,11 +1124,11 @@ export const AdminCategories = () => {
 
         {/* Sub Category Modal */}
         {isSubCategoryModalOpen && (
-          <div 
+          <div
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
             onClick={() => setIsSubCategoryModalOpen(false)}
           >
-            <div 
+            <div
               className="bg-white rounded-lg shadow-xl max-w-md w-full"
               onClick={(e) => e.stopPropagation()}
             >
@@ -1137,7 +1136,7 @@ export const AdminCategories = () => {
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">
                   {editingSubCategory ? "Edit Sub-Category" : "Create New Sub-Category"}
                 </h2>
-                
+
                 <form onSubmit={handleSubmitSubCategory}>
                   <div className="space-y-4">
                     <div>
@@ -1155,7 +1154,7 @@ export const AdminCategories = () => {
                         />
                         <select
                           value={subCategoryForm.serviceCategoryId}
-                          onChange={(e) => setSubCategoryForm({...subCategoryForm, serviceCategoryId: e.target.value})}
+                          onChange={(e) => setSubCategoryForm({ ...subCategoryForm, serviceCategoryId: e.target.value })}
                           className="absolute inset-0 w-full opacity-0 cursor-pointer"
                           disabled={submitting}
                         >
@@ -1177,7 +1176,7 @@ export const AdminCategories = () => {
                         type="text"
                         id="subCategoryName"
                         value={subCategoryForm.name}
-                        onChange={(e) => setSubCategoryForm({...subCategoryForm, name: e.target.value})}
+                        onChange={(e) => setSubCategoryForm({ ...subCategoryForm, name: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Enter sub-category name"
                         disabled={submitting}
@@ -1193,7 +1192,7 @@ export const AdminCategories = () => {
                           type="number"
                           id="price"
                           value={subCategoryForm.price}
-                          onChange={(e) => setSubCategoryForm({...subCategoryForm, price: e.target.value})}
+                          onChange={(e) => setSubCategoryForm({ ...subCategoryForm, price: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           placeholder="0.00"
                           min="0"
@@ -1209,7 +1208,7 @@ export const AdminCategories = () => {
                           type="number"
                           id="coinsRequired"
                           value={subCategoryForm.coinsRequired}
-                          onChange={(e) => setSubCategoryForm({...subCategoryForm, coinsRequired: e.target.value})}
+                          onChange={(e) => setSubCategoryForm({ ...subCategoryForm, coinsRequired: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           placeholder="0"
                           min="0"
@@ -1295,7 +1294,7 @@ export const AdminCategories = () => {
                     >
                       {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                       <span>
-                        {submitting 
+                        {submitting
                           ? (editingSubCategory ? "Updating..." : "Creating...")
                           : (editingSubCategory ? "Update Sub-Category" : "Create Sub-Category")
                         }

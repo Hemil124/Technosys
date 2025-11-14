@@ -20,6 +20,7 @@ import adminCreationRoute from "./routes/adminCreation.route.js";
 import serviceCategoryRoutes from "./routes/serviceCategory.route.js";
 import subServiceCategoryRoutes from "./routes/subServiceCategory.route.js";
 import technicianAvailabilityRoutes from "./routes/technicianAvailability.route.js";
+import technicianProfileRoutes from "./routes/technicianProfile.route.js";
 import path from 'path';
 import { fileURLToPath } from 'url';
 import "./config/passport.js";
@@ -124,6 +125,7 @@ app.use("/api/admin", adminRoutes);
 app.use('/api/service-categories', serviceCategoryRoutes);
 app.use('/api/sub-service-categories', subServiceCategoryRoutes);
 app.use('/api/technician-availability', technicianAvailabilityRoutes);
+app.use('/api/technician/profile', technicianProfileRoutes);
 app.use('/api/subscription-packages', subscriptionPackageRoutes);
 // one-time admin creation route
 app.use("/api/admin-setup", adminCreationRoute);
