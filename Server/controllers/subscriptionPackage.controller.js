@@ -4,6 +4,12 @@ import { validationResult } from "express-validator";
 import SubscriptionHistory from "../models/SubscriptionHistory.js";
 import TechnicianWallet from "../models/TechnicianWallet.js";
 import SubscriptionPayment from "../models/SubscriptionPayment.js";
+import Invoice from "../models/Invoice.js";
+import Technician from "../models/Technician.js";
+import transporter from "../config/nodemailer.js";
+import fs from "fs";
+import path from "path";
+import PDFDocument from "pdfkit";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 
@@ -495,6 +501,114 @@ export const verifyRazorpayPayment = async (req, res) => {
       },
       { new: true, upsert: true, setDefaultsOnInsert: true }
     );
+
+    // Generate invoice PDF, store it and email to technician
+    (async () => {
+      try {
+        // fetch technician details
+        const tech = await Technician.findById(req.userId).lean();
+        const invoiceDir = path.join(process.cwd(), 'uploads', 'invoices');
+        if (!fs.existsSync(invoiceDir)) fs.mkdirSync(invoiceDir, { recursive: true });
+
+        const invoiceFilename = `invoice_${String(paymentRecord._id)}.pdf`;
+        const invoicePath = path.join(invoiceDir, invoiceFilename);
+
+        // create PDF
+        const doc = new PDFDocument({ size: 'A4', margin: 50 });
+        const stream = fs.createWriteStream(invoicePath);
+        doc.pipe(stream);
+
+        // Header
+        doc.fontSize(20).text('Technosys Invoice', { align: 'center' });
+        doc.moveDown();
+
+        // Invoice meta
+        doc.fontSize(12).text(`Invoice ID: ${paymentRecord._id}`);
+        doc.text(`Payment ID: ${paymentRecord.ProviderPaymentId || ''}`);
+        doc.text(`Date: ${new Date().toLocaleString()}`);
+        doc.moveDown();
+
+        // Technician
+        doc.text('Billed To:', { underline: true });
+        doc.text(`${tech?.Name || tech?.name || ''}`);
+        doc.text(`${tech?.Email || tech?.email || ''}`);
+        if (tech?.MobileNumber) doc.text(`${tech.MobileNumber}`);
+        doc.moveDown();
+
+        // Package details
+        doc.text('Package:', { underline: true });
+        doc.text(`${subscriptionPackage?.name || ''}`);
+        doc.text(`Coins: ${subscriptionPackage?.coins || 0}`);
+        doc.text(`Amount: ₹${paymentRecord.Amount || subscriptionPackage?.price || 0}`);
+        doc.moveDown();
+
+        doc.text('Thank you for your purchase.', { align: 'left' });
+
+        doc.end();
+
+        // wait for stream finish
+        await new Promise((resolve, reject) => {
+          stream.on('finish', resolve);
+          stream.on('error', reject);
+        });
+
+        // store Invoice document
+        const invoiceDoc = new Invoice({
+          ref_type: 'SubscriptionPayment',
+          ref_id: paymentRecord._id,
+          invoice_pdf: `/uploads/invoices/${invoiceFilename}`,
+        });
+        await invoiceDoc.save();
+
+        // send email with attachment if email exists
+        if (tech?.Email) {
+          const mailOptions = {
+            from: process.env.SENDER_EMAIL || process.env.SMTP_FROM || process.env.SMTP_USER,
+            to: tech.Email,
+            subject: 'Your Technosys Invoice',
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #155DFC; text-align: center;">Invoice from Technosys</h2>
+                <p>Dear <strong>${tech?.Name || ''}</strong>,</p>
+                <p>Thank you for your purchase. Please find the invoice attached for your recent subscription.</p>
+
+                <div style="background-color: #f3f4f6; padding: 12px; border-radius: 8px; margin: 18px 0;">
+                  <p style="margin: 0;"><strong>Invoice Details</strong></p>
+                  <ul style="margin: 8px 0 0 16px; padding: 0;">
+                    <li><strong>Invoice ID:</strong> ${paymentRecord._id}</li>
+                    <li><strong>Payment ID:</strong> ${paymentRecord.ProviderPaymentId || ''}</li>
+                    <li><strong>Package:</strong> ${subscriptionPackage?.name || ''}</li>
+                    <li><strong>Amount:</strong> ₹${paymentRecord.Amount || subscriptionPackage?.price || 0}</li>
+                  </ul>
+                </div>
+
+                <p>If you have any questions, please contact our support team.</p>
+
+                <p>Best regards,<br/><strong>Technosys Team</strong></p>
+
+                <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;"/>
+                <p style="color: #6b7280; font-size: 12px; text-align: center;">This is an automated message. Please do not reply to this email.</p>
+              </div>
+            `,
+            attachments: [
+              {
+                filename: invoiceFilename,
+                path: invoicePath,
+              },
+            ],
+          };
+
+          try {
+            await transporter.sendMail(mailOptions);
+            console.log(`Invoice email sent to: ${tech.Email}`);
+          } catch (mailErr) {
+            console.error('Invoice email send failed', mailErr);
+          }
+        }
+      } catch (invErr) {
+        console.error('Invoice generation error', invErr);
+      }
+    })();
 
     return res.status(200).json({ success: true, message: 'Payment verified and subscription applied', data: { history, wallet: updatedWallet, payment: paymentRecord } });
   } catch (error) {

@@ -1,16 +1,16 @@
 import React, { useEffect, useState, useContext } from "react";
 import { AppContext } from "../context/AppContext";
 import axios from "axios";
-
-/**
- * TechnicianSubscription.jsx
- * - YouTube Premium inspired UI
- * - Fixed SUCCESS/FAILED history display (frontend-only)
- */
+import { toast } from "react-toastify";
 
 export default function TechnicianSubscription() {
-  const { backendUrl, userData, fetchUserData, getUserData } =
-    useContext(AppContext);
+  const {
+    backendUrl,
+    userData,
+    fetchUserData,
+    getUserData,
+    realtimeSubscribe,
+  } = useContext(AppContext);
 
   // packages + history
   const [packages, setPackages] = useState([]);
@@ -66,6 +66,35 @@ export default function TechnicianSubscription() {
     fetchHistory();
   }, []);
 
+  // Subscribe to realtime updates for SubscriptionHistory so purchase history updates live
+  useEffect(() => {
+    if (!userData || !realtimeSubscribe) return;
+
+    const unsubscribe = realtimeSubscribe("SubscriptionHistory", (payload) => {
+      try {
+        const doc = payload?.doc;
+        if (!doc) return;
+
+        const docTechId = String(
+          doc?.TechnicianID || doc?.TechnicianId || doc?.technicianID || ""
+        );
+        const currentId = String(userData?.id || userData?._id || "");
+        if (!currentId) return;
+
+        if (docTechId !== currentId) return;
+
+        // For simplicity, refetch the history when relevant changes occur
+        fetchHistory();
+      } catch (e) {
+        console.error("Realtime SubscriptionHistory handler error", e);
+      }
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [realtimeSubscribe, userData]);
+
   // ----------------- LOAD RAZORPAY -----------------
   const loadRazorpayScript = (
     src = "https://checkout.razorpay.com/v1/checkout.js"
@@ -84,14 +113,14 @@ export default function TechnicianSubscription() {
   // ----------------- BUY PACKAGE -----------------
   const handleBuy = async (pkg) => {
     if (!userData) {
-      window.alert("Please log in as a technician.");
+      toast.info("Please log in as a technician.");
       return;
     }
 
-    const confirm = window.confirm(
-      `Buy "${pkg.name}" for ₹${pkg.price} (${pkg.coins} coins)?`
-    );
-    if (!confirm) return;
+    // const confirm = window.confirm(
+    //   `Buy "${pkg.name}" for ₹${pkg.price} (${pkg.coins} coins)?`
+    // );
+    // if (!confirm) return;
 
     try {
       setBuyingId(pkg._id);
@@ -104,7 +133,7 @@ export default function TechnicianSubscription() {
       );
 
       if (!createRes.data?.success) {
-        window.alert(createRes.data?.message);
+        toast.error(createRes.data?.message || "Failed to create order");
         setBuyingId(null);
         return;
       }
@@ -122,6 +151,15 @@ export default function TechnicianSubscription() {
         name: "Technosys",
         description: pkg.name,
         order_id: order.id,
+        modal: {
+          ondismiss: function () {
+            try {
+              setBuyingId(null);
+            } catch (e) {
+              // ignore
+            }
+          },
+        },
 
         handler: async function (response) {
           try {
@@ -142,21 +180,20 @@ export default function TechnicianSubscription() {
               if (payment) {
                 setPayments((prev) => [...prev, payment]);
               }
-
-              window.alert("Payment successful!");
+              toast.success("Payment successful!");
               await fetchHistory();
 
               // update navbar coins
-              if (typeof fetchUserData === "function") {
-                await fetchUserData();
-              } else if (typeof getUserData === "function") {
+              // if (typeof fetchUserData === "function") {
+              //   await fetchUserData();
+              // } else if (typeof getUserData === "function") {
                 await getUserData();
-              }
+              // }
             } else {
-              window.alert("Payment verification failed");
+              toast.error("Payment verification failed");
             }
           } catch (err) {
-            window.alert("Payment error");
+            toast.error(err?.response?.data?.message || "Payment error");
           } finally {
             setBuyingId(null);
           }
@@ -165,15 +202,16 @@ export default function TechnicianSubscription() {
         prefill: {
           name: userData?.name || "",
           email: userData?.email || "",
+          contact: userData?.mobileNumber || "",
         },
 
-        theme: { color: "#ff0000" },
+        theme: { color: "#155DFC" },
       };
 
       const rzp = new window.Razorpay(options);
       rzp.open();
     } catch (err) {
-      window.alert("Payment failed.");
+      toast.error(err?.response?.data?.message || "Payment failed.");
       setBuyingId(null);
     }
   };
@@ -194,10 +232,7 @@ export default function TechnicianSubscription() {
 
   // pagination
   const totalPages = Math.max(1, Math.ceil(history.length / PER_PAGE));
-  const pagedHistory = history.slice(
-    (page - 1) * PER_PAGE,
-    page * PER_PAGE
-  );
+  const pagedHistory = history.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
   // Coin badge
   const CoinBadge = ({ coins }) => (
@@ -215,7 +250,6 @@ export default function TechnicianSubscription() {
   return (
     <div className="min-h-screen bg-white py-10">
       <div className="max-w-6xl mx-auto px-4">
-
         {/* PACKAGES */}
         <section className="mb-12">
           <h2 className="text-xl font-semibold mb-4">Popular plans</h2>
@@ -230,7 +264,9 @@ export default function TechnicianSubscription() {
                   className="bg-gray-50 rounded-2xl p-6 shadow-sm hover:shadow-lg"
                 >
                   <h3 className="text-lg font-bold">{pkg.name}</h3>
-                  <p className="text-sm text-gray-600 mt-1">{pkg.description}</p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {pkg.description}
+                  </p>
 
                   <div className="mt-4 flex items-center gap-3">
                     <CoinBadge coins={pkg.coins} />
@@ -244,10 +280,11 @@ export default function TechnicianSubscription() {
                   <button
                     onClick={() => handleBuy(pkg)}
                     disabled={buyingId === pkg._id}
-                    className={`mt-5 w-full py-3 rounded-lg text-white font-semibold ${buyingId === pkg._id
-                      ? "bg-gray-400"
-                      : "bg-red-600 hover:bg-red-700"
-                      }`}
+                    className={`mt-5 w-full py-3 rounded-lg text-white font-semibold ${
+                      buyingId === pkg._id
+                        ? "bg-gray-400"
+                        : "bg-red-600 hover:bg-red-700"
+                    }`}
                   >
                     {buyingId === pkg._id ? "Processing…" : "Buy now"}
                   </button>
@@ -259,16 +296,21 @@ export default function TechnicianSubscription() {
 
         {/* PURCHASE HISTORY */}
         <section id="purchase-history" className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Purchase History</h2>
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">
+            Purchase History
+          </h2>
 
           {loadingHistory ? (
-            <div className="py-8 text-center text-gray-500">Loading history…</div>
+            <div className="py-8 text-center text-gray-500">
+              Loading history…
+            </div>
           ) : history.length === 0 ? (
-            <div className="py-10 text-center text-gray-500">No purchases yet.</div>
+            <div className="py-10 text-center text-gray-500">
+              No purchases yet.
+            </div>
           ) : (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               <div className="divide-y divide-gray-200">
-
                 {pagedHistory.map((h) => (
                   <div
                     key={h._id}
@@ -291,23 +333,22 @@ export default function TechnicianSubscription() {
                     </div>
                   </div>
                 ))}
-
               </div>
             </div>
           )}
 
           {/* SMART PAGINATION (same as TechnicianRequest.jsx) */}
           <div className="flex justify-center items-center gap-2 py-6 select-none">
-
             {/* PREV BUTTON */}
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
               className={`px-4 py-2 rounded-lg border text-sm transition 
-        ${page === 1
-                  ? "opacity-40 cursor-not-allowed"
-                  : "hover:bg-gray-100 shadow-sm"
-                }`}
+        ${
+          page === 1
+            ? "opacity-40 cursor-not-allowed"
+            : "hover:bg-gray-100 shadow-sm"
+        }`}
             >
               Prev
             </button>
@@ -331,16 +372,19 @@ export default function TechnicianSubscription() {
 
               return pages.map((p, i) =>
                 p === "left" || p === "right" ? (
-                  <span key={i} className="px-3 py-2 text-gray-500">…</span>
+                  <span key={i} className="px-3 py-2 text-gray-500">
+                    …
+                  </span>
                 ) : (
                   <button
                     key={i}
                     onClick={() => setPage(p)}
                     className={`w-10 h-10 flex items-center justify-center rounded-lg border text-sm transition
-              ${p === page
-                        ? "bg-gray-900 text-white shadow"
-                        : "hover:bg-gray-100"
-                      }`}
+              ${
+                p === page
+                  ? "bg-gray-900 text-white shadow"
+                  : "hover:bg-gray-100"
+              }`}
                   >
                     {p}
                   </button>
@@ -353,19 +397,16 @@ export default function TechnicianSubscription() {
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
               className={`px-4 py-2 rounded-lg border text-sm transition 
-        ${page === totalPages
-                  ? "opacity-40 cursor-not-allowed"
-                  : "hover:bg-gray-100 shadow-sm"
-                }`}
+        ${
+          page === totalPages
+            ? "opacity-40 cursor-not-allowed"
+            : "hover:bg-gray-100 shadow-sm"
+        }`}
             >
               Next
             </button>
-
           </div>
-
         </section>
-
-
       </div>
     </div>
   );

@@ -24,59 +24,6 @@ const TechnicianSidebar = () => {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [coinBalance, setCoinBalance] = useState(null);
 
-  // Fetch technician wallet balance
-  // useEffect(() => {
-  //   const fetchWallet = async () => {
-  //     try {
-  //       if (!userData) return;
-  //       const res = await axios.get(`${backendUrl}/api/user/wallet`, { withCredentials: true });
-  //       if (res.data && res.data.success) {
-  //         setCoinBalance(res.data.data?.BalanceCoins ?? 0);
-  //       }
-  //     } catch (err) {
-  //       console.error('Failed to fetch wallet', err?.response?.data || err.message);
-  //     }
-  //   };
-
-  //   fetchWallet();
-  // }, [backendUrl, userData]);
-
-  // // Subscribe to realtime wallet updates for this technician
-  // useEffect(() => {
-  //   if (!userData || !realtimeSubscribe) return;
-
-  //   const unsubscribe = realtimeSubscribe('TechnicianWallet', (payload) => {
-  //     try {
-  //       const doc = payload?.doc;
-  //       if (!doc) return;
-
-  //       const docTechId = String(doc?.TechnicianID || doc?.TechnicianId || doc?.technicianID || '');
-  //       const currentId = String(userData?.id || userData?._id || '');
-  //       if (!currentId) return;
-
-  //       if (docTechId !== currentId) return;
-
-  //       const newBalance = doc?.BalanceCoins ?? doc?.Balance ?? doc?.balanceCoins;
-  //       if (newBalance !== undefined && newBalance !== null) {
-  //         setCoinBalance(Number(newBalance));
-  //       } else {
-  //         // If payload doesn't include balance, refetch wallet
-  //         (async () => {
-  //           try {
-  //             const res = await axios.get(`${backendUrl}/api/user/wallet`, { withCredentials: true });
-  //             if (res.data && res.data.success) setCoinBalance(res.data.data?.BalanceCoins ?? 0);
-  //           } catch (e) {
-  //             console.error('wallet fetch after update failed', e);
-  //           }
-  //         })();
-  //       }
-  //     } catch (e) {
-  //       console.error('Realtime wallet handler error', e);
-  //     }
-  //   });
-
-  //   return () => unsubscribe && unsubscribe();
-  // }, [realtimeSubscribe, userData, backendUrl]);
   useEffect(() => {
     if (!userData) return;
 
