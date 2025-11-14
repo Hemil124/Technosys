@@ -2,281 +2,371 @@ import React, { useEffect, useState, useContext } from "react";
 import { AppContext } from "../context/AppContext";
 import axios from "axios";
 
+/**
+ * TechnicianSubscription.jsx
+ * - YouTube Premium inspired UI
+ * - Fixed SUCCESS/FAILED history display (frontend-only)
+ */
+
 export default function TechnicianSubscription() {
-  const { backendUrl, userData } = useContext(AppContext);
+  const { backendUrl, userData, fetchUserData, getUserData } =
+    useContext(AppContext);
+
+  // packages + history
   const [packages, setPackages] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [history, setHistory] = useState([]);
+
+  // ⭐ store successful/failed payments here (frontend only)
+  const [payments, setPayments] = useState([]);
+
+  // loading + UI states
+  const [loadingPackages, setLoadingPackages] = useState(true);
+  const [loadingHistory, setLoadingHistory] = useState(true);
   const [buyingId, setBuyingId] = useState(null);
   const [error, setError] = useState(null);
-  const [history, setHistory] = useState([]);
-  const [loadingHistory, setLoadingHistory] = useState(true);
-  // Pagination for history
-  const [historyPage, setHistoryPage] = useState(1);
-  const [historyPerPage, setHistoryPerPage] = useState(7);
 
-  useEffect(() => {
-    const fetchPackages = async () => {
-      try {
-        setLoading(true);
-        const res = await axios.get(`${backendUrl}/api/subscription-packages`, {
-          withCredentials: true,
-        });
-        const data = res.data;
-        setPackages(data.data || []);
-      } catch (err) {
-        setError(err.message || "Error");
-      } finally {
-        setLoading(false);
-      }
-    };
+  // pagination
+  const [page, setPage] = useState(1);
+  const PER_PAGE = 6;
 
-    const fetchAll = async () => {
-      await fetchPackages();
-      await fetchHistory();
-    };
-
-    fetchAll();
-  }, [backendUrl]);
-
-  const fetchHistory = async () => {
+  // ----------------- FETCH PACKAGES -----------------
+  async function fetchPackages() {
     try {
-      setLoadingHistory(true);
-      const res = await axios.get(`${backendUrl}/api/subscription-packages/history`, {
+      setLoadingPackages(true);
+      const res = await axios.get(`${backendUrl}/api/subscription-packages`, {
         withCredentials: true,
       });
-      const data = res.data;
-      setHistory(data.data || []);
+      setPackages(res.data?.data || []);
     } catch (err) {
-      // ignore silently or set error if desired
-      console.error('Fetch history error', err?.response?.data || err.message);
+      setError("Unable to load plans.");
+    } finally {
+      setLoadingPackages(false);
+    }
+  }
+
+  // ----------------- FETCH HISTORY -----------------
+  async function fetchHistory() {
+    try {
+      setLoadingHistory(true);
+      const res = await axios.get(
+        `${backendUrl}/api/subscription-packages/history`,
+        { withCredentials: true }
+      );
+      setHistory(res.data?.data || []);
+    } catch (err) {
+      console.error("History fetch error:", err);
     } finally {
       setLoadingHistory(false);
     }
-  };
+  }
 
-  // Reset page when history length or per-page changes
+  // ----------------- ON LOAD -----------------
   useEffect(() => {
-    setHistoryPage(1);
-  }, [historyPerPage]);
+    fetchPackages();
+    fetchHistory();
+  }, []);
 
+  // ----------------- LOAD RAZORPAY -----------------
+  const loadRazorpayScript = (
+    src = "https://checkout.razorpay.com/v1/checkout.js"
+  ) =>
+    new Promise((resolve, reject) => {
+      if (typeof window === "undefined") return resolve(false);
+      const existing = document.querySelector(`script[src="${src}"]`);
+      if (existing) return resolve(true);
+      const s = document.createElement("script");
+      s.src = src;
+      s.onload = () => resolve(true);
+      s.onerror = () => reject(new Error("Razorpay SDK failed to load"));
+      document.body.appendChild(s);
+    });
+
+  // ----------------- BUY PACKAGE -----------------
   const handleBuy = async (pkg) => {
     if (!userData) {
-      alert("Please login as a technician to purchase.");
+      window.alert("Please log in as a technician.");
       return;
     }
-    const ok = window.confirm(`Buy '${pkg.name}' for ${pkg.coins} coins (price: ${pkg.price})?`);
-    if (!ok) return;
+
+    const confirm = window.confirm(
+      `Buy "${pkg.name}" for ₹${pkg.price} (${pkg.coins} coins)?`
+    );
+    if (!confirm) return;
 
     try {
       setBuyingId(pkg._id);
 
-      // 1) create razorpay order on server
-      const createRes = await axios.post(`${backendUrl}/api/subscription-packages/${pkg._id}/create-order`, {}, { withCredentials: true });
-      if (!createRes.data || !createRes.data.success) {
-        // show server-provided message if available
-        const serverMsg = createRes.data?.message || 'Failed to create payment order';
-        const detail = createRes.data?.detail;
-        alert(detail ? `${serverMsg}: ${detail}` : serverMsg);
+      // create order
+      const createRes = await axios.post(
+        `${backendUrl}/api/subscription-packages/${pkg._id}/create-order`,
+        {},
+        { withCredentials: true }
+      );
+
+      if (!createRes.data?.success) {
+        window.alert(createRes.data?.message);
         setBuyingId(null);
         return;
       }
 
-      const { order, paymentId } = createRes.data.data || {};
+      const { order, paymentId } = createRes.data.data;
       const key = createRes.data.key;
 
-      if (!order || !key) {
-        alert('Failed to create payment order (missing order or key)');
-        setBuyingId(null);
-        return;
-      }
+      await loadRazorpayScript();
 
-      // load razorpay script
-      const loadScript = (src) => new Promise((resolve, reject) => {
-        const existing = document.querySelector(`script[src="${src}"]`);
-        if (existing) return resolve(true);
-        const script = document.createElement('script');
-        script.src = src;
-        script.onload = () => resolve(true);
-        script.onerror = () => reject(new Error('Razorpay SDK failed to load'));
-        document.body.appendChild(script);
-      });
-
-      await loadScript('https://checkout.razorpay.com/v1/checkout.js');
-
+      // Razorpay checkout
       const options = {
         key,
         amount: order.amount,
-        currency: order.currency,
-        name: 'Technosys',
+        currency: order.currency || "INR",
+        name: "Technosys",
         description: pkg.name,
         order_id: order.id,
+
         handler: async function (response) {
           try {
-            // response contains razorpay_order_id, razorpay_payment_id, razorpay_signature
-            const verifyRes = await axios.post(`${backendUrl}/api/subscription-packages/verify-payment`, {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              paymentId
-            }, { withCredentials: true });
+            const verifyRes = await axios.post(
+              `${backendUrl}/api/subscription-packages/verify-payment`,
+              {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                paymentId,
+              },
+              { withCredentials: true }
+            );
 
-            if (verifyRes.data && verifyRes.data.success) {
-              alert(verifyRes.data.message || 'Payment successful and subscription applied');
+            if (verifyRes.data?.success) {
+              // ⭐ store payment status locally
+              const payment = verifyRes.data?.data?.payment;
+              if (payment) {
+                setPayments((prev) => [...prev, payment]);
+              }
+
+              window.alert("Payment successful!");
               await fetchHistory();
+
+              // update navbar coins
+              if (typeof fetchUserData === "function") {
+                await fetchUserData();
+              } else if (typeof getUserData === "function") {
+                await getUserData();
+              }
             } else {
-              alert(verifyRes.data.message || 'Payment verification failed');
+              window.alert("Payment verification failed");
             }
           } catch (err) {
-            console.error('Verify error', err?.response || err);
-            alert(err?.response?.data?.message || 'Payment verification failed');
+            window.alert("Payment error");
           } finally {
             setBuyingId(null);
           }
         },
+
         prefill: {
-          name: userData?.name || '',
-          email: userData?.email || ''
+          name: userData?.name || "",
+          email: userData?.email || "",
         },
-        theme: { color: '#2563eb' }
+
+        theme: { color: "#ff0000" },
       };
 
       const rzp = new window.Razorpay(options);
       rzp.open();
-
     } catch (err) {
+      window.alert("Payment failed.");
       setBuyingId(null);
-      const msg = err?.response?.data?.message || err.message || "Purchase error";
-      alert(msg);
     }
   };
 
-  if (loading) return <div className="p-6">Loading packages...</div>;
-  if (error) return <div className="p-6 text-red-600">Error: {error}</div>;
+  // ---------------------------------------------
+  // ⭐ MATCH PAYMENT STATUS WITH HISTORY FRONTEND ONLY
+  // ---------------------------------------------
+  function getStatusForHistory(h) {
+    const match = payments.find(
+      (p) =>
+        p.PackageID === h.PackageID?._id &&
+        p.TechnicianID === h.TechnicianID &&
+        Math.abs(new Date(p.createdAt) - new Date(h.PurchasedAt)) < 20000
+    );
+
+    return match?.Status || "Success"; // default Success (since backend already succeeded)
+  }
+
+  // pagination
+  const totalPages = Math.max(1, Math.ceil(history.length / PER_PAGE));
+  const pagedHistory = history.slice(
+    (page - 1) * PER_PAGE,
+    page * PER_PAGE
+  );
+
+  // Coin badge
+  const CoinBadge = ({ coins }) => (
+    <span className="inline-flex items-center gap-2 bg-black text-white px-3 py-1 rounded-full text-sm font-semibold">
+      <svg width="14" height="14" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" fill="#FFD54A" />
+        <text x="12" y="16" fontSize="10" textAnchor="middle" fill="#111">
+          C
+        </text>
+      </svg>
+      {coins}
+    </span>
+  );
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-semibold mb-4">Subscription Packages</h2>
+    <div className="min-h-screen bg-white py-10">
+      <div className="max-w-6xl mx-auto px-4">
 
-      {packages.length === 0 ? (
-        <div>No subscription packages available.</div>
-      ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
-          {packages.map((pkg) => (
-            <div key={pkg._id} style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 16, background: "#fff" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <div>
-                  <div style={{ fontSize: 16, fontWeight: 600 }}>{pkg.name}</div>
-                  <div style={{ color: "#6b7280", fontSize: 13 }}>{pkg.description}</div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 14, fontWeight: 700 }}>{pkg.coins} coins</div>
-                  <div style={{ color: "#6b7280", fontSize: 13 }}>₹{pkg.price}</div>
-                </div>
-              </div>
+        {/* PACKAGES */}
+        <section className="mb-12">
+          <h2 className="text-xl font-semibold mb-4">Popular plans</h2>
 
-              <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <button
-                  onClick={() => handleBuy(pkg)}
-                  disabled={buyingId === pkg._id}
-                  style={{
-                    background: buyingId === pkg._id ? "#9ca3af" : "#2563eb",
-                    color: "#fff",
-                    border: "none",
-                    padding: "8px 12px",
-                    borderRadius: 6,
-                    cursor: buyingId === pkg._id ? "not-allowed" : "pointer",
-                  }}
-                >
-                  {buyingId === pkg._id ? "Processing..." : "Buy"}
-                </button>
-
-                <div style={{ fontSize: 12, color: "#6b7280" }}>{pkg.isActive ? "Active" : "Inactive"}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-        <div style={{ marginTop: 28 }}>
-          <h3 className="text-xl font-semibold mb-3">Purchase History</h3>
-          {loadingHistory ? (
-            <div>Loading history...</div>
-          ) : history.length === 0 ? (
-            <div>No purchases yet.</div>
+          {loadingPackages ? (
+            <div className="py-10 text-center">Loading plans...</div>
           ) : (
-            <div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {/** compute paginated slice */}
-                {(() => {
-                  const total = history.length;
-                  const totalPages = Math.max(1, Math.ceil(total / historyPerPage));
-                  const startIndex = (historyPage - 1) * historyPerPage;
-                  const paginated = history.slice(startIndex, startIndex + historyPerPage);
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {packages.map((pkg) => (
+                <article
+                  key={pkg._id}
+                  className="bg-gray-50 rounded-2xl p-6 shadow-sm hover:shadow-lg"
+                >
+                  <h3 className="text-lg font-bold">{pkg.name}</h3>
+                  <p className="text-sm text-gray-600 mt-1">{pkg.description}</p>
 
-                  return (
-                    <>
-                      {paginated.map((h) => (
-                        <div key={h._id} style={{ border: '1px solid #e5e7eb', borderRadius: 6, padding: 10, background: '#fafafa' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <div style={{ fontWeight: 600 }}>{h.PackageID?.name || 'Package'}</div>
-                            <div style={{ color: '#6b7280' }}>{new Date(h.PurchasedAt || h.createdAt).toLocaleString()}</div>
-                          </div>
-                          <div style={{ color: '#6b7280', fontSize: 13 }}>{h.PackageID?.coins} coins • ₹{h.PackageID?.price}</div>
-                        </div>
-                      ))}
+                  <div className="mt-4 flex items-center gap-3">
+                    <CoinBadge coins={pkg.coins} />
+                    <div className="text-sm text-gray-500">• One-time</div>
+                  </div>
 
-                      {/* Pagination footer like AdminCategories */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
-                        <div style={{ color: '#6b7280' }}>
-                          {(() => {
-                            const total = history.length;
-                            const start = total === 0 ? 0 : startIndex + 1;
-                            const end = Math.min(startIndex + paginated.length, total);
-                            return `Showing ${start} to ${end} of ${total} purchases`;
-                          })()}
-                        </div>
+                  <div className="mt-4 flex justify-between items-center">
+                    <div className="text-2xl font-extrabold">₹{pkg.price}</div>
+                  </div>
 
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                          <button
-                            onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
-                            disabled={historyPage === 1}
-                            style={{
-                              padding: '8px 12px',
-                              borderRadius: 9999,
-                              border: '1px solid #e5e7eb',
-                              background: historyPage === 1 ? '#f3f4f6' : '#fff',
-                              color: historyPage === 1 ? '#9ca3af' : '#111827'
-                            }}
-                          >
-                            Previous
-                          </button>
+                  <button
+                    onClick={() => handleBuy(pkg)}
+                    disabled={buyingId === pkg._id}
+                    className={`mt-5 w-full py-3 rounded-lg text-white font-semibold ${buyingId === pkg._id
+                      ? "bg-gray-400"
+                      : "bg-red-600 hover:bg-red-700"
+                      }`}
+                  >
+                    {buyingId === pkg._id ? "Processing…" : "Buy now"}
+                  </button>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
 
-                          <div style={{ width: 36, height: 36, borderRadius: 9999, background: '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {historyPage}
-                          </div>
+        {/* PURCHASE HISTORY */}
+        <section id="purchase-history" className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">Purchase History</h2>
 
-                          <button
-                            onClick={() => setHistoryPage((p) => Math.min(Math.max(1, Math.ceil(history.length / historyPerPage)), p + 1))}
-                            disabled={historyPage === Math.max(1, Math.ceil(history.length / historyPerPage))}
-                            style={{
-                              padding: '8px 12px',
-                              borderRadius: 9999,
-                              border: '1px solid #e5e7eb',
-                              background: historyPage === Math.max(1, Math.ceil(history.length / historyPerPage)) ? '#f3f4f6' : '#fff',
-                              color: historyPage === Math.max(1, Math.ceil(history.length / historyPerPage)) ? '#9ca3af' : '#111827'
-                            }}
-                          >
-                            Next
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  );
-                })()}
+          {loadingHistory ? (
+            <div className="py-8 text-center text-gray-500">Loading history…</div>
+          ) : history.length === 0 ? (
+            <div className="py-10 text-center text-gray-500">No purchases yet.</div>
+          ) : (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+              <div className="divide-y divide-gray-200">
+
+                {pagedHistory.map((h) => (
+                  <div
+                    key={h._id}
+                    className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition"
+                  >
+                    {/* LEFT SIDE */}
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium text-gray-900">
+                        {h.PackageID?.name}
+                      </span>
+
+                      <span className="text-xs text-gray-500 mt-1">
+                        {h.PackageID?.coins} coins • ₹{h.PackageID?.price}
+                      </span>
+                    </div>
+
+                    {/* RIGHT SIDE - DATE */}
+                    <div className="text-xs text-gray-500 text-right">
+                      {new Date(h.PurchasedAt || h.createdAt).toLocaleString()}
+                    </div>
+                  </div>
+                ))}
+
               </div>
             </div>
           )}
-        </div>
+
+          {/* SMART PAGINATION (same as TechnicianRequest.jsx) */}
+          <div className="flex justify-center items-center gap-2 py-6 select-none">
+
+            {/* PREV BUTTON */}
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className={`px-4 py-2 rounded-lg border text-sm transition 
+        ${page === 1
+                  ? "opacity-40 cursor-not-allowed"
+                  : "hover:bg-gray-100 shadow-sm"
+                }`}
+            >
+              Prev
+            </button>
+
+            {/* PAGE BUTTONS + DOTS */}
+            {(() => {
+              const pages = [];
+              const total = totalPages;
+
+              pages.push(1); // always first page
+
+              if (page > 3) pages.push("left");
+
+              for (let p = page - 1; p <= page + 1; p++) {
+                if (p > 1 && p < total) pages.push(p);
+              }
+
+              if (page < total - 2) pages.push("right");
+
+              if (total > 1) pages.push(total);
+
+              return pages.map((p, i) =>
+                p === "left" || p === "right" ? (
+                  <span key={i} className="px-3 py-2 text-gray-500">…</span>
+                ) : (
+                  <button
+                    key={i}
+                    onClick={() => setPage(p)}
+                    className={`w-10 h-10 flex items-center justify-center rounded-lg border text-sm transition
+              ${p === page
+                        ? "bg-gray-900 text-white shadow"
+                        : "hover:bg-gray-100"
+                      }`}
+                  >
+                    {p}
+                  </button>
+                )
+              );
+            })()}
+
+            {/* NEXT BUTTON */}
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className={`px-4 py-2 rounded-lg border text-sm transition 
+        ${page === totalPages
+                  ? "opacity-40 cursor-not-allowed"
+                  : "hover:bg-gray-100 shadow-sm"
+                }`}
+            >
+              Next
+            </button>
+
+          </div>
+
+        </section>
+
+
+      </div>
     </div>
   );
 }
-
