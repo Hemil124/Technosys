@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 import { Link } from "react-router-dom";
 
 const TechnicianRequest = () => {
-  const { backendUrl, userData } = useContext(AppContext);
+  const { backendUrl, userData, realtimeSubscribe } = useContext(AppContext);
   const [technicians, setTechnicians] = useState([]);
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
@@ -24,6 +24,21 @@ const TechnicianRequest = () => {
     fetchTechnicians();
     fetchStats();
   }, [filter]);
+
+  // Subscribe to realtime Technician events so list updates across clients
+  useEffect(() => {
+    if (!realtimeSubscribe) return;
+    const unsubscribe = realtimeSubscribe('Technician', (payload) => {
+      console.log('Realtime event received (Technician):', payload);
+      // For simplicity, refetch list and stats on any technician event
+      fetchTechnicians();
+      fetchStats();
+    });
+
+    return () => {
+      try { unsubscribe(); } catch (e) {}
+    };
+  }, [realtimeSubscribe, filter]);
 
   const fetchTechnicians = async () => {
     try {
