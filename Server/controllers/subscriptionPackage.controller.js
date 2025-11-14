@@ -337,7 +337,24 @@ export const getSubscriptionHistory = async (req, res) => {
 
     const history = await SubscriptionHistory.find({ TechnicianID: technicianId })
       .populate({ path: 'PackageID', select: 'name coins price description' })
-      .sort({ PurchasedAt: -1 });
+      .sort({ PurchasedAt: -1 })
+      .lean();
+
+    // Attach invoice URL when available by looking up the SubscriptionPayment and Invoice
+    for (const h of history) {
+      try {
+        const payment = await SubscriptionPayment.findOne({ HistoryID: h._id }).select('_id').lean();
+        if (payment) {
+          const invoice = await Invoice.findOne({ ref_type: 'SubscriptionPayment', ref_id: payment._id }).select('invoice_pdf').lean();
+          h.invoice_pdf = invoice?.invoice_pdf || null;
+        } else {
+          h.invoice_pdf = null;
+        }
+      } catch (attachErr) {
+        console.error('Attach invoice error for history', h._id, attachErr);
+        h.invoice_pdf = null;
+      }
+    }
 
     return res.status(200).json({ success: true, message: 'Purchase history retrieved', data: history });
   } catch (error) {

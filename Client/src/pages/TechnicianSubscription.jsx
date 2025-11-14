@@ -2,6 +2,7 @@ import React, { useEffect, useState, useContext } from "react";
 import { AppContext } from "../context/AppContext";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { FileText } from "lucide-react";
 
 export default function TechnicianSubscription() {
   const {
@@ -327,9 +328,18 @@ export default function TechnicianSubscription() {
                       </span>
                     </div>
 
-                    {/* RIGHT SIDE - DATE */}
-                    <div className="text-xs text-gray-500 text-right">
-                      {new Date(h.PurchasedAt || h.createdAt).toLocaleString()}
+                    {/* RIGHT SIDE - Date + Invoice */}
+                    <div className="flex items-center gap-3 text-xs text-gray-500 text-right">
+                      <div>{new Date(h.PurchasedAt || h.createdAt).toLocaleString()}</div>
+                      {h.invoice_pdf ? (
+                        <button
+                          onClick={() => window.open(`${backendUrl}${h.invoice_pdf}`, "_blank")}
+                          title="Download invoice"
+                          className="p-1 rounded hover:bg-gray-100"
+                        >
+                          <FileText size={18} className="text-blue-600" />
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 ))}
