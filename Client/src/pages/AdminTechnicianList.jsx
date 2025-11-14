@@ -8,7 +8,26 @@ function AdminTechnicianList() {
   const [technicians, setTechnicians] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Fetch all technicians
+  // ⭐ Get correct photo URL
+  const getPhotoUrl = (photoPath) => {
+    if (!photoPath) return null;
+
+    if (photoPath.startsWith("http")) return photoPath;
+
+    if (photoPath.startsWith("/uploads")) {
+      return `${backendUrl}${photoPath}`;
+    }
+
+    return `${backendUrl}/uploads/photos/${photoPath}`;
+  };
+
+  // ⭐ Fallback Avatar
+  const DefaultAvatar = ({ name }) => (
+    <div className="w-12 h-12 bg-blue-100 border border-blue-200 text-blue-600 rounded-full flex items-center justify-center font-bold text-lg">
+      {name?.charAt(0)?.toUpperCase() || "T"}
+    </div>
+  );
+
   const fetchTechnicians = async () => {
     try {
       setLoading(true);
@@ -23,9 +42,7 @@ function AdminTechnicianList() {
       }
     } catch (error) {
       console.error("Error fetching technicians:", error);
-      toast.error(
-        error.response?.data?.message || "Error fetching technicians"
-      );
+      toast.error(error.response?.data?.message || "Error fetching technicians");
     } finally {
       setLoading(false);
     }
@@ -36,79 +53,100 @@ function AdminTechnicianList() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto bg-white shadow-md rounded-lg p-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">
-          Technician List
+    <div className="min-h-screen bg-gray-100 p-6">
+      <div className="max-w-6xl mx-auto bg-white shadow-xl rounded-2xl p-6">
+        <h2 className="text-3xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+          👨‍🔧 Technician List
         </h2>
 
         {loading ? (
-          <div className="text-center py-8 text-gray-600">
-            Loading technicians...
-          </div>
+          <div className="text-center py-8 text-gray-600">Loading technicians...</div>
         ) : technicians.length === 0 ? (
-          <div className="text-center py-8 text-gray-600">
-            No technicians found.
-          </div>
+          <div className="text-center py-8 text-gray-600">No technicians found.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full border border-gray-200 divide-y divide-gray-200">
-              <thead className="bg-gray-100">
+          <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-md">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-blue-50 text-gray-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Mobile
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Registered On
-                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Profile</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Mobile</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Category</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold uppercase">Registered</th>
                 </tr>
               </thead>
+
               <tbody className="bg-white divide-y divide-gray-200">
                 {technicians.map((tech) => (
-                  <tr key={tech._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <tr key={tech._id} className="hover:bg-blue-50 transition">
+                    
+                    {/* PROFILE IMAGE WITH FALLBACK */}
+                    <td className="px-6 py-4">
+                      {tech.Photo ? (
+                        <img
+                          src={getPhotoUrl(tech.Photo)}
+                          alt="Profile"
+                          className="w-12 h-12 rounded-full border shadow-sm object-cover"
+                          onError={(e) => {
+                            e.target.style.display = "none";
+                            const fallback = e.target.parentElement.querySelector(".fallback-avatar");
+                            if (fallback) fallback.style.display = "flex";
+                          }}
+                        />
+                      ) : null}
+
+                      {/* Fallback Avatar */}
+                      <div
+                        className="fallback-avatar"
+                        style={{ display: tech.Photo ? "none" : "flex" }}
+                      >
+                        <DefaultAvatar name={tech.Name} />
+                      </div>
+                    </td>
+
+                    {/* NAME */}
+                    <td className="px-6 py-4 text-sm font-semibold text-gray-900">
                       {tech.Name}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {tech.Email}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {tech.MobileNumber}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+
+                    {/* EMAIL */}
+                    <td className="px-6 py-4 text-sm text-gray-700">{tech.Email}</td>
+
+                    {/* MOBILE */}
+                    <td className="px-6 py-4 text-sm text-gray-700">{tech.MobileNumber}</td>
+
+                    {/* CATEGORY */}
+                    <td className="px-6 py-4 text-sm text-gray-700">
                       {tech.ServiceCategoryID?.name || "N/A"}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+
+                    {/* STATUS BADGE */}
+                    <td className="px-6 py-4">
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          tech.VerifyStatus === "Approved"
-                            ? "bg-green-100 text-green-700"
-                            : tech.VerifyStatus === "Pending"
-                            ? "bg-yellow-100 text-yellow-700"
-                            : "bg-red-100 text-red-700"
-                        }`}
+                        className={`px-3 py-1 text-xs font-semibold rounded-full 
+                          ${
+                            tech.VerifyStatus === "Approved"
+                              ? "bg-green-100 text-green-700"
+                              : tech.VerifyStatus === "Pending"
+                              ? "bg-yellow-100 text-yellow-700"
+                              : "bg-red-100 text-red-700"
+                          }
+                        `}
                       >
                         {tech.VerifyStatus}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+
+                    {/* DATE */}
+                    <td className="px-6 py-4 text-sm text-gray-500">
                       {new Date(tech.createdAt).toLocaleDateString()}
                     </td>
                   </tr>
                 ))}
               </tbody>
+
             </table>
           </div>
         )}
