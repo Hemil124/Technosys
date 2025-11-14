@@ -144,6 +144,7 @@
 
 import ServiceCategory from "../models/ServiceCategory.js";
 import SubServiceCategory from "../models/SubServiceCategory.js"; // Add this import
+import { getIo } from "../config/realtime.js";
 
 export const getAllCategories = async (req, res) => {
   try {
@@ -194,6 +195,14 @@ export const createCategory = async (req, res) => {
     }
 
     const category = await ServiceCategory.create({ name: name.trim(), isActive, image: imagePath });
+    // Emit realtime create event
+    try {
+      const io = getIo();
+      if (io) io.emit('db_change', { model: 'ServiceCategory', operation: 'create', doc: category });
+    } catch (e) {
+      console.warn('Realtime emit failed (createCategory)', e);
+    }
+
     return res.status(201).json({ success: true, data: category, message: 'Category created' });
   } catch (error) {
     // Handle unique index error
@@ -252,6 +261,14 @@ export const updateCategory = async (req, res) => {
 
     await category.save();
 
+    // Emit realtime update event
+    try {
+      const io = getIo();
+      if (io) io.emit('db_change', { model: 'ServiceCategory', operation: 'update', doc: category });
+    } catch (e) {
+      console.warn('Realtime emit failed (updateCategory)', e);
+    }
+
     // CRITICAL: If category is being deactivated, also deactivate all its sub-categories
     if (wasActive === true && isActive === false) {
       await SubServiceCategory.updateMany(
@@ -293,6 +310,14 @@ export const deleteCategory = async (req, res) => {
     // Soft delete: Set isActive to false instead of removing from database
     category.isActive = false;
     await category.save();
+
+    // Emit realtime delete/deactivate event
+    try {
+      const io = getIo();
+      if (io) io.emit('db_change', { model: 'ServiceCategory', operation: 'delete', doc: category });
+    } catch (e) {
+      console.warn('Realtime emit failed (deleteCategory)', e);
+    }
 
     // CRITICAL: Also deactivate all sub-categories when main category is deleted
     await SubServiceCategory.updateMany(

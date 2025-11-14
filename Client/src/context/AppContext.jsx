@@ -1,6 +1,7 @@
-import React, { createContext, useState, useEffect } from "react";
+import React, { createContext, useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { io as ioClient } from "socket.io-client";
 
 export const AppContext = createContext();
 
@@ -13,6 +14,8 @@ export const AppContextProvider = ({ children }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const socketRef = useRef(null);
+  const subscribersRef = useRef({}); // { modelName: Set(callback) }
 
   const getAuthState = async () => {
     try {
@@ -41,6 +44,61 @@ export const AppContextProvider = ({ children }) => {
   useEffect(() => {
     getAuthState();
   }, []);
+
+  useEffect(() => {
+    // Initialize socket connection
+    try {
+      const s = ioClient(backendUrl, { withCredentials: true });
+      socketRef.current = s;
+
+      s.on('connect', () => {
+        console.log('Realtime: connected', s.id);
+      });
+
+      s.on('db_change', (payload) => {
+        // Notify specific model subscribers
+        const model = payload?.model || '*';
+        const subs = subscribersRef.current[model];
+        if (subs) {
+          subs.forEach((cb) => {
+            try { cb(payload); } catch (e) { console.error('subscriber error', e); }
+          });
+        }
+        // Notify wildcard subscribers
+        const wild = subscribersRef.current['*'];
+        if (wild) {
+          wild.forEach((cb) => {
+            try { cb(payload); } catch (e) { console.error('subscriber error', e); }
+          });
+        }
+      });
+
+      s.on('disconnect', () => console.log('Realtime: disconnected'));
+
+      return () => {
+        try { s.disconnect(); } catch (e) {}
+        socketRef.current = null;
+      };
+    } catch (err) {
+      console.warn('Realtime init failed', err);
+    }
+  }, [backendUrl]);
+
+  // Subscribe to realtime DB changes for a model. Use modelName='*' for all events.
+  const realtimeSubscribe = (modelName, cb) => {
+    if (!modelName || typeof cb !== 'function') return () => {};
+    const map = subscribersRef.current;
+    if (!map[modelName]) map[modelName] = new Set();
+    map[modelName].add(cb);
+    return () => realtimeUnsubscribe(modelName, cb);
+  };
+
+  const realtimeUnsubscribe = (modelName, cb) => {
+    const map = subscribersRef.current;
+    if (!map[modelName]) return;
+    map[modelName].delete(cb);
+    if (map[modelName].size === 0) delete map[modelName];
+  };
 
   const getUserData = async () => {
     try {
@@ -72,6 +130,9 @@ export const AppContextProvider = ({ children }) => {
     setUserData,
     getUserData,
     loadingUser,
+    realtimeSubscribe,
+    realtimeUnsubscribe,
+    socket: socketRef.current,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -11,6 +11,7 @@ import hpp from "hpp";
 import morgan from "morgan";
 
 import connectdb from "./config/mongodb.js";
+import { initRealtime } from "./config/realtime.js";
 import authRouter from "./routes/auth.route.js";
 import userRoutesr from "./routes/user.route.js";
 import adminRoutes from "./routes/admin.route.js";
@@ -46,14 +47,16 @@ if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
 // Set Security Headers with configured CSP
+// Build connectSrc for CSP from allowedOrigins + backend
+const cspConnectSrc = ["'self'", `http://localhost:${port}`, ...allowedOrigins];
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        imgSrc: ["'self'", "http://localhost:4000", "data:", "blob:"],
-        connectSrc: ["'self'", "http://localhost:4000"],
+        imgSrc: ["'self'", `http://localhost:${port}`, "data:", "blob:"],
+        connectSrc: cspConnectSrc,
       },
     },
   })
@@ -72,11 +75,17 @@ app.use(hpp());
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors({ 
-  origin: allowedOrigins, 
+// Allow origins: in development reflect request origin (origin: true) for convenience.
+const corsOptions = {
   credentials: true,
-  exposedHeaders: ['Content-Type', 'Content-Length']
-}));
+  exposedHeaders: ['Content-Type', 'Content-Length'],
+};
+if (process.env.NODE_ENV === 'development') {
+  corsOptions.origin = true; // allow any origin (use only in dev)
+} else {
+  corsOptions.origin = allowedOrigins;
+}
+app.use(cors(corsOptions));
 
 // Serve static files (uploads folder)
 app.use('/uploads', (req, res, next) => {
@@ -119,7 +128,14 @@ app.use('/api/subscription-packages', subscriptionPackageRoutes);
 app.use("/api/admin-setup", adminCreationRoute);
 
 
-app.listen(port, () => console.log(`Server started on PORT:${port}`));
+const server = app.listen(port, () => console.log(`Server started on PORT:${port}`));
+
+// Initialize realtime (Socket.IO)
+try {
+  initRealtime(server);
+} catch (err) {
+  console.error('Failed to initialize realtime module', err);
+}
 
 
 

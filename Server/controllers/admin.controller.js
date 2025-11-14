@@ -3,6 +3,7 @@ import TechnicianBankDetails from "../models/TechnicianBankDetails.js";
 import TechnicianServiceCategory from "../models/TechnicianServiceCategory.js";
 import ServiceCategory from "../models/ServiceCategory.js";
 import nodemailer from "nodemailer";
+import { getIo } from "../config/realtime.js";
 
 // Create transporter for emails
 // const transporter = nodemailer.createTransport({
@@ -446,6 +447,13 @@ export const approveTechnician = async (req, res) => {
       message: "Technician approved successfully",
       technician,
     });
+    // Emit realtime event for clients
+    try {
+      const io = getIo();
+      if (io) io.emit('db_change', { model: 'Technician', operation: 'approve', doc: technician });
+    } catch (e) {
+      console.warn('Realtime emit failed (approveTechnician)', e);
+    }
   } catch (error) {
     console.error("Approve technician error:", error);
     res.status(500).json({
@@ -557,6 +565,13 @@ export const rejectTechnician = async (req, res) => {
       message: "Technician rejected successfully",
       technician,
     });
+    // Emit realtime event for clients
+    try {
+      const io = getIo();
+      if (io) io.emit('db_change', { model: 'Technician', operation: 'reject', doc: technician });
+    } catch (e) {
+      console.warn('Realtime emit failed (rejectTechnician)', e);
+    }
   } catch (error) {
     console.error("Reject technician error:", error);
     res.status(500).json({
@@ -634,6 +649,14 @@ export const toggleTechnicianStatus = async (req, res) => {
       message: `Technician ${action}d successfully`,
       technician: updatedTechnician,
     });
+
+    // Emit realtime event for clients about status toggle
+    try {
+      const io = getIo();
+      if (io) io.emit('db_change', { model: 'Technician', operation: 'status_toggle', doc: updatedTechnician });
+    } catch (e) {
+      console.warn('Realtime emit failed (toggleTechnicianStatus)', e);
+    }
   } catch (error) {
     console.error("Toggle technician status error:", error);
     res.status(500).json({
