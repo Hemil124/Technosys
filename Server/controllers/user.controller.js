@@ -115,6 +115,7 @@ export const getUserData = async (req, res) => {
       const user = await Admin.findById(userId);
       if (!user) return res.json({ success: false, message: 'Admin not found' });
       userData = {
+        id: user._id,
         name: 'Administrator',
         email: user.username,
         role: 'admin',
@@ -131,6 +132,7 @@ export const getUserData = async (req, res) => {
       const services = await ServiceCategory.find({ _id: { $in: serviceCategoryIds } }).lean();
 
       userData = {
+        id: user._id,
         name: user.Name,
         email: user.Email,
         mobileNumber: user.MobileNumber,
