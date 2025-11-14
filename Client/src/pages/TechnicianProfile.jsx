@@ -755,34 +755,7 @@ const TechnicianProfile = () => {
                 </div>
               </div>
 
-              {/* Quick Actions */}
-              <div className="mt-6 space-y-3">
-                <button
-                  onClick={() => setShowPasswordModal(true)}
-                  className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-red-500 to-pink-600 text-white px-4 py-3 rounded-xl hover:from-red-600 hover:to-pink-700 font-medium transition-all duration-200 shadow-md hover:shadow-lg"
-                >
-                  <Shield className="w-5 h-5" />
-                  Change Password
-                </button>
-                
-                <button
-                  onClick={handleSaveProfile}
-                  disabled={saving || Object.values(errors).some((err) => err !== "")}
-                  className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-3 rounded-xl hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed font-medium transition-all duration-200 shadow-md hover:shadow-lg"
-                >
-                  {saving ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-5 h-5" />
-                      Save Changes
-                    </>
-                  )}
-                </button>
-              </div>
+
             </div>
 
             {/* ID Proof Upload Card */}
@@ -1011,6 +984,34 @@ const TechnicianProfile = () => {
               </div>
             </div>
 
+{/* Action Buttons */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 flex flex-col sm:flex-row gap-4">
+              <button
+                onClick={() => setShowPasswordModal(true)}
+                className="flex-1 flex items-center justify-center gap-3 bg-gradient-to-r from-red-500 to-pink-600 text-white px-4 py-4 rounded-xl hover:from-red-600 hover:to-pink-700 font-semibold transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                <Shield className="w-5 h-5" />
+                Change Password
+              </button>
+              
+              <button
+                onClick={handleSaveProfile}
+                disabled={saving || Object.values(errors).some((err) => err !== "")}
+                className="flex-1 flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-4 rounded-xl hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed font-semibold transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-5 h-5" />
+                    Save Changes
+                  </>
+                )}
+              </button>
+            </div>
             {/* Services Section */}
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
               <div className="flex items-center gap-3 mb-6">
@@ -1084,6 +1085,8 @@ const TechnicianProfile = () => {
                 )}
               </div>
             </div>
+
+            
           </div>
         </div>
       </div>
