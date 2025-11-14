@@ -78,55 +78,55 @@ const TechnicianSidebar = () => {
   //   return () => unsubscribe && unsubscribe();
   // }, [realtimeSubscribe, userData, backendUrl]);
   useEffect(() => {
-  if (!userData) return;
+    if (!userData) return;
 
-  // --- Helper: Fetch wallet ---
-  const fetchWallet = async () => {
-    try {
-      const res = await axios.get(`${backendUrl}/api/user/wallet`, {
-        withCredentials: true,
-      });
+    // --- Helper: Fetch wallet ---
+    const fetchWallet = async () => {
+      try {
+        const res = await axios.get(`${backendUrl}/api/user/wallet`, {
+          withCredentials: true,
+        });
 
-      if (res.data?.success) {
-        setCoinBalance(res.data.data?.BalanceCoins ?? 0);
+        if (res.data?.success) {
+          setCoinBalance(res.data.data?.BalanceCoins ?? 0);
+        }
+      } catch (err) {
+        console.error("Failed to fetch wallet", err?.response?.data || err.message);
       }
-    } catch (err) {
-      console.error("Failed to fetch wallet", err?.response?.data || err.message);
-    }
-  };
+    };
 
-  // Fetch wallet initially
-  fetchWallet();
+    // Fetch wallet initially
+    fetchWallet();
 
-  // Stop here if realtimeSubscribe not available (prevents crash)
-  if (!realtimeSubscribe) return;
+    // Stop here if realtimeSubscribe not available (prevents crash)
+    if (!realtimeSubscribe) return;
 
-  // --- Subscribe to realtime updates ---
-  const unsubscribe = realtimeSubscribe("TechnicianWallet", (payload) => {
-    try {
-      const doc = payload?.doc;
-      if (!doc) return;
+    // --- Subscribe to realtime updates ---
+    const unsubscribe = realtimeSubscribe("TechnicianWallet", (payload) => {
+      try {
+        const doc = payload?.doc;
+        if (!doc) return;
 
-      const docTechId = String(doc?.TechnicianID || "");
-      const currentId = String(userData?.id || "");
+        const docTechId = String(doc?.TechnicianID || "");
+        const currentId = String(userData?.id || "");
 
-      if (docTechId !== currentId) return;
+        if (docTechId !== currentId) return;
 
-      // If balance included, update directly
-      if (doc?.BalanceCoins !== undefined) {
-        setCoinBalance(Number(doc.BalanceCoins));
-      } else {
-        // Else re-fetch wallet
-        fetchWallet();
+        // If balance included, update directly
+        if (doc?.BalanceCoins !== undefined) {
+          setCoinBalance(Number(doc.BalanceCoins));
+        } else {
+          // Else re-fetch wallet
+          fetchWallet();
+        }
+      } catch (e) {
+        console.error("Realtime wallet handler error", e);
       }
-    } catch (e) {
-      console.error("Realtime wallet handler error", e);
-    }
-  });
+    });
 
-  // Cleanup on unmount
-  return () => unsubscribe && unsubscribe();
-}, [backendUrl, userData, realtimeSubscribe]);
+    // Cleanup on unmount
+    return () => unsubscribe && unsubscribe();
+  }, [backendUrl, userData, realtimeSubscribe]);
 
 
   // Close dropdowns when clicking outside
@@ -154,6 +154,22 @@ const TechnicianSidebar = () => {
       toast.error(error.response?.data?.message || "Logout failed");
     }
   };
+
+const CoinBadge = ({ coins }) => (
+  <span className="inline-flex items-center gap-2 bg-white text-white px-3 py-1 rounded-full text-sm font-semibold shadow border border-gray-300">
+    <svg width="20" height="20" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" fill="#FFD54A" />
+      <text x="12" y="16" fontSize="12" textAnchor="middle" fill="#111" fontWeight="bold">
+        C
+      </text>
+    </svg>
+    <span className="text-sm text-black">{Number(coins).toFixed(2)}</span>
+  </span>
+);
+
+
+
+
 
   // Technician nav items
   const navItems = [
@@ -186,10 +202,9 @@ const TechnicianSidebar = () => {
                     key={item.name}
                     to={item.path}
                     className={({ isActive }) =>
-                      `flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all ${
-                        isActive
-                          ? "bg-blue-600 text-white shadow-md"
-                          : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                      `flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all ${isActive
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "text-gray-300 hover:bg-gray-800 hover:text-white"
                       }`
                     }
                   >
@@ -203,9 +218,12 @@ const TechnicianSidebar = () => {
             {/* Right - Profile menu */}
             <div className="flex items-center space-x-3">
               {/* Coin balance badge (shown before profile) */}
-              <div className="hidden sm:flex items-center px-3 py-1 rounded-md bg-white text-gray-900" title="Coin Balance">
+              {/* <div className="hidden sm:flex items-center px-3 py-1 rounded-md bg-white text-gray-900" title="Coin Balance">
                 <div style={{ fontWeight: 600, marginRight: 8 }}>{coinBalance ?? 0}</div>
                 <div style={{ fontSize: 12, color: '#6b7280' }}>coins</div>
+              </div> */}
+              <div className="hidden sm:flex">
+                <CoinBadge coins={coinBalance ?? 0} />
               </div>
               {/* Mobile menu toggle */}
               <button
@@ -284,10 +302,9 @@ const TechnicianSidebar = () => {
                     to={item.path}
                     onClick={() => setMenuOpen(false)}
                     className={({ isActive }) =>
-                      `flex items-center px-3 py-2 rounded-md text-base font-medium transition-all ${
-                        isActive
-                          ? "bg-blue-600 text-white"
-                          : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                      `flex items-center px-3 py-2 rounded-md text-base font-medium transition-all ${isActive
+                        ? "bg-blue-600 text-white"
+                        : "text-gray-300 hover:bg-gray-700 hover:text-white"
                       }`
                     }
                   >

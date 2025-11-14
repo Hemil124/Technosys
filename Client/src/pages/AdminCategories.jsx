@@ -69,6 +69,7 @@ export const AdminCategories = () => {
 
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [dragOverArea, setDragOverArea] = useState(null); // 'category' | 'subCategory' | null
   const [submitting, setSubmitting] = useState(false);
   const [togglingId, setTogglingId] = useState(null);
   const categoryDropdownRef = useRef(null);
@@ -341,6 +342,37 @@ export const AdminCategories = () => {
       return;
     }
 
+    // New: require description, price and coins
+    if (!subCategoryForm.description || !subCategoryForm.description.trim()) {
+      toast.error("Description is required");
+      return;
+    }
+
+    if (!subCategoryForm.price || String(subCategoryForm.price).trim() === "") {
+      toast.error("Price is required");
+      return;
+    }
+
+    if (!subCategoryForm.coinsRequired || String(subCategoryForm.coinsRequired).trim() === "") {
+      toast.error("Coins required is required");
+      return;
+    }
+
+    // Image required: if creating new, imageFile must be present.
+    // If editing, require either an existing preview (already has image) or a new imageFile.
+    if (!editingSubCategory) {
+      if (!imageFile) {
+        toast.error("Sub-category image is required for new sub-categories");
+        return;
+      }
+    } else {
+      // editing: if there's no existing preview (no image currently) and no new image selected, require image
+      if (!imageFile && !imagePreview) {
+        toast.error("Sub-category image is required");
+        return;
+      }
+    }
+
     setSubmitting(true);
 
     try {
@@ -417,23 +449,53 @@ export const AdminCategories = () => {
   };
 
   // Image handling
-  const handleImageChange = (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
+  const processImageFile = (file) => {
+    if (!file) return false;
+    if (!file.type || !file.type.startsWith("image/")) {
       toast.error("Only image files are allowed");
-      return;
+      return false;
     }
     if (file.size > 2 * 1024 * 1024) {
       toast.error("Image must be less than 2MB");
-      return;
+      return false;
     }
 
     setImageFile(file);
     const reader = new FileReader();
     reader.onload = () => setImagePreview(reader.result);
     reader.readAsDataURL(file);
+    return true;
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    processImageFile(file);
+  };
+
+  const onDropImage = (e, area) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverArea(null);
+    const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) processImageFile(file);
+  };
+
+  const onDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const onDragEnter = (e, area) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverArea(area);
+  };
+
+  const onDragLeave = (e, area) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // only clear if leaving the same area
+    setDragOverArea((cur) => (cur === area ? null : cur));
   };
 
   const removeImage = () => {
@@ -453,76 +515,76 @@ export const AdminCategories = () => {
   }
 
 
- // 🔥 PREMIUM Pagination (Black Active Button)
-const Pagination = ({ page, totalPages, onPageChange }) => {
-  const getPages = () => {
-    let pages = [];
+  // 🔥 PREMIUM Pagination (Black Active Button)
+  const Pagination = ({ page, totalPages, onPageChange }) => {
+    const getPages = () => {
+      let pages = [];
 
-    // Always show page 1
-    pages.push(1);
+      // Always show page 1
+      pages.push(1);
 
-    if (page > 3) pages.push("left-gap");
+      if (page > 3) pages.push("left-gap");
 
-    // Middle pages
-    for (let p = page - 1; p <= page + 1; p++) {
-      if (p > 1 && p < totalPages) pages.push(p);
-    }
+      // Middle pages
+      for (let p = page - 1; p <= page + 1; p++) {
+        if (p > 1 && p < totalPages) pages.push(p);
+      }
 
-    if (page < totalPages - 2) pages.push("right-gap");
+      if (page < totalPages - 2) pages.push("right-gap");
 
-    if (totalPages > 1) pages.push(totalPages);
+      if (totalPages > 1) pages.push(totalPages);
 
-    return pages;
+      return pages;
+    };
+
+    return (
+      <div className="flex items-center justify-center gap-2 mt-4 select-none">
+
+        {/* PREV */}
+        <button
+          onClick={() => onPageChange(Math.max(1, page - 1))}
+          disabled={page === 1}
+          className={`px-4 py-2 rounded-xl border text-sm transition-all duration-200
+          ${page === 1
+              ? "opacity-40 cursor-not-allowed"
+              : "hover:bg-gray-100 shadow-sm"}`}
+        >
+          Prev
+        </button>
+
+        {/* PAGE BUTTONS */}
+        {getPages().map((p, i) =>
+          p === "left-gap" || p === "right-gap" ? (
+            <span key={i} className="px-3 py-2 text-gray-500">…</span>
+          ) : (
+            <button
+              key={i}
+              onClick={() => onPageChange(p)}
+              className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm border transition-all
+              ${p === page
+                  ? "bg-gray-900 text-white shadow-md scale-110 border-gray-900"
+                  : "hover:bg-gray-100 text-gray-700 border-gray-300"}`}
+            >
+              {p}
+            </button>
+          )
+        )}
+
+        {/* NEXT */}
+        <button
+          onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+          disabled={page === totalPages}
+          className={`px-4 py-2 rounded-xl border text-sm transition-all duration-200
+          ${page === totalPages
+              ? "opacity-40 cursor-not-allowed"
+              : "hover:bg-gray-100 shadow-sm"}`}
+        >
+          Next
+        </button>
+
+      </div>
+    );
   };
-
-  return (
-    <div className="flex items-center justify-center gap-2 mt-4 select-none">
-      
-      {/* PREV */}
-      <button
-        onClick={() => onPageChange(Math.max(1, page - 1))}
-        disabled={page === 1}
-        className={`px-4 py-2 rounded-xl border text-sm transition-all duration-200
-          ${page === 1 
-            ? "opacity-40 cursor-not-allowed" 
-            : "hover:bg-gray-100 shadow-sm"}`}
-      >
-        Prev
-      </button>
-
-      {/* PAGE BUTTONS */}
-      {getPages().map((p, i) =>
-        p === "left-gap" || p === "right-gap" ? (
-          <span key={i} className="px-3 py-2 text-gray-500">…</span>
-        ) : (
-          <button
-            key={i}
-            onClick={() => onPageChange(p)}
-            className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm border transition-all
-              ${p === page 
-                ? "bg-gray-900 text-white shadow-md scale-110 border-gray-900" 
-                : "hover:bg-gray-100 text-gray-700 border-gray-300"}`}
-          >
-            {p}
-          </button>
-        )
-      )}
-
-      {/* NEXT */}
-      <button
-        onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-        disabled={page === totalPages}
-        className={`px-4 py-2 rounded-xl border text-sm transition-all duration-200
-          ${page === totalPages 
-            ? "opacity-40 cursor-not-allowed" 
-            : "hover:bg-gray-100 shadow-sm"}`}
-      >
-        Next
-      </button>
-
-    </div>
-  );
-};
 
 
 
@@ -1014,7 +1076,7 @@ const Pagination = ({ page, totalPages, onPageChange }) => {
             onClick={() => setIsCategoryModalOpen(false)}
           >
             <div
-              className="bg-white rounded-lg shadow-xl max-w-md w-full"
+              className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6">
@@ -1045,7 +1107,11 @@ const Pagination = ({ page, totalPages, onPageChange }) => {
                         Category Image {!editingCategory && "*"}
                       </label>
                       <div
-                        className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer border-gray-300 hover:border-blue-400`}
+                        onDragOver={onDragOver}
+                        onDragEnter={(e) => onDragEnter(e, 'category')}
+                        onDragLeave={(e) => onDragLeave(e, 'category')}
+                        onDrop={(e) => onDropImage(e, 'category')}
+                        className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer ${dragOverArea === 'category' ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-blue-400'}`}
                       >
                         {imagePreview ? (
                           <div className="flex items-center justify-between bg-blue-50 px-3 py-2 rounded">
@@ -1137,7 +1203,7 @@ const Pagination = ({ page, totalPages, onPageChange }) => {
             onClick={() => setIsSubCategoryModalOpen(false)}
           >
             <div
-              className="bg-white rounded-lg shadow-xl max-w-md w-full"
+              className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6">
@@ -1193,14 +1259,14 @@ const Pagination = ({ page, totalPages, onPageChange }) => {
 
                     <div>
                       <label htmlFor="subCategoryDescription" className="block text-sm font-medium text-gray-700 mb-1">
-                        Description
+                        Description *
                       </label>
                       <textarea
                         id="subCategoryDescription"
                         value={subCategoryForm.description}
                         onChange={(e) => setSubCategoryForm({ ...subCategoryForm, description: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Short description about this sub-category (optional)"
+                        placeholder="Short description about this sub-category"
                         rows={3}
                         disabled={submitting}
                       />
@@ -1233,10 +1299,12 @@ const Pagination = ({ page, totalPages, onPageChange }) => {
                           value={subCategoryForm.coinsRequired}
                           onChange={(e) => setSubCategoryForm({ ...subCategoryForm, coinsRequired: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="0"
+                           placeholder="0.00"
                           min="0"
+                          step="0.01"     // ⭐ allows decimals
                           disabled={submitting}
                         />
+
                       </div>
                     </div>
 
@@ -1245,7 +1313,11 @@ const Pagination = ({ page, totalPages, onPageChange }) => {
                         Sub-Category Image
                       </label>
                       <div
-                        className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer border-gray-300 hover:border-blue-400`}
+                        onDragOver={onDragOver}
+                        onDragEnter={(e) => onDragEnter(e, 'subCategory')}
+                        onDragLeave={(e) => onDragLeave(e, 'subCategory')}
+                        onDrop={(e) => onDropImage(e, 'subCategory')}
+                        className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors cursor-pointer ${dragOverArea === 'subCategory' ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-blue-400'}`}
                       >
                         {imagePreview ? (
                           <div className="flex items-center justify-between bg-blue-50 px-3 py-2 rounded">
