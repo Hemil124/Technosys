@@ -147,137 +147,7 @@ const CustomerDashboard = () => {
       {/* =========================
             Premium Navbar (white)
          ========================= */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
-          <div className="h-20 flex items-center justify-between">
-            {/* left - logo */}
-            <div
-              className="flex items-center gap-3 cursor-pointer"
-              onClick={() => navigate("/customer/dashboard")}
-            >
-              <img
-                src={assets?.navbarlogo || "/favicon.ico"}
-                alt="logo"
-                className="w-10 h-10 rounded-full object-cover"
-              />
-              <div className="hidden md:block">
-                <span className="text-lg font-semibold text-slate-800">Technosys</span>
-                <div className="text-xs text-gray-500">Home Services</div>
-              </div>
-            </div>
 
-            {/* center - search (compact on small screens) */}
-            <div className="flex-1 px-4">
-              <div className="relative max-w-2xl mx-auto">
-                <input
-                  type="text"
-                  aria-label="Search services"
-                  placeholder="Search for 'Plumber', 'Salon', 'Cleaning'..."
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  onFocus={() => setShowSuggestions(true)}
-                  className="w-full bg-gray-100 rounded-full py-3 px-4 shadow-inner text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-sky-200 outline-none transition"
-                />
-                {/* suggestions dropdown */}
-                {showSuggestions && suggestions.length > 0 && (
-                  <div className="absolute left-0 right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-100 z-50 max-h-64 overflow-auto">
-                    {suggestions.map((it, idx) => (
-                      <div
-                        key={idx}
-                        onMouseDown={() => {
-                          // onMouseDown to prevent blur before click
-                          setShowSuggestions(false);
-                          setSearchQuery(it.name);
-                          if (it.type === "category") {
-                            const cat = categories.find((c) => c._id === it.id);
-                            openCategory(cat);
-                          } else {
-                            navigate(`/customer/service/${it.id}`);
-                          }
-                        }}
-                        className="px-4 py-3 hover:bg-sky-50 flex justify-between items-center cursor-pointer"
-                      >
-                        <div className="text-gray-800">{it.name}</div>
-                        <div className="text-xs text-gray-400">
-                          {it.type === "category" ? "Category" : "Service"}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* right - profile / bookings */}
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => (isLoggedIn ? navigate("/customer/bookings") : navigate("/login-customer"))}
-                className="hidden sm:inline-flex items-center gap-2 bg-sky-600 text-white px-4 py-2 rounded-full hover:bg-sky-700 transition"
-              >
-                My Bookings
-              </button>
-
-              {/* profile */}
-              <div className="relative" ref={profileRef}>
-                <button
-                  onClick={() => setProfileOpen((s) => !s)}
-                  className="w-9 h-9 rounded-full bg-sky-600 text-white flex items-center justify-center font-medium shadow"
-                >
-                  {isLoggedIn ? (userData?.name?.charAt(0).toUpperCase() || "U") : <User size={16} />}
-                </button>
-
-                {profileOpen && (
-                  <div className="absolute right-0 mt-3 w-48 bg-white rounded-lg shadow-lg border border-gray-100 z-50 overflow-hidden">
-                    {isLoggedIn ? (
-                      <>
-                        <div
-                          onClick={() => {
-                            navigate("/customer/profile");
-                            setProfileOpen(false);
-                          }}
-                          className="px-4 py-3 hover:bg-sky-50 cursor-pointer flex items-center gap-2"
-                        >
-                          <User size={16} /> Profile
-                        </div>
-                        <div
-                          onClick={() => {
-                            navigate("/customer/settings");
-                            setProfileOpen(false);
-                          }}
-                          className="px-4 py-3 hover:bg-sky-50 cursor-pointer flex items-center gap-2"
-                        >
-                          <Settings size={16} /> Settings
-                        </div>
-                        <div
-                          onClick={() => {
-                            handleLogout();
-                            setProfileOpen(false);
-                          }}
-                          className="px-4 py-3 hover:bg-red-50 cursor-pointer flex items-center gap-2 text-red-600"
-                        >
-                          <LogOut size={16} /> Logout
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div
-                          onClick={() => {
-                            navigate("/login-customer");
-                            setProfileOpen(false);
-                          }}
-                          className="px-4 py-3 hover:bg-sky-50 cursor-pointer flex items-center gap-2"
-                        >
-                          <User size={16} /> Login / Signup
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
 
       {/* spacer to avoid navbar overlap */}
       <div className="h-20" />
@@ -285,6 +155,48 @@ const CustomerDashboard = () => {
       {/* =========================
             HERO (top banners)
          ========================= */}
+      {/* center - search (compact on small screens) */}
+      <div className="flex-1 px-4">
+        <div className="relative max-w-2xl mx-auto">
+          <input
+            type="text"
+            aria-label="Search services"
+            placeholder="Search for 'Plumber', 'Salon', 'Cleaning'..."
+            value={searchQuery}
+            onChange={handleSearchChange}
+            onFocus={() => setShowSuggestions(true)}
+            className="w-full bg-gray-100 rounded-full py-3 px-4 shadow-inner text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-sky-200 outline-none transition"
+          />
+          {/* suggestions dropdown */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute left-0 right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-100 z-50 max-h-64 overflow-auto">
+              {suggestions.map((it, idx) => (
+                <div
+                  key={idx}
+                  onMouseDown={() => {
+                    // onMouseDown to prevent blur before click
+                    setShowSuggestions(false);
+                    setSearchQuery(it.name);
+                    if (it.type === "category") {
+                      const cat = categories.find((c) => c._id === it.id);
+                      openCategory(cat);
+                    } else {
+                      navigate(`/customer/service/${it.id}`);
+                    }
+                  }}
+                  className="px-4 py-3 hover:bg-sky-50 flex justify-between items-center cursor-pointer"
+                >
+                  <div className="text-gray-800">{it.name}</div>
+                  <div className="text-xs text-gray-400">
+                    {it.type === "category" ? "Category" : "Service"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       <main className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
         <section className="relative">
           <Swiper

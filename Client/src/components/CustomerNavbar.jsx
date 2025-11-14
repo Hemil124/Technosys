@@ -1,165 +1,178 @@
-import React, { useContext, useState, useEffect } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
-import { AppContext } from "../context/AppContext";
+import React, { useContext, useRef, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { User, LogOut, Settings, History, Menu, X } from "lucide-react";
 import axios from "axios";
-import { toast } from "react-toastify";
-import { User, History, Settings, LogOut, Menu, X } from "lucide-react";
+import { AppContext } from "../context/AppContext";
 import { assets } from "../assets/assets";
+
+
+
+const backendUrl = "http://localhost:4000";
 
 const CustomerNavbar = () => {
   const navigate = useNavigate();
-  const { userData, setIsLoggedIn, setUserData, backendUrl } = useContext(AppContext);
+  const { userData, setIsLoggedIn, setUserData } = useContext(AppContext);
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
-  // Close dropdowns when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (!e.target.closest(".profile-menu")) setProfileMenuOpen(false);
-      if (!e.target.closest(".mobile-menu")) setMobileMenuOpen(false);
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const profileRef = useRef();
 
-  // Logout handler
+  // --- LOGOUT ---
   const logout = async () => {
     try {
-      const { data } = await axios.post(
-        `${backendUrl}/api/auth/logout`,
-        {},
-        { withCredentials: true }
-      );
-      if (data.success) {
-        setIsLoggedIn(false);
-        setUserData(null);
-        navigate("/login-customer");
-        toast.success("Logged out successfully");
-      } else toast.error(data.message);
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Logout failed");
-    }
+      await axios.post(`${backendUrl}/api/auth/logout`, {}, { withCredentials: true });
+    } catch {}
+
+    setIsLoggedIn(false);
+    setUserData(null);
+    setMobileMenuOpen(false);
+    navigate("/login-customer");
   };
+
+  // --- CLOSE MOBILE + NAVIGATE IMMEDIATELY (NO DELAY) ---
+  const goTo = (path) => {
+    setMobileMenuOpen(false);
+    navigate(path);
+  };
+
+  // --- CLOSE PROFILE ON OUTSIDE CLICK ---
+  useEffect(() => {
+    const handler = (e) => {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   return (
     <>
-      {/* Top Navbar */}
-      <div className="w-full bg-gray-900 text-white fixed top-0 z-50 shadow-md">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+      <header className="fixed top-0 left-0 right-0 bg-white shadow-sm z-50">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
+          <div className="h-20 flex items-center justify-between">
 
-            {/* Left - Logo */}
+            {/* LOGO */}
             <div
-              onClick={() => navigate("/customer/dashboard")}
-              className="flex items-center cursor-pointer"
+              className="flex items-center gap-3 cursor-pointer"
+              onClick={() => goTo("/customer/dashboard")}
             >
-              <img src={assets.navbarlogo} alt="Logo" className="w-10 h-10" />
-            </div>
-
-            {/* Right - Profile Dropdown */}
-            <div className="relative profile-menu">
-              <button
-                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-                className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
-              >
-                {userData?.name?.charAt(0).toUpperCase() || <User size={16} />}
-              </button>
-
-              {profileMenuOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-gray-200 z-50">
-                  <NavLink
-                    to="/customer/profile"
-                    onClick={() => setProfileMenuOpen(false)}
-                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
-                  >
-                    <User size={16} className="mr-3" />
-                    Profile
-                  </NavLink>
-
-                  <NavLink
-                    to="/customer/bookings"
-                    onClick={() => setProfileMenuOpen(false)}
-                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
-                  >
-                    <History size={16} className="mr-3" />
-                    My Bookings
-                  </NavLink>
-
-                  <NavLink
-                    to="/customer/settings"
-                    onClick={() => setProfileMenuOpen(false)}
-                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
-                  >
-                    <Settings size={16} className="mr-3" />
-                    Settings
-                  </NavLink>
-
-                  <button
-                    onClick={() => {
-                      logout();
-                      setProfileMenuOpen(false);
-                    }}
-                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 border-t border-gray-100"
-                  >
-                    <LogOut size={16} className="mr-3" />
-                    Logout
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-800 mobile-menu"
-            >
-              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
-            </button>
-          </div>
-
-          {/* Mobile Menu */}
-          {mobileMenuOpen && (
-            <div className="md:hidden bg-gray-800 border-t border-gray-700">
-              <div className="px-2 py-3 space-y-1">
-                <NavLink
-                  to="/customer/profile"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
-                >
-                  <User size={18} className="mr-3" /> Profile
-                </NavLink>
-                <NavLink
-                  to="/customer/bookings"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
-                >
-                  <History size={18} className="mr-3" /> My Bookings
-                </NavLink>
-                <NavLink
-                  to="/customer/settings"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
-                >
-                  <Settings size={18} className="mr-3" /> Settings
-                </NavLink>
-                <button
-                  onClick={() => {
-                    logout();
-                    setMobileMenuOpen(false);
-                  }}
-                  className="flex items-center w-full px-3 py-2 text-base text-gray-300 hover:bg-red-100 hover:text-red-600"
-                >
-                  <LogOut size={18} className="mr-3" /> Logout
-                </button>
+              <img
+                src={assets.navbarlogo}
+                className="w-10 h-10 rounded-full object-cover"
+              />
+              <div className="hidden md:block">
+                <span className="text-lg font-semibold">Technosys</span>
+                <div className="text-xs text-gray-500">Home Services</div>
               </div>
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* Spacer for fixed navbar height */}
-      <div className="h-16"></div>
+            {/* RIGHT SIDE */}
+            <div className="flex items-center gap-4">
+
+              {/* MOBILE MENU BUTTON */}
+              <button className="md:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+                {mobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
+              </button>
+
+              {/* DESKTOP PROFILE */}
+              <div className="hidden md:block relative" ref={profileRef}>
+                <button
+                  onClick={() => setProfileOpen(!profileOpen)}
+                  className="w-9 h-9 rounded-full bg-sky-600 text-white flex items-center justify-center font-bold"
+                >
+                  {userData?.name?.charAt(0)?.toUpperCase() || "U"}
+                </button>
+
+                {profileOpen && (
+                  <div className="absolute right-0 mt-3 w-48 bg-white border rounded-lg shadow-md text-gray-700">
+
+                    <div
+                      onClick={() => goTo("/customer/profile")}
+                      className="px-4 py-3 hover:bg-gray-100 cursor-pointer flex items-center gap-2"
+                    >
+                      <User size={16} /> Profile
+                    </div>
+
+                    <div
+                      onClick={() => goTo("/customer/bookings")}
+                      className="px-4 py-3 hover:bg-gray-100 cursor-pointer flex items-center gap-2"
+                    >
+                      <History size={16} /> My Bookings
+                    </div>
+
+                    <div
+                      onClick={() => goTo("/customer/settings")}
+                      className="px-4 py-3 hover:bg-gray-100 cursor-pointer flex items-center gap-2"
+                    >
+                      <Settings size={16} /> Settings
+                    </div>
+
+                    <div
+                      onClick={logout}
+                      className="px-4 py-3 hover:bg-red-50 text-red-600 cursor-pointer flex items-center gap-2"
+                    >
+                      <LogOut size={16} /> Logout
+                    </div>
+
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        {/* MOBILE MENU */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-gray-100 border-t shadow-inner py-2 animate-fadeIn">
+
+            <div
+              onClick={() => {
+                setMobileMenuOpen(false);
+                navigate("/customer/profile");
+              }}
+              className="px-5 py-3 flex items-center gap-3 cursor-pointer hover:bg-gray-200"
+            >
+              <User size={18} /> Profile
+            </div>
+
+            <div
+              onClick={() => {
+                setMobileMenuOpen(false);
+                navigate("/customer/bookings");
+              }}
+              className="px-5 py-3 flex items-center gap-3 cursor-pointer hover:bg-gray-200"
+            >
+              <History size={18} /> My Bookings
+            </div>
+
+            <div
+              onClick={() => {
+                setMobileMenuOpen(false);
+                navigate("/customer/settings");
+              }}
+              className="px-5 py-3 flex items-center gap-3 cursor-pointer hover:bg-gray-200"
+            >
+              <Settings size={18} /> Settings
+            </div>
+
+            <div
+              onClick={() => {
+                setMobileMenuOpen(false);
+                logout();
+              }}
+              className="px-5 py-3 flex items-center gap-3 cursor-pointer hover:bg-red-100 text-red-600"
+            >
+              <LogOut size={18} /> Logout
+            </div>
+
+          </div>
+        )}
+      </header>
+
+      <div className="h-20" />
     </>
   );
 };
