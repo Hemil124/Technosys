@@ -44,6 +44,7 @@ const TechnicianProfile = () => {
 
   // File Upload State
   const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
   const [idProofFile, setIdProofFile] = useState(null);
 
   // Password Change Modal
@@ -241,19 +242,21 @@ const TechnicianProfile = () => {
       isValid = false;
     }
 
-    // Bank details validation (if provided)
-    if (bankDetails.BankAccountNo && bankDetails.BankAccountNo.trim().length > 0) {
-      if (!/^\d{9,18}$/.test(bankDetails.BankAccountNo.replace(/\s/g, ""))) {
-        newErrors.BankAccountNo = "Bank account number must be 9-18 digits";
-        isValid = false;
-      }
+    // Bank details validation (REQUIRED)
+    if (!bankDetails.BankAccountNo || bankDetails.BankAccountNo.trim().length === 0) {
+      newErrors.BankAccountNo = "Bank account number is required";
+      isValid = false;
+    } else if (!/^\d{9,18}$/.test(bankDetails.BankAccountNo.replace(/\s/g, ""))) {
+      newErrors.BankAccountNo = "Bank account number must be 9-18 digits";
+      isValid = false;
     }
 
-    if (bankDetails.IFSCCode && bankDetails.IFSCCode.trim().length > 0) {
-      if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bankDetails.IFSCCode.toUpperCase())) {
-        newErrors.IFSCCode = "IFSC code must be in format: ABCD0123456";
-        isValid = false;
-      }
+    if (!bankDetails.IFSCCode || bankDetails.IFSCCode.trim().length === 0) {
+      newErrors.IFSCCode = "IFSC code is required";
+      isValid = false;
+    } else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bankDetails.IFSCCode.toUpperCase())) {
+      newErrors.IFSCCode = "IFSC code must be in format: ABCD0123456";
+      isValid = false;
     }
 
     // Services validation - Not required since technician cannot edit services
@@ -313,16 +316,20 @@ const TechnicianProfile = () => {
         break;
 
       case "BankAccountNo":
-        if (value && !/^\d{9,18}$/.test(value.replace(/\s/g, ""))) {
-          newErrors.BankAccountNo = "Bank account must be 9-18 digits";
+        if (!value || value.trim().length === 0) {
+          newErrors.BankAccountNo = "Bank account number is required";
+        } else if (!/^\d{9,18}$/.test(value.replace(/\s/g, ""))) {
+          newErrors.BankAccountNo = "Bank account number must be 9-18 digits";
         } else {
           newErrors.BankAccountNo = "";
         }
         break;
 
       case "IFSCCode":
-        if (value && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(value.toUpperCase())) {
-          newErrors.IFSCCode = "Invalid IFSC format";
+        if (!value || value.trim().length === 0) {
+          newErrors.IFSCCode = "IFSC code is required";
+        } else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(value.toUpperCase())) {
+          newErrors.IFSCCode = "IFSC code must be in format: ABCD0123456";
         } else {
           newErrors.IFSCCode = "";
         }
@@ -378,6 +385,12 @@ const TechnicianProfile = () => {
     if (file) {
       if (fileType === "photo") {
         setPhotoFile(file);
+        // Generate preview URL immediately
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setPhotoPreview(event.target.result);
+        };
+        reader.readAsDataURL(file);
       } else if (fileType === "idProof") {
         setIdProofFile(file);
       }
@@ -419,7 +432,8 @@ const TechnicianProfile = () => {
 
       // Add files if selected
       if (photoFile) formData.append("photo", photoFile);
-      if (idProofFile) formData.append("idProof", idProofFile);
+      // Note: ID Proof is read-only and cannot be changed by technician
+      // if (idProofFile) formData.append("idProof", idProofFile);
 
       // Add bank details
       formData.append("bankDetails", JSON.stringify(bankDetails));
@@ -439,6 +453,7 @@ const TechnicianProfile = () => {
       if (res.data.success) {
         toast.success(res.data.message || "Profile updated successfully");
         setPhotoFile(null);
+        setPhotoPreview(null);
         setIdProofFile(null);
         // Refresh profile data
         fetchProfileData();
@@ -694,7 +709,13 @@ const TechnicianProfile = () => {
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
               <div className="text-center">
                 <div className="relative inline-block">
-                  {profile.Photo ? (
+                  {photoPreview ? (
+                    <img
+                      src={photoPreview}
+                      alt="Profile Preview"
+                      className="w-32 h-32 rounded-full object-cover border-4 border-blue-100 shadow-md mx-auto"
+                    />
+                  ) : profile.Photo ? (
                     <img
                       src={`${backendUrl}${profile.Photo}`}
                       alt="Profile"
@@ -782,9 +803,6 @@ const TechnicianProfile = () => {
                         e.target.src = profile.IDProof;
                       }}
                     />
-                    <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all duration-200 rounded-lg flex items-center justify-center">
-                      <span className="text-white text-sm font-medium opacity-0 hover:opacity-100 transition-opacity">View Document</span>
-                    </div>
                   </div>
                 ) : (
                   <div className="w-full h-40 bg-gradient-to-br from-gray-50 to-blue-50 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center p-4">
@@ -796,19 +814,9 @@ const TechnicianProfile = () => {
 
               {/* ID Proof is view-only for technicians. Remove upload control. */}
               {profile.IDProof ? (
-                <div className="w-full">
-                  <a
-                    href={`${backendUrl}${profile.IDProof}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block w-full text-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-150"
-                  >
-                    View Document
-                  </a>
-                  {/* <p className="mt-2 text-sm text-gray-500 text-center">Document is read-only. Contact admin to update.</p> */}
-                </div>
+                <p className="text-xs text-gray-500 text-center"></p>
               ) : (
-                <div className="text-sm text-gray-500">No ID proof uploaded. Please contact admin to upload.</div>
+                <p className="text-xs text-gray-500 text-center">No ID proof uploaded</p>
               )}
             </div>
           </div>

@@ -87,7 +87,8 @@ router.patch(
   userAuth,
   upload.fields([
     { name: "photo", maxCount: 1 },
-    { name: "idProof", maxCount: 1 },
+    // ID Proof is managed by admin only, not by technician
+    // { name: "idProof", maxCount: 1 },
   ]),
   updateTechnicianProfile
 );

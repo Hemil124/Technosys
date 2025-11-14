@@ -6,8 +6,9 @@ import SubServiceCategory from "../models/SubServiceCategory.js";
 import bcrypt from "bcryptjs";
 import nodemailer from "nodemailer";
 import twilio from "twilio";
-import { mkdir } from "fs/promises";
+import { mkdir, unlink } from "fs/promises";
 import { existsSync } from "fs";
+import path from "path";
 
 // Initialize Twilio
 const twilioClient = twilio(
@@ -24,6 +25,20 @@ const transporter = nodemailer.createTransport({
     pass: process.env.SMTP_PASS,
   },
 });
+
+// Helper function to delete old file
+const deleteOldFile = async (filePath) => {
+  if (!filePath) return;
+  try {
+    const fullPath = path.join(process.cwd(), filePath);
+    if (existsSync(fullPath)) {
+      await unlink(fullPath);
+      console.log(`Deleted old file: ${fullPath}`);
+    }
+  } catch (error) {
+    console.error(`Error deleting file ${filePath}:`, error);
+  }
+};
 
 // Helper function to generate OTP
 const generateOTP = () => {
@@ -516,10 +531,20 @@ export const updateTechnicianProfile = async (req, res) => {
     // Handle file uploads from multer
     if (req.files) {
       if (req.files.photo && req.files.photo[0]) {
+        // Delete old photo if it exists
+        if (currentTechnician.Photo) {
+          await deleteOldFile(currentTechnician.Photo);
+        }
         updateFields.Photo = `/uploads/photos/${req.files.photo[0].filename}`;
+        console.log("Photo updated:", updateFields.Photo);
       }
       if (req.files.idProof && req.files.idProof[0]) {
+        // Delete old ID proof if it exists
+        if (currentTechnician.IDProof) {
+          await deleteOldFile(currentTechnician.IDProof);
+        }
         updateFields.IDProof = `/uploads/idProofs/${req.files.idProof[0].filename}`;
+        console.log("ID Proof updated:", updateFields.IDProof);
       }
     }
 
