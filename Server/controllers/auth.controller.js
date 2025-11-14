@@ -4,6 +4,8 @@ import userModel from "../models/userModels.js";
 import transporter from "../config/nodemailer.js";
 import UserGoogle from "../models/userGoogleModel.js";
 import Technician from "../models/Technician.js";
+import TechnicianBankDetails from "../models/TechnicianBankDetails.js";
+import TechnicianServiceCategory from "../models/TechnicianServiceCategory.js";
 import TempOtpVerification from "../models/TempOtpVerification.js";
 import twilio from "twilio";
 import Admin from "../models/Admin.js";
@@ -275,16 +277,13 @@ export const register = async (req, res) => {
     const idProofPath = `/uploads/idProofs/${req.files.idProof[0].filename}`;
     const photoPath = `/uploads/photos/${req.files.photo[0].filename}`;
 
-    // ✅ Create technician
+    // ✅ Create technician (core profile)
     const technician = new Technician({
       Name: name,
       MobileNumber: mobileNumber,
       Email: email,
       Password: hashedPassword,
       Address: address,
-      ServiceCategoryID: serviceCategoryID,
-      BankAccountNo: bankAccountNo,
-      IFSCCode: ifscCode,
       IDProof: idProofPath,
       Photo: photoPath,
       VerifyStatus: "Pending",
@@ -294,6 +293,25 @@ export const register = async (req, res) => {
     });
 
     await technician.save();
+
+    // ✅ Persist bank details and service-category mapping in separate collections
+    try {
+      const bank = new TechnicianBankDetails({
+        TechnicianID: technician._id,
+        BankAccountNo: bankAccountNo,
+        IFSCCode: ifscCode,
+      });
+      await bank.save();
+
+      const svc = new TechnicianServiceCategory({
+        TechnicianID: technician._id,
+        ServiceCategoryID: serviceCategoryID,
+      });
+      await svc.save();
+    } catch (relErr) {
+      console.error("Failed to save technician related records:", relErr);
+      // Optionally continue — don't block registration if related records fail
+    }
 
     // ✅ Mark OTP records as used
     await TempOtpVerification.updateMany(

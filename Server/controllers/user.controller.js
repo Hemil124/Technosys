@@ -50,6 +50,9 @@
 
 import Technician from "../models/Technician.js";
 import Admin from "../models/Admin.js";
+import TechnicianBankDetails from "../models/TechnicianBankDetails.js";
+import TechnicianServiceCategory from "../models/TechnicianServiceCategory.js";
+import ServiceCategory from "../models/ServiceCategory.js";
 /*
 export const getUserData = async (req, res) => {
   try {
@@ -118,14 +121,22 @@ export const getUserData = async (req, res) => {
         isAccountVerified: true
       };
     } else if (userType === 'technician') {
-      const user = await Technician.findById(userId);
+      const user = await Technician.findById(userId).lean();
       if (!user) return res.json({ success: false, message: 'Technician not found' });
+
+      // Fetch bank details and service category mappings
+      const bank = await TechnicianBankDetails.findOne({ TechnicianID: userId }).lean();
+      const svcMaps = await TechnicianServiceCategory.find({ TechnicianID: userId }).lean();
+      const serviceCategoryIds = svcMaps.map((s) => s.ServiceCategoryID);
+      const services = await ServiceCategory.find({ _id: { $in: serviceCategoryIds } }).lean();
+
       userData = {
         name: user.Name,
         email: user.Email,
         mobileNumber: user.MobileNumber,
         address: user.Address,
-        serviceCategory: user.ServiceCategoryID,
+        serviceCategories: services,
+        bankDetails: bank || null,
         isAccountVerified: user.isEmailVerified,
         verifyStatus: user.VerifyStatus,
         activeStatus: user.ActiveStatus,

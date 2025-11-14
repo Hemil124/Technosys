@@ -1,4 +1,7 @@
 import Technician from "../models/Technician.js";
+import TechnicianBankDetails from "../models/TechnicianBankDetails.js";
+import TechnicianServiceCategory from "../models/TechnicianServiceCategory.js";
+import ServiceCategory from "../models/ServiceCategory.js";
 import nodemailer from "nodemailer";
 
 // Create transporter for emails
@@ -31,14 +34,27 @@ export const getTechnicians = async (req, res) => {
 
     const technicians = await Technician.find(filter)
       .select("-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry")
-      .populate('ServiceCategoryID', 'name')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
-    res.json({
-      success: true,
-      technicians,
-      total: technicians.length,
-    });
+    // Attach bank details and service categories for each technician
+    for (const tech of technicians) {
+      const bank = await TechnicianBankDetails.findOne({ TechnicianID: tech._id }).lean();
+      const svcMaps = await TechnicianServiceCategory.find({ TechnicianID: tech._id }).lean();
+      const serviceCategoryIds = svcMaps.map((s) => s.ServiceCategoryID);
+      const services = serviceCategoryIds.length
+        ? await ServiceCategory.find({ _id: { $in: serviceCategoryIds } }).select('name').lean()
+        : [];
+
+      // Provide backward-compatible fields expected by frontend
+      tech.bankDetails = bank || null;
+      tech.serviceCategories = services;
+      tech.ServiceCategoryID = services[0] || null; // keep previous property name for compatibility
+      tech.BankAccountNo = bank?.BankAccountNo || null;
+      tech.IFSCCode = bank?.IFSCCode || null;
+    }
+
+    res.json({ success: true, technicians, total: technicians.length });
   } catch (error) {
     console.error("Get technicians error:", error);
     res.status(500).json({
@@ -53,21 +69,26 @@ export const getTechnicianById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const technician = await Technician.findById(id).select(
-      "-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry"
-    );
+    const technician = await Technician.findById(id)
+      .select('-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry')
+      .lean();
 
-    if (!technician) {
-      return res.status(404).json({
-        success: false,
-        message: "Technician not found",
-      });
-    }
+    if (!technician) return res.status(404).json({ success: false, message: 'Technician not found' });
 
-    res.json({
-      success: true,
-      technician,
-    });
+    const bank = await TechnicianBankDetails.findOne({ TechnicianID: id }).lean();
+    const svcMaps = await TechnicianServiceCategory.find({ TechnicianID: id }).lean();
+    const serviceCategoryIds = svcMaps.map((s) => s.ServiceCategoryID);
+    const services = serviceCategoryIds.length
+      ? await ServiceCategory.find({ _id: { $in: serviceCategoryIds } }).select('name').lean()
+      : [];
+
+    technician.bankDetails = bank || null;
+    technician.serviceCategories = services;
+    technician.ServiceCategoryID = services[0] || null;
+    technician.BankAccountNo = bank?.BankAccountNo || null;
+    technician.IFSCCode = bank?.IFSCCode || null;
+
+    res.json({ success: true, technician });
   } catch (error) {
     console.error("Get technician error:", error);
     res.status(500).json({
@@ -81,15 +102,21 @@ export const getTechnicianById = async (req, res) => {
 export const getTechnicianDetails = async (req, res) => {
   try {
     const { id } = req.params;
-    
+    const technician = await Technician.findById(id).lean();
+    if (!technician) return res.status(404).json({ success: false, message: 'Technician not found' });
 
-    const technician = await Technician.findById(id)
-      .populate('ServiceCategoryID', 'name');
-    console.log("🔍 Technician found:", technician ? "Yes" : "No");
+    const bank = await TechnicianBankDetails.findOne({ TechnicianID: id }).lean();
+    const svcMaps = await TechnicianServiceCategory.find({ TechnicianID: id }).lean();
+    const serviceCategoryIds = svcMaps.map((s) => s.ServiceCategoryID);
+    const services = serviceCategoryIds.length
+      ? await ServiceCategory.find({ _id: { $in: serviceCategoryIds } }).select('name').lean()
+      : [];
 
-    if (!technician) {
-      return res.status(404).json({ success: false, message: "Technician not found" });
-    }
+    technician.bankDetails = bank || null;
+    technician.serviceCategories = services;
+    technician.ServiceCategoryID = services[0] || null;
+    technician.BankAccountNo = bank?.BankAccountNo || null;
+    technician.IFSCCode = bank?.IFSCCode || null;
 
     res.status(200).json({ success: true, technician });
   } catch (error) {
@@ -331,13 +358,22 @@ export const approveTechnician = async (req, res) => {
       }
     );
 
-    // Then fetch the updated technician with populated fields
-    const technician = await Technician.findById(id)
-      .select("-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry")
-      .populate({ 
-        path: 'ServiceCategoryID',
-        select: 'name'
-      });
+    // Then fetch the updated technician and related records
+    const technician = await Technician.findById(id).select('-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry').lean();
+    const bank = await TechnicianBankDetails.findOne({ TechnicianID: id }).lean();
+    const svcMaps = await TechnicianServiceCategory.find({ TechnicianID: id }).lean();
+    const serviceCategoryIds = svcMaps.map((s) => s.ServiceCategoryID);
+    const services = serviceCategoryIds.length
+      ? await ServiceCategory.find({ _id: { $in: serviceCategoryIds } }).select('name').lean()
+      : [];
+
+    if (technician) {
+      technician.bankDetails = bank || null;
+      technician.serviceCategories = services;
+      technician.ServiceCategoryID = services[0] || null;
+      technician.BankAccountNo = bank?.BankAccountNo || null;
+      technician.IFSCCode = bank?.IFSCCode || null;
+    }
 
     
 
@@ -439,13 +475,22 @@ export const rejectTechnician = async (req, res) => {
       }
     );
 
-    // Then fetch the updated technician with populated fields
-    const technician = await Technician.findById(id)
-      .select("-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry")
-      .populate({ 
-        path: 'ServiceCategoryID',
-        select: 'name'
-      });
+    // Then fetch the updated technician and related records
+    const technician = await Technician.findById(id).select('-Password -mobileOtp -mobileOtpExpiry -emailOtp -emailOtpExpiry').lean();
+    const bank = await TechnicianBankDetails.findOne({ TechnicianID: id }).lean();
+    const svcMaps = await TechnicianServiceCategory.find({ TechnicianID: id }).lean();
+    const serviceCategoryIds = svcMaps.map((s) => s.ServiceCategoryID);
+    const services = serviceCategoryIds.length
+      ? await ServiceCategory.find({ _id: { $in: serviceCategoryIds } }).select('name').lean()
+      : [];
+
+    if (technician) {
+      technician.bankDetails = bank || null;
+      technician.serviceCategories = services;
+      technician.ServiceCategoryID = services[0] || null;
+      technician.BankAccountNo = bank?.BankAccountNo || null;
+      technician.IFSCCode = bank?.IFSCCode || null;
+    }
 
     if (!technician) {
       return res.status(404).json({
