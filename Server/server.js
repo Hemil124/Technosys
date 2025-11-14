@@ -12,6 +12,7 @@ import morgan from "morgan";
 
 import connectdb from "./config/mongodb.js";
 import { initRealtime } from "./config/realtime.js";
+import { initChangeStream } from "./config/changeStream.js";
 import authRouter from "./routes/auth.route.js";
 import userRoutesr from "./routes/user.route.js";
 import adminRoutes from "./routes/admin.route.js";
@@ -135,6 +136,14 @@ try {
   initRealtime(server);
 } catch (err) {
   console.error('Failed to initialize realtime module', err);
+}
+
+// Initialize change stream (if available). This will emit events for DB changes
+// even when they come from outside this Node process (requires replica set).
+try {
+  initChangeStream();
+} catch (err) {
+  console.warn('ChangeStream initialization failed', err);
 }
 
 
