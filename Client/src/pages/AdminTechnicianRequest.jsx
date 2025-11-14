@@ -186,7 +186,7 @@ const TechnicianRequest = () => {
   };
 
   // UI: subtle glows/pulse classes
-  const glowBadge = "rounded-full p-3 shadow-[0_8px_24px_rgba(0,0,0,0.06)]";
+  const glowBadge = "rounded-full p-3 ";
   const pulseText = "animate-pulse";
 
   // security: only admin
@@ -211,7 +211,7 @@ const TechnicianRequest = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           {/* Total */}
           <div className="bg-white p-4 rounded-lg shadow-sm flex items-center gap-4">
-            <div className={`${glowBadge} bg-blue-50 text-blue-600`}>
+            <div className={`${glowBadge}  text-blue-600`}>
               <Grid3X3 size={22} />
             </div>
             <div>
@@ -222,7 +222,7 @@ const TechnicianRequest = () => {
 
           {/* Pending */}
           <div className="bg-white p-4 rounded-lg shadow-sm flex items-center gap-4">
-            <div className={`${glowBadge} bg-yellow-50 text-yellow-600`}>
+            <div className={`${glowBadge}  text-yellow-600`}>
               <Hourglass size={22} />
             </div>
             <div>
@@ -233,7 +233,7 @@ const TechnicianRequest = () => {
 
           {/* Approved */}
           <div className="bg-white p-4 rounded-lg shadow-sm flex items-center gap-4">
-            <div className={`${glowBadge} bg-green-50 text-green-600`}>
+            <div className={`${glowBadge}  text-green-600`}>
               <ToggleRight size={22} />
             </div>
             <div>
@@ -244,7 +244,7 @@ const TechnicianRequest = () => {
 
           {/* Rejected */}
           <div className="bg-white p-4 rounded-lg shadow-sm flex items-center gap-4">
-            <div className={`${glowBadge} bg-red-50 text-red-600`}>
+            <div className={`${glowBadge}  text-red-600`}>
               <ToggleLeft size={22} />
             </div>
             <div>
@@ -339,19 +339,35 @@ const TechnicianRequest = () => {
 
                         <td className="px-6 py-4">
                           <div className="flex flex-col gap-1">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${tech.VerifyStatus === "Pending"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : tech.VerifyStatus === "Approved"
-                                ? "bg-green-100 text-green-800"
-                                : "bg-red-100 text-red-800"
-                              }`}>
+
+                            {/* Main Verify Status Badge */}
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${tech.VerifyStatus === "Pending"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : tech.VerifyStatus === "Approved"
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
+                                }`}
+                            >
                               {tech.VerifyStatus}
                             </span>
+
+                            {/* Active Status Badge (only when Approved) */}
                             {tech.VerifyStatus === "Approved" && (
-                              <span className="text-xs text-gray-500">{tech.ActiveStatus || "Active status N/A"}</span>
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-medium 
+          ${tech.ActiveStatus === "Active"
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-red-100 text-red-700"
+                                  }
+                                `}
+                              >
+                                {tech.ActiveStatus || "Not Active"}
+                              </span>
                             )}
                           </div>
                         </td>
+
 
                         <td className="px-6 py-4">
                           <div className="text-sm text-gray-900">{formatDate(tech.createdAt)}</div>
