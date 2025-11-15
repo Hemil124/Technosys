@@ -299,14 +299,38 @@ export const verifyMobileOTP = async (req, res) => {
       });
     }
 
+    // Mark verification record as verified
     await TempOtpVerification.updateOne(
       { _id: verification._id },
       { isVerified: true }
     );
 
+    // Ensure the mobile is still not taken by another technician
+    const existing = await Technician.findOne({ MobileNumber: newMobileNumber });
+    if (existing && String(existing._id) !== String(req.userId)) {
+      return res.status(400).json({
+        success: false,
+        message: "This mobile number was registered by another account",
+      });
+    }
+
+    // Update technician record: set MobileNumber and isMobileVerified
+    const technician = await Technician.findById(req.userId);
+    if (!technician) {
+      return res.status(404).json({ success: false, message: "Technician not found" });
+    }
+
+    technician.MobileNumber = newMobileNumber;
+    technician.isMobileVerified = true;
+    await technician.save();
+
+    // Remove the temp verification record after successful linking
+    await TempOtpVerification.deleteOne({ _id: verification._id });
+
     return res.json({
       success: true,
-      message: "Mobile number verified successfully",
+      message: "Mobile number verified and updated successfully",
+      data: { MobileNumber: technician.MobileNumber, isMobileVerified: technician.isMobileVerified },
     });
   } catch (error) {
     console.error("Verify mobile OTP error:", error);
@@ -355,14 +379,38 @@ export const verifyEmailOTP = async (req, res) => {
       });
     }
 
+    // Mark verification record as verified
     await TempOtpVerification.updateOne(
       { _id: verification._id },
       { isVerified: true }
     );
 
+    // Ensure the email is still not taken by another technician
+    const existing = await Technician.findOne({ Email: newEmail });
+    if (existing && String(existing._id) !== String(req.userId)) {
+      return res.status(400).json({
+        success: false,
+        message: "This email was registered by another account",
+      });
+    }
+
+    // Update technician record: set Email and isEmailVerified
+    const technician = await Technician.findById(req.userId);
+    if (!technician) {
+      return res.status(404).json({ success: false, message: "Technician not found" });
+    }
+
+    technician.Email = newEmail;
+    technician.isEmailVerified = true;
+    await technician.save();
+
+    // Remove the temp verification record after successful linking
+    await TempOtpVerification.deleteOne({ _id: verification._id });
+
     return res.json({
       success: true,
-      message: "Email verified successfully",
+      message: "Email verified and updated successfully",
+      data: { Email: technician.Email, isEmailVerified: technician.isEmailVerified },
     });
   } catch (error) {
     console.error("Verify email OTP error:", error);
@@ -421,6 +469,22 @@ export const getTechnicianProfile = async (req, res) => {
       success: false,
       message: error.message || "Server error",
     });
+  }
+};
+
+// GET current mobile number for the authenticated technician
+export const getTechnicianMobile = async (req, res) => {
+  try {
+    const technicianId = req.userId;
+    if (!technicianId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const technician = await Technician.findById(technicianId).select('MobileNumber isMobileVerified');
+    if (!technician) return res.status(404).json({ success: false, message: 'Technician not found' });
+
+    return res.json({ success: true, data: { MobileNumber: technician.MobileNumber || null, isMobileVerified: !!technician.isMobileVerified } });
+  } catch (err) {
+    console.error('getTechnicianMobile error', err);
+    return res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 

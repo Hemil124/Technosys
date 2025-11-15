@@ -26,6 +26,7 @@ import { fileURLToPath } from 'url';
 import "./config/passport.js";
 import subscriptionPackageRoutes from "./routes/subscriptionPackage.route.js";
 import customerProfileRoutes from "./routes/customerProfile.route.js";
+import adminCustomerListRoute from "./routes/AdminCustomerList.route.js";
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -131,6 +132,8 @@ app.use('/api/subscription-packages', subscriptionPackageRoutes);
 // one-time admin creation route
 app.use("/api/admin-setup", adminCreationRoute);
 app.use("/api/customer-profile", customerProfileRoutes);
+// Admin customers list
+app.use('/api/admin/customers', adminCustomerListRoute);
 
 const server = app.listen(port, () => console.log(`Server started on PORT:${port}`));
 
