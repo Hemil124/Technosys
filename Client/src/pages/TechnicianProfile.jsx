@@ -73,12 +73,44 @@ const TechnicianProfile = () => {
   const [verifyingEmail, setVerifyingEmail] = useState(false);
   const [sendingEmailOTP, setSendingEmailOTP] = useState(false);
   const [newEmail, setNewEmail] = useState("");
+  const [emailOtpTimer, setEmailOtpTimer] = useState(0);
+  const [canResendEmailOTP, setCanResendEmailOTP] = useState(false);
+  
+  // Mobile OTP Timer
+  const [mobileOtpTimer, setMobileOtpTimer] = useState(0);
+  const [canResendMobileOTP, setCanResendMobileOTP] = useState(false);
 
   // Fetch profile and services on mount
   useEffect(() => {
     fetchProfileData();
     fetchServices();
   }, []);
+
+  // Mobile OTP Timer Effect
+  useEffect(() => {
+    let interval;
+    if (mobileOTPSent && mobileOtpTimer > 0) {
+      interval = setInterval(() => {
+        setMobileOtpTimer((prev) => prev - 1);
+      }, 1000);
+    } else if (mobileOtpTimer === 0 && mobileOTPSent) {
+      setCanResendMobileOTP(true);
+    }
+    return () => clearInterval(interval);
+  }, [mobileOTPSent, mobileOtpTimer]);
+
+  // Email OTP Timer Effect
+  useEffect(() => {
+    let interval;
+    if (emailOTPSent && emailOtpTimer > 0) {
+      interval = setInterval(() => {
+        setEmailOtpTimer((prev) => prev - 1);
+      }, 1000);
+    } else if (emailOtpTimer === 0 && emailOTPSent) {
+      setCanResendEmailOTP(true);
+    }
+    return () => clearInterval(interval);
+  }, [emailOTPSent, emailOtpTimer]);
 
   const fetchProfileData = async () => {
     try {
@@ -557,6 +589,8 @@ const TechnicianProfile = () => {
       if (res.data.success) {
         toast.success("OTP sent to your mobile number");
         setMobileOTPSent(true);
+        setMobileOtpTimer(120);
+        setCanResendMobileOTP(false);
 
         // In development mode, auto-fill OTP
         if (res.data.otp) {
@@ -595,6 +629,8 @@ const TechnicianProfile = () => {
         setMobileOTPSent(false);
         setMobileOTP("");
         setNewMobileNumber("");
+        setMobileOtpTimer(0);
+        setCanResendMobileOTP(false);
         // Clear mobile validation errors
         setErrors({ ...errors, MobileNumber: "" });
       } else {
@@ -626,6 +662,8 @@ const TechnicianProfile = () => {
       if (res.data.success) {
         toast.success("OTP sent to your email");
         setEmailOTPSent(true);
+        setEmailOtpTimer(120);
+        setCanResendEmailOTP(false);
 
         // In development mode, auto-fill OTP
         if (res.data.otp) {
@@ -664,6 +702,8 @@ const TechnicianProfile = () => {
         setEmailOTPSent(false);
         setEmailOTP("");
         setNewEmail("");
+        setEmailOtpTimer(0);
+        setCanResendEmailOTP(false);
         // Clear email validation errors
         setErrors({ ...errors, Email: "" });
       } else {
@@ -887,7 +927,12 @@ const TechnicianProfile = () => {
                       placeholder="Enter valid email address"
                     />
                     <button
-                      onClick={() => setShowEmailVerification(true)}
+                      onClick={() => {
+                        setNewEmail(profile.Email || "");
+                        setEmailOTPSent(false);
+                        setEmailOTP("");
+                        setShowEmailVerification(true);
+                      }}
                       className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-all duration-200 text-sm"
                     >
                       <Mail className="w-3 h-3" />
@@ -1093,30 +1138,41 @@ const TechnicianProfile = () => {
 
       {/* Mobile Verification Modal */}
       {showMobileVerification && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 transform transition-all duration-300 scale-100">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <Phone className="w-5 h-5 text-blue-600" />
-                Update Mobile Number
-              </h2>
-              <button
-                onClick={() => {
-                  setShowMobileVerification(false);
-                  setMobileOTPSent(false);
-                  setMobileOTP("");
-                  setNewMobileNumber("");
-                }}
-                className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+        <div className="fixed inset-0 bg-gradient-to-br from-blue-200 to-purple-400 flex items-center justify-center p-4 z-50" onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowMobileVerification(false);
+            setMobileOTPSent(false);
+            setMobileOTP("");
+            setNewMobileNumber("");
+            setMobileOtpTimer(0);
+            setCanResendMobileOTP(false);
+          }
+        }}>
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl shadow-2xl max-w-md w-full p-8 transform transition-all duration-300 scale-100">
+            {!mobileOTPSent ? (
+              <>
+                <div className="flex justify-between items-center mb-8">
+                  <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                    <Phone className="w-6 h-6 text-blue-400" />
+                    Update Mobile
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setShowMobileVerification(false);
+                      setMobileOTPSent(false);
+                      setMobileOTP("");
+                      setNewMobileNumber("");
+                      setMobileOtpTimer(0);
+                      setCanResendMobileOTP(false);
+                    }}
+                    className="text-gray-400 hover:text-gray-300 transition-colors duration-200"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
 
-            <div className="space-y-4 mb-6">
-              {!mobileOTPSent ? (
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">
+                <div className="space-y-4 mb-6">
+                  <label className="block text-sm font-semibold text-gray-300">
                     New Mobile Number
                   </label>
                   <input
@@ -1124,89 +1180,190 @@ const TechnicianProfile = () => {
                     value={newMobileNumber}
                     onChange={(e) => setNewMobileNumber(filterMobileInput(e.target.value))}
                     disabled={sendingMobileOTP}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    placeholder="Enter 10-digit mobile number"
+                    className="w-full px-4 py-3 border-2 border-gray-600 bg-slate-800 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 disabled:bg-gray-900 disabled:cursor-not-allowed text-white placeholder-gray-500"
+                    placeholder="Enter new mobile number"
                   />
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Enter OTP
-                  </label>
-                  <input
-                    type="text"
-                    value={mobileOTP}
-                    onChange={(e) => setMobileOTP(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    disabled={verifyingMobile}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed text-center text-lg font-semibold tracking-widest"
-                    placeholder="Enter OTP"
-                    maxLength="6"
-                  />
-                  <p className="text-xs text-gray-500 text-center">OTP sent to {newMobileNumber}</p>
-                </div>
-              )}
-            </div>
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowMobileVerification(false);
-                  setMobileOTPSent(false);
-                  setMobileOTP("");
-                  setNewMobileNumber("");
-                }}
-                className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 font-semibold transition-all duration-200"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={mobileOTPSent ? handleVerifyMobileOTP : handleSendMobileOTP}
-                disabled={mobileOTPSent ? verifyingMobile : sendingMobileOTP}
-                className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed font-semibold transition-all duration-200 flex items-center justify-center gap-2"
-              >
-                {mobileOTPSent ? (
-                  <>
-                    {verifyingMobile && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {verifyingMobile ? "Verifying..." : "Verify OTP"}
-                  </>
-                ) : (
-                  <>
-                    {sendingMobileOTP && <Loader2 className="w-4 h-4 animate-spin" />}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowMobileVerification(false);
+                      setMobileOTPSent(false);
+                      setMobileOTP("");
+                      setNewMobileNumber("");
+                      setMobileOtpTimer(0);
+                      setCanResendMobileOTP(false);
+                    }}
+                    className="flex-1 px-4 py-3 border-2 border-gray-600 rounded-lg text-gray-300 hover:bg-slate-700 font-semibold transition-all duration-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSendMobileOTP}
+                    disabled={sendingMobileOTP}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed font-semibold transition-all duration-200 flex items-center justify-center gap-2"
+                  >
+                    {sendingMobileOTP && (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    )}
                     {sendingMobileOTP ? "Sending..." : "Send OTP"}
-                  </>
-                )}
-              </button>
-            </div>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* OTP Verification Screen */}
+                <div className="text-center mb-8">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Phone className="w-8 h-8 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-white mb-2">
+                    Enter Verification Code
+                  </h2>
+                  <p className="text-gray-400 text-sm">
+                    Enter the 6-digit code sent to <span className="text-blue-300 font-semibold">{newMobileNumber}</span>
+                  </p>
+                </div>
+
+                {/* OTP Digit Boxes */}
+                <div className="mb-8">
+                  <div className="flex justify-center gap-3 mb-6">
+                    {[0, 1, 2, 3, 4, 5].map((index) => (
+                      <input
+                        key={index}
+                        type="text"
+                        maxLength="1"
+                        value={mobileOTP[index] || ""}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, "");
+                          if (value.length <= 1) {
+                            const newOTP = mobileOTP.split("");
+                            newOTP[index] = value;
+                            setMobileOTP(newOTP.join(""));
+                            // Auto-focus next input
+                            if (value && index < 5) {
+                              const nextInput = document.querySelector(
+                                `input[data-mobile-otp-index="${index + 1}"]`
+                              );
+                              nextInput?.focus();
+                            }
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Backspace" && !mobileOTP[index] && index > 0) {
+                            const prevInput = document.querySelector(
+                              `input[data-mobile-otp-index="${index - 1}"]`
+                            );
+                            prevInput?.focus();
+                          }
+                        }}
+                        data-mobile-otp-index={index}
+                        disabled={verifyingMobile}
+                        className={`w-12 h-12 text-center text-lg font-bold rounded-lg border-2 transition-all duration-200 focus:outline-none ${
+                          mobileOTP[index]
+                            ? "border-blue-500 bg-blue-500 bg-opacity-20 text-white"
+                            : "border-gray-600 bg-slate-800 text-gray-400 focus:border-blue-500"
+                        } disabled:cursor-not-allowed`}
+                        placeholder="•"
+                      />
+                    ))}
+                  </div>
+
+                  {/* Timer and Resend */}
+                  <div className="text-center mb-6">
+                    {mobileOtpTimer > 0 ? (
+                      <p className="text-gray-400 text-sm">
+                        Resend OTP in{" "}
+                        <span className="text-blue-400 font-semibold">
+                          {Math.floor(mobileOtpTimer / 60)}:{String(mobileOtpTimer % 60).padStart(2, "0")}
+                        </span>
+                      </p>
+                    ) : canResendMobileOTP ? (
+                      <button
+                        onClick={() => {
+                          setMobileOTP("");
+                          setMobileOtpTimer(0);
+                          setCanResendMobileOTP(false);
+                          handleSendMobileOTP();
+                        }}
+                        className="text-blue-400 hover:text-blue-300 font-semibold transition-colors duration-200"
+                      >
+                        Resend OTP
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowMobileVerification(false);
+                      setMobileOTPSent(false);
+                      setMobileOTP("");
+                      setNewMobileNumber("");
+                      setMobileOtpTimer(0);
+                      setCanResendMobileOTP(false);
+                    }}
+                    className="flex-1 px-4 py-3 border-2 border-gray-600 rounded-lg text-gray-300 hover:bg-slate-700 font-semibold transition-all duration-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleVerifyMobileOTP}
+                    disabled={mobileOTP.length !== 6 || verifyingMobile}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed font-semibold transition-all duration-200 flex items-center justify-center gap-2"
+                  >
+                    {verifyingMobile && (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    )}
+                    {verifyingMobile ? "Verifying..." : "Verify Code"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
 
       {/* Email Verification Modal */}
       {showEmailVerification && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 transform transition-all duration-300 scale-100">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <Mail className="w-5 h-5 text-blue-600" />
-                Update Email Address
-              </h2>
-              <button
-                onClick={() => {
-                  setShowEmailVerification(false);
-                  setEmailOTPSent(false);
-                  setEmailOTP("");
-                  setNewEmail("");
-                }}
-                className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+        <div className="fixed inset-0 bg-gradient-to-br from-blue-200 to-purple-400 flex items-center justify-center p-4 z-50" onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowEmailVerification(false);
+            setEmailOTPSent(false);
+            setEmailOTP("");
+            setNewEmail("");
+            setEmailOtpTimer(0);
+            setCanResendEmailOTP(false);
+          }
+        }}>
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-3xl shadow-2xl max-w-md w-full p-8 transform transition-all duration-300 scale-100">
+            {!emailOTPSent ? (
+              <>
+                <div className="flex justify-between items-center mb-8">
+                  <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                    <Mail className="w-6 h-6 text-blue-400" />
+                    Update Email
+                  </h2>
+                  <button
+                    onClick={() => {
+                      setShowEmailVerification(false);
+                      setEmailOTPSent(false);
+                      setEmailOTP("");
+                      setNewEmail("");
+                      setEmailOtpTimer(0);
+                      setCanResendEmailOTP(false);
+                    }}
+                    className="text-gray-400 hover:text-gray-300 transition-colors duration-200"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
 
-            <div className="space-y-4 mb-6">
-              {!emailOTPSent ? (
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">
+                <div className="space-y-4 mb-6">
+                  <label className="block text-sm font-semibold text-gray-300">
                     New Email Address
                   </label>
                   <input
@@ -1214,59 +1371,149 @@ const TechnicianProfile = () => {
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
                     disabled={sendingEmailOTP}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full px-4 py-3 border-2 border-gray-600 bg-slate-800 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 disabled:bg-gray-900 disabled:cursor-not-allowed text-white placeholder-gray-500"
                     placeholder="Enter new email address"
                   />
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">
-                    Enter OTP
-                  </label>
-                  <input
-                    type="text"
-                    value={emailOTP}
-                    onChange={(e) => setEmailOTP(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    disabled={verifyingEmail}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed text-center text-lg font-semibold tracking-widest"
-                    placeholder="Enter OTP"
-                    maxLength="6"
-                  />
-                  <p className="text-xs text-gray-500 text-center">OTP sent to {newEmail}</p>
-                </div>
-              )}
-            </div>
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowEmailVerification(false);
-                  setEmailOTPSent(false);
-                  setEmailOTP("");
-                  setNewEmail("");
-                }}
-                className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 font-semibold transition-all duration-200"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={emailOTPSent ? handleVerifyEmailOTP : handleSendEmailOTP}
-                disabled={emailOTPSent ? verifyingEmail : sendingEmailOTP}
-                className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed font-semibold transition-all duration-200 flex items-center justify-center gap-2"
-              >
-                {emailOTPSent ? (
-                  <>
-                    {verifyingEmail && <Loader2 className="w-4 h-4 animate-spin" />}
-                    {verifyingEmail ? "Verifying..." : "Verify OTP"}
-                  </>
-                ) : (
-                  <>
-                    {sendingEmailOTP && <Loader2 className="w-4 h-4 animate-spin" />}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowEmailVerification(false);
+                      setEmailOTPSent(false);
+                      setEmailOTP("");
+                      setNewEmail("");
+                      setEmailOtpTimer(0);
+                      setCanResendEmailOTP(false);
+                    }}
+                    className="flex-1 px-4 py-3 border-2 border-gray-600 rounded-lg text-gray-300 hover:bg-slate-700 font-semibold transition-all duration-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSendEmailOTP}
+                    disabled={sendingEmailOTP}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed font-semibold transition-all duration-200 flex items-center justify-center gap-2"
+                  >
+                    {sendingEmailOTP && (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    )}
                     {sendingEmailOTP ? "Sending..." : "Send OTP"}
-                  </>
-                )}
-              </button>
-            </div>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* OTP Verification Screen */}
+                <div className="text-center mb-8">
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Mail className="w-8 h-8 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-white mb-2">
+                    Enter Verification Code
+                  </h2>
+                  <p className="text-gray-400 text-sm">
+                    Enter the 6-digit code sent to <span className="text-blue-300 font-semibold">{newEmail}</span>
+                  </p>
+                </div>
+
+                {/* OTP Digit Boxes */}
+                <div className="mb-8">
+                  <div className="flex justify-center gap-3 mb-6">
+                    {[0, 1, 2, 3, 4, 5].map((index) => (
+                      <input
+                        key={index}
+                        type="text"
+                        maxLength="1"
+                        value={emailOTP[index] || ""}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, "");
+                          if (value.length <= 1) {
+                            const newOTP = emailOTP.split("");
+                            newOTP[index] = value;
+                            setEmailOTP(newOTP.join(""));
+                            // Auto-focus next input
+                            if (value && index < 5) {
+                              const nextInput = document.querySelector(
+                                `input[data-email-otp-index="${index + 1}"]`
+                              );
+                              nextInput?.focus();
+                            }
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Backspace" && !emailOTP[index] && index > 0) {
+                            const prevInput = document.querySelector(
+                              `input[data-email-otp-index="${index - 1}"]`
+                            );
+                            prevInput?.focus();
+                          }
+                        }}
+                        data-email-otp-index={index}
+                        disabled={verifyingEmail}
+                        className={`w-12 h-12 text-center text-lg font-bold rounded-lg border-2 transition-all duration-200 focus:outline-none ${
+                          emailOTP[index]
+                            ? "border-blue-500 bg-blue-500 bg-opacity-20 text-white"
+                            : "border-gray-600 bg-slate-800 text-gray-400 focus:border-blue-500"
+                        } disabled:cursor-not-allowed`}
+                        placeholder="•"
+                      />
+                    ))}
+                  </div>
+
+                  {/* Timer and Resend */}
+                  <div className="text-center mb-6">
+                    {emailOtpTimer > 0 ? (
+                      <p className="text-gray-400 text-sm">
+                        Resend OTP in{" "}
+                        <span className="text-blue-400 font-semibold">
+                          {Math.floor(emailOtpTimer / 60)}:{String(emailOtpTimer % 60).padStart(2, "0")}
+                        </span>
+                      </p>
+                    ) : canResendEmailOTP ? (
+                      <button
+                        onClick={() => {
+                          setEmailOTP("");
+                          setEmailOtpTimer(0);
+                          setCanResendEmailOTP(false);
+                          handleSendEmailOTP();
+                        }}
+                        className="text-blue-400 hover:text-blue-300 font-semibold transition-colors duration-200"
+                      >
+                        Resend OTP
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowEmailVerification(false);
+                      setEmailOTPSent(false);
+                      setEmailOTP("");
+                      setNewEmail("");
+                      setEmailOtpTimer(0);
+                      setCanResendEmailOTP(false);
+                    }}
+                    className="flex-1 px-4 py-3 border-2 border-gray-600 rounded-lg text-gray-300 hover:bg-slate-700 font-semibold transition-all duration-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleVerifyEmailOTP}
+                    disabled={emailOTP.length !== 6 || verifyingEmail || (emailOTPSent && emailOtpTimer === 0)}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed font-semibold transition-all duration-200 flex items-center justify-center gap-2"
+                  >
+                    {verifyingEmail && (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    )}
+                    {verifyingEmail ? "Verifying..." : "Verify Code"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

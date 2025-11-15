@@ -491,7 +491,12 @@ const TechnicianRequest = () => {
 
       {/* Reject Modal */}
       {showRejectModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black p-4" onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowRejectModal(null);
+            setRejectReason("");
+          }
+        }}>
           <div className="bg-white rounded-lg w-full max-w-md p-6">
             <h3 className="text-lg font-semibold mb-2">Reject Technician</h3>
             <p className="text-sm text-gray-600 mb-3">Provide reason (visible to technician)</p>
@@ -525,7 +530,11 @@ const TechnicianRequest = () => {
 
       {/* Details Modal */}
       {showDetailsModal && selectedTechnician && (
-        <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-black bg-opacity-40 p-4 overflow-auto">
+        <div className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-black p-4 overflow-auto" onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowDetailsModal(false);
+          }
+        }}>
           <div className="bg-white rounded-lg w-full max-w-4xl p-6">
             <div className="flex justify-between items-start gap-4">
               <div>
@@ -546,7 +555,7 @@ const TechnicianRequest = () => {
                     <DefaultAvatar name={selectedTechnician.Name} className="mx-auto" />
                   )}
                   <h4 className="mt-3 text-lg font-semibold">{selectedTechnician.Name}</h4>
-                  <p className="text-sm text-gray-500">ID: {selectedTechnician._id?.slice(-6)}</p>
+                  {/* <p className="text-sm text-gray-500">ID: {selectedTechnician._id?.slice(-6)}</p> */}
 
                   <div className="mt-4 space-y-2 text-left">
                     <div className="flex justify-between"><span className="text-sm text-gray-600">Status</span><span>{selectedTechnician.VerifyStatus}</span></div>

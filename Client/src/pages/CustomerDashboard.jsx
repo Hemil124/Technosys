@@ -165,7 +165,7 @@ const CustomerDashboard = () => {
             value={searchQuery}
             onChange={handleSearchChange}
             onFocus={() => setShowSuggestions(true)}
-            className="w-full bg-gray-100 rounded-full py-3 px-4 shadow-inner text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-sky-200 outline-none transition"
+            className="w-full mb-5 bg-gray-100 rounded-full py-3 px-4 shadow-inner text-gray-700 placeholder-gray-500 focus:ring-2 focus:ring-sky-200 outline-none transition"
           />
           {/* suggestions dropdown */}
           {showSuggestions && suggestions.length > 0 && (

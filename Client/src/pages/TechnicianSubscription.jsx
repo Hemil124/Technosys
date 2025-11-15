@@ -3,6 +3,7 @@ import { AppContext } from "../context/AppContext";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { FileText } from "lucide-react";
+import { Check } from "lucide-react";
 
 export default function TechnicianSubscription() {
   const {
@@ -188,7 +189,7 @@ export default function TechnicianSubscription() {
               // if (typeof fetchUserData === "function") {
               //   await fetchUserData();
               // } else if (typeof getUserData === "function") {
-                await getUserData();
+              await getUserData();
               // }
             } else {
               toast.error("Payment verification failed");
@@ -249,7 +250,8 @@ export default function TechnicianSubscription() {
   );
 
   return (
-    <div className="min-h-screen bg-white py-10">
+    <div className="min-h-screen bg-white py-10 relative overflow-hidden">
+     
       <div className="max-w-6xl mx-auto px-4">
         {/* PACKAGES */}
         <section className="mb-12">
@@ -259,38 +261,71 @@ export default function TechnicianSubscription() {
             <div className="py-10 text-center">Loading plans...</div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {packages.map((pkg) => (
-                <article
-                  key={pkg._id}
-                  className="bg-gray-50 rounded-2xl p-6 shadow-sm hover:shadow-lg"
-                >
-                  <h3 className="text-lg font-bold">{pkg.name}</h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {pkg.description}
-                  </p>
+              {packages.map((pkg, index) => {
+                const colors = [
+                  "from-pink-400 to-pink-500",
+                  "from-blue-400 to-blue-500",
+                  "from-purple-400 to-purple-500",
+                ];
 
-                  <div className="mt-4 flex items-center gap-3">
-                    <CoinBadge coins={pkg.coins} />
-                    <div className="text-sm text-gray-500">• One-time</div>
-                  </div>
-
-                  <div className="mt-4 flex justify-between items-center">
-                    <div className="text-2xl font-extrabold">₹{pkg.price}</div>
-                  </div>
-
-                  <button
-                    onClick={() => handleBuy(pkg)}
-                    disabled={buyingId === pkg._id}
-                    className={`mt-5 w-full py-3 rounded-lg text-white font-semibold ${
-                      buyingId === pkg._id
-                        ? "bg-gray-400"
-                        : "bg-red-600 hover:bg-red-700"
-                    }`}
+                return (
+                  <article
+                    key={pkg._id}
+                    className="rounded-2xl shadow-lg bg-white overflow-hidden hover:shadow-xl transition"
                   >
-                    {buyingId === pkg._id ? "Processing…" : "Buy now"}
-                  </button>
-                </article>
-              ))}
+                    {/* Top Color Section */}
+                    <div
+                      className={`relative h-32 w-full bg-gradient-to-br ${
+                        colors[index % 3]
+                      } flex items-center justify-center overflow-hidden`}
+                    >
+                      <div className="absolute bottom-0 left-0 right-0 h-12 bg-white rotate-[8deg] translate-y-6"></div>
+
+                      {/* Package Name */}
+                      <h3 className="text-white text-2xl font-bold relative z-10">
+                        {pkg.name}
+                      </h3>
+                    </div>
+
+                    {/* Pricing */}
+                    <div className="text-center mt-4">
+                      <p className="text-4xl font-extrabold text-gray-900">
+                        ₹{pkg.price}
+                      </p>
+                    </div>
+
+                    {/* Description (split by . ) */}
+                    <div className="px-6 mt-4 space-y-2 text-gray-700 text-sm">
+                      {pkg.description?.split(".").map((line, i) =>
+                        line.trim() ? (
+                          <div key={i} className="flex items-center gap-2">
+                            <Check className="w-4 h-4 text-purple-600" />
+                            <span>{line.trim()}</span>
+                          </div>
+                        ) : null
+                      )}
+                    </div>
+
+                    {/* Coins Row */}
+                    <div className="mt-4 px-6 flex items-center gap-3">
+                      <CoinBadge coins={pkg.coins} />
+                    </div>
+
+                    {/* Buy Button (unchanged) */}
+                    <button
+                      onClick={() => handleBuy(pkg)}
+                      disabled={buyingId === pkg._id}
+                      className={`mt-5 w-full py-3 rounded-lg text-white font-semibold ${
+                        buyingId === pkg._id
+                          ? "bg-gray-400"
+                          : "bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90"
+                      }`}
+                    >
+                      {buyingId === pkg._id ? "Processing…" : "Buy now"}
+                    </button>
+                  </article>
+                );
+              })}
             </div>
           )}
         </section>
@@ -330,10 +365,19 @@ export default function TechnicianSubscription() {
 
                     {/* RIGHT SIDE - Date + Invoice */}
                     <div className="flex items-center gap-3 text-xs text-gray-500 text-right">
-                      <div>{new Date(h.PurchasedAt || h.createdAt).toLocaleString()}</div>
+                      <div>
+                        {new Date(
+                          h.PurchasedAt || h.createdAt
+                        ).toLocaleString()}
+                      </div>
                       {h.invoice_pdf ? (
                         <button
-                          onClick={() => window.open(`${backendUrl}${h.invoice_pdf}`, "_blank")}
+                          onClick={() =>
+                            window.open(
+                              `${backendUrl}${h.invoice_pdf}`,
+                              "_blank"
+                            )
+                          }
                           title="Download invoice"
                           className="p-1 rounded hover:bg-gray-100"
                         >
