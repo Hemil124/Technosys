@@ -1,142 +1,218 @@
-import React, { useState, useEffect, useContext } from 'react';
-import axios from 'axios';
-import { AppContext } from '../context/AppContext';
-import { Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useContext } from "react";
+import axios from "axios";
+import { AppContext } from "../context/AppContext";
+import { Loader2 } from "lucide-react";
 
 function AdminCustomerList() {
   const { backendUrl } = useContext(AppContext);
-  const [customers, setCustomers] = useState([]);
+
+  const [allCustomers, setAllCustomers] = useState([]); // all data loaded once
+  const [customers, setCustomers] = useState([]);       // filtered + paginated
+
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+
+  // pagination
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [totalCount, setTotalCount] = useState(0);
+
+  // search
   const [query, setQuery] = useState("");
 
-  const fetchCustomers = async (p = page, ps = pageSize, q = query) => {
-    try {
-      setLoading(true);
-      const params = { page: p, pageSize: ps };
-      if (q && q.trim()) params.q = q.trim();
-      const res = await axios.get(`${backendUrl}/api/admin/customers`, { withCredentials: true, params });
-      if (res.data?.success) {
-        setCustomers(res.data.customers || []);
-        setTotalCount(res.data.totalCount || 0);
-        setPage(res.data.page || p);
-        setPageSize(res.data.pageSize || ps);
-      } else {
-        setError(res.data?.message || 'Failed to fetch customers');
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Network error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Load once
   useEffect(() => {
-    fetchCustomers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize]);
+    async function loadData() {
+      try {
+        const res = await axios.get(`${backendUrl}/api/admin/customers/all`, {
+          withCredentials: true,
+        });
+        if (res.data.success) {
+          setAllCustomers(res.data.customers);
+          setCustomers(res.data.customers);
+        }
+      } catch (err) {
+        console.log(err);
+      } finally {
+        setLoading(false);
+      }
+    }
 
-  const handleSearch = () => {
+    loadData();
+  }, []);
+
+  // Filter instantly on client
+  useEffect(() => {
+    const q = query.toLowerCase();
+    let filtered = allCustomers;
+
+    if (q.trim().length > 0) {
+      filtered = allCustomers.filter(
+        (c) =>
+          c.Name?.toLowerCase().includes(q) ||
+          c.Email?.toLowerCase().includes(q) ||
+          c.Mobile?.toLowerCase().includes(q)
+      );
+    }
+
+    setCustomers(filtered);
     setPage(1);
-    fetchCustomers(1, pageSize, query);
-  };
+  }, [query, allCustomers]);
+
+  const totalCount = customers.length;
+
+  // pagination slice
+  const paginated = customers.slice((page - 1) * pageSize, page * pageSize);
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+  const Avatar = ({ name }) => (
+    <div className="w-12 h-12 bg-gradient-to-br from-blue-200 to-blue-400 text-white rounded-full flex items-center justify-center font-bold shadow">
+      {name?.[0]?.toUpperCase()}
+    </div>
+  );
+
+  const Pagination = ({ page, totalPages, onChange }) => (
+    <div className="flex items-center justify-center gap-2 mt-4">
+      <button
+        onClick={() => onChange(Math.max(1, page - 1))}
+        disabled={page === 1}
+        className="px-4 py-2 border rounded disabled:opacity-40"
+      >
+        Prev
+      </button>
+
+      {Array.from({ length: totalPages }).map((_, i) => (
+        <button
+          key={i}
+          onClick={() => onChange(i + 1)}
+          className={`px-4 py-2 border rounded ${
+            page === i + 1 ? "bg-black text-white" : "hover:bg-gray-100"
+          }`}
+        >
+          {i + 1}
+        </button>
+      ))}
+
+      <button
+        onClick={() => onChange(Math.min(totalPages, page + 1))}
+        disabled={page === totalPages}
+        className="px-4 py-2 border rounded disabled:opacity-40"
+      >
+        Next
+      </button>
+    </div>
+  );
 
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-2xl font-bold mb-4">Customers</h1>
+
+        <h1 className="text-3xl font-bold mb-4">Customers</h1>
+
+        <div className="bg-white p-4 rounded-xl shadow mb-6 flex gap-3 items-center">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search instantly..."
+            className="px-3 py-2 border rounded w-full max-w-sm"
+          />
+          <div className="ml-auto text-sm text-gray-500">
+            Total: {totalCount}
+          </div>
+        </div>
 
         {loading ? (
-          <div className="p-8 text-center">
-            <Loader2 className="animate-spin mx-auto" />
-            <div className="mt-3 text-gray-600">Loading customers...</div>
+          <div className="py-16 flex justify-center">
+            <Loader2 className="animate-spin h-7 w-7 text-gray-700" />
           </div>
-        ) : error ? (
-          <div className="p-6 bg-red-50 text-red-700 rounded">{error}</div>
         ) : (
-          <div className="bg-white rounded shadow overflow-auto">
-            <div className="p-4 flex items-center gap-3">
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by name, email or mobile"
-                className="px-3 py-2 border rounded w-full max-w-md"
-              />
-              <button onClick={handleSearch} className="px-4 py-2 bg-blue-600 text-white rounded">Search</button>
-              <div className="ml-auto text-sm text-gray-500">Total: {totalCount}</div>
-            </div>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Address</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Registered</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {customers.map((c) => (
-                  <tr key={c._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">{c.Name || '—'}</div>
-                      <div className="text-xs text-gray-500">ID: {String(c._id).slice(-6)}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">{c.Email || '—'}</div>
-                      <div className="text-sm text-gray-500">{c.Mobile || '—'}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">{c.Address || '—'}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      {c.isProfileComplete ? (
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-700">Complete</span>
-                      ) : (
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-yellow-100 text-yellow-800">Incomplete</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">{new Date(c.createdAt).toLocaleString()}</div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {/* Pagination controls */}
-            <div className="flex items-center justify-between p-4">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="px-3 py-1 rounded border disabled:opacity-50"
-                >
-                  Prev
-                </button>
-                <span className="text-sm text-gray-600">Page {page} of {Math.max(1, Math.ceil(totalCount / pageSize))}</span>
-                <button
-                  onClick={() => setPage((p) => Math.min(Math.max(1, Math.ceil(totalCount / pageSize)), p + 1))}
-                  disabled={page >= Math.ceil(totalCount / pageSize)}
-                  className="px-3 py-1 rounded border disabled:opacity-50"
-                >
-                  Next
-                </button>
+          <>
+            {/* TABLE */}
+            <div className="bg-white rounded-xl shadow overflow-hidden">
+              <div className="grid grid-cols-6 px-6 py-4 bg-gray-50 border-b font-semibold text-gray-600 text-sm">
+                <div>Customer</div>
+                <div>Contact</div>
+                <div>Address</div>
+                <div>Status</div>
+                <div>Registered</div>
+                <div className="text-right">Actions</div>
               </div>
 
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <label>Rows:</label>
-                <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }} className="border px-2 py-1 rounded">
-                  {[5,10,20,50].map(n => (
-                    <option key={n} value={n}>{n}</option>
-                  ))}
-                </select>
-              </div>
+              {paginated.map((c) => (
+                <div
+                  key={c._id}
+                  className="grid grid-cols-6 px-6 py-5 border-b hover:bg-gray-50"
+                >
+                  <div className="flex items-center gap-3">
+                    {c.Photo ? (
+                      <img
+                        src={backendUrl + c.Photo}
+                        className="w-12 h-12 rounded-full object-cover border"
+                      />
+                    ) : (
+                      <Avatar name={c.Name} />
+                    )}
+
+                    <div>
+                      <div className="font-medium">{c.Name || "—"}</div>
+                      <div className="text-xs text-gray-500">
+                        ID: {String(c._id).slice(-6)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div>{c.Email || "—"}</div>
+                    <div className="text-gray-500">{c.Mobile || "—"}</div>
+                  </div>
+
+                  <div>{c.Address || "—"}</div>
+
+                  <div>
+                    {c.isProfileComplete ? (
+                      <span className="px-3 py-1 bg-green-100 text-green-700 rounded">
+                        Complete
+                      </span>
+                    ) : (
+                      <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded">
+                        Incomplete
+                      </span>
+                    )}
+                  </div>
+
+                  <div>{new Date(c.createdAt).toLocaleString()}</div>
+
+                  <div className="text-right">
+                    <button className="px-4 py-2 bg-black text-white rounded">
+                      View
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
+
+            {/* Pagination */}
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onChange={setPage}
+            />
+
+            {/* rows */}
+            <div className="flex justify-end mt-3 text-sm">
+              <label className="mr-2">Rows:</label>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="border px-2 py-1 rounded"
+              >
+                {[5, 10, 20, 50].map((n) => (
+                  <option key={n}>{n}</option>
+                ))}
+              </select>
+            </div>
+          </>
         )}
       </div>
     </div>
