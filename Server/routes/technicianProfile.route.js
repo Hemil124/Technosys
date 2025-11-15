@@ -5,6 +5,7 @@ import { existsSync } from "fs";
 import userAuth from "../middleware/userAuth.js";
 import {
   getTechnicianProfile,
+  getTechnicianMobile,
   updateTechnicianProfile,
   changeTechnicianPassword,
   sendMobileOTP,
@@ -68,6 +69,9 @@ const upload = multer({
 
 // GET /api/technician/profile - Get technician profile (protected)
 router.get("/", userAuth, getTechnicianProfile);
+
+// GET /api/technician/profile/old-mobile - Return current mobile for prefill
+router.get("/old-mobile", userAuth, getTechnicianMobile);
 
 // POST /api/technician/profile/send-mobile-otp - Send OTP for mobile verification
 router.post("/send-mobile-otp", userAuth, sendMobileOTP);

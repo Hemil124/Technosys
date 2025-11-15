@@ -894,7 +894,12 @@ const TechnicianProfile = () => {
                       placeholder="Enter 10-digit mobile number"
                     />
                     <button
-                      onClick={() => setShowMobileVerification(true)}
+                      onClick={() => {
+                        setNewMobileNumber(profile.MobileNumber || "");
+                        setMobileOTPSent(false);
+                        setMobileOTP("");
+                        setShowMobileVerification(true);
+                      }}
                       className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-all duration-200 text-sm"
                     >
                       <Phone className="w-3 h-3" />
