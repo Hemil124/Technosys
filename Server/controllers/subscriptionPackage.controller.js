@@ -341,54 +341,7 @@ export const getSubscriptionHistory = async (req, res) => {
       .lean();
 
     // Attach invoice URL when available using batched queries to avoid N+1 DB calls
-    try {
-      const historyIds = history.map(h => h._id);
-      if (historyIds.length > 0) {
-        // Fetch all payments that reference these history entries
-        const payments = await SubscriptionPayment.find({ HistoryID: { $in: historyIds } })
-          .select('_id HistoryID')
-          .lean();
-
-        // Map historyId -> payment (if multiple payments per history exist we pick the first)
-        const paymentByHistory = Object.create(null);
-        for (const p of payments) {
-          const key = String(p.HistoryID);
-          if (!paymentByHistory[key]) paymentByHistory[key] = p;
-        }
-
-        // Fetch invoices for these payments in one query
-        const paymentIds = payments.map(p => p._id);
-        let invoices = [];
-        if (paymentIds.length > 0) {
-          invoices = await Invoice.find({ ref_type: 'SubscriptionPayment', ref_id: { $in: paymentIds } })
-            .select('ref_id invoice_pdf')
-            .lean();
-        }
-
-        const invoiceByPayment = Object.create(null);
-        for (const inv of invoices) {
-          invoiceByPayment[String(inv.ref_id)] = inv;
-        }
-
-        // Attach invoice_pdf to each history item
-        for (const h of history) {
-          const key = String(h._id);
-          const payment = paymentByHistory[key];
-          if (payment) {
-            const inv = invoiceByPayment[String(payment._id)];
-            h.invoice_pdf = inv ? inv.invoice_pdf : null;
-          } else {
-            h.invoice_pdf = null;
-          }
-        }
-      } else {
-        // no history entries
-        for (const h of history) h.invoice_pdf = null;
-      }
-    } catch (attachErr) {
-      console.error('Attach invoice batch error', attachErr);
-      for (const h of history) h.invoice_pdf = null;
-    }
+    
 
     return res.status(200).json({ success: true, message: 'Purchase history retrieved', data: history });
   } catch (error) {
