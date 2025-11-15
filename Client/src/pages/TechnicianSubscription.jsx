@@ -251,7 +251,7 @@ export default function TechnicianSubscription() {
 
   return (
     <div className="min-h-screen bg-white py-10 relative overflow-hidden">
-     
+
       <div className="max-w-6xl mx-auto px-4">
         {/* PACKAGES */}
         <section className="mb-12">
@@ -275,11 +275,33 @@ export default function TechnicianSubscription() {
                   >
                     {/* Top Color Section */}
                     <div
-                      className={`relative h-32 w-full bg-gradient-to-br ${
-                        colors[index % 3]
-                      } flex items-center justify-center overflow-hidden`}
+                      className={`relative h-38 w-full bg-gradient-to-br ${colors[index % 3]
+                        } flex items-center justify-center overflow-hidden`}
                     >
-                      <div className="absolute bottom-0 left-0 right-0 h-12 bg-white rotate-[8deg] translate-y-6"></div>
+                      <div className="absolute bottom-0 left-0 right-0">
+                        <svg
+                          viewBox="0 0 1440 120"
+                          className="w-full h-16"
+                          preserveAspectRatio="none"
+                        >
+                          <path
+                            fill="#ffffff"
+                            d="M0,40 C150,80 300,0 450,20 C600,40 750,90 900,70 C1050,50 1200,0 1440,40 L1440,120 L0,120 Z"
+                          >
+                            <animate
+                              attributeName="d"
+                              dur="6s"
+                              repeatCount="indefinite"
+                              values="
+            M0,40 C150,80 300,0 450,20 C600,40 750,90 900,70 C1050,50 1200,0 1440,40 L1440,120 L0,120 Z;
+            M0,60 C150,40 300,80 450,40 C600,10 750,50 900,30 C1050,60 1200,20 1440,60 L1440,120 L0,120 Z;
+            M0,40 C150,80 300,0 450,20 C600,40 750,90 900,70 C1050,50 1200,0 1440,40 L1440,120 L0,120 Z
+          "
+                            />
+                          </path>
+                        </svg>
+                      </div>
+
 
                       {/* Package Name */}
                       <h3 className="text-white text-2xl font-bold relative z-10">
@@ -315,11 +337,10 @@ export default function TechnicianSubscription() {
                     <button
                       onClick={() => handleBuy(pkg)}
                       disabled={buyingId === pkg._id}
-                      className={`mt-5 w-full py-3 rounded-lg text-white font-semibold ${
-                        buyingId === pkg._id
-                          ? "bg-gray-400"
-                          : "bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90"
-                      }`}
+                      className={`mt-5 w-full py-3 rounded-lg text-white font-semibold ${buyingId === pkg._id
+                        ? "bg-gray-400"
+                        : "bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90"
+                        }`}
                     >
                       {buyingId === pkg._id ? "Processing…" : "Buy now"}
                     </button>
@@ -398,11 +419,10 @@ export default function TechnicianSubscription() {
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
               className={`px-4 py-2 rounded-lg border text-sm transition 
-        ${
-          page === 1
-            ? "opacity-40 cursor-not-allowed"
-            : "hover:bg-gray-100 shadow-sm"
-        }`}
+        ${page === 1
+                  ? "opacity-40 cursor-not-allowed"
+                  : "hover:bg-gray-100 shadow-sm"
+                }`}
             >
               Prev
             </button>
@@ -434,11 +454,10 @@ export default function TechnicianSubscription() {
                     key={i}
                     onClick={() => setPage(p)}
                     className={`w-10 h-10 flex items-center justify-center rounded-lg border text-sm transition
-              ${
-                p === page
-                  ? "bg-gray-900 text-white shadow"
-                  : "hover:bg-gray-100"
-              }`}
+              ${p === page
+                        ? "bg-gray-900 text-white shadow"
+                        : "hover:bg-gray-100"
+                      }`}
                   >
                     {p}
                   </button>
@@ -451,11 +470,10 @@ export default function TechnicianSubscription() {
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
               className={`px-4 py-2 rounded-lg border text-sm transition 
-        ${
-          page === totalPages
-            ? "opacity-40 cursor-not-allowed"
-            : "hover:bg-gray-100 shadow-sm"
-        }`}
+        ${page === totalPages
+                  ? "opacity-40 cursor-not-allowed"
+                  : "hover:bg-gray-100 shadow-sm"
+                }`}
             >
               Next
             </button>
