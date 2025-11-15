@@ -48,6 +48,33 @@ export const getAllCustomers = async (req, res) => {
   }
 };
 
+
+export const getAllCustomersRaw = async (req, res) => {
+  try {
+    const customers = await Customer.find({}).sort({ createdAt: -1 }).lean();
+
+    const processed = customers.map((c) => {
+      const hasName = c.Name && c.Name.trim().length > 0;
+      const hasMobile = c.Mobile && c.Mobile.trim().length > 0;
+      const hasEmail = c.Email && c.Email.trim().length > 0;
+      const hasAddress = c.Address && c.Address.trim().length > 0;
+
+      return {
+        ...c,
+        isProfileComplete: hasName && hasMobile && hasEmail && hasAddress,
+      };
+    });
+
+    res.json({ success: true, customers: processed });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: "Failed to load" });
+  }
+};
+
+
 export default {
   getAllCustomers,
+  getAllCustomersRaw,
 };
+
+
