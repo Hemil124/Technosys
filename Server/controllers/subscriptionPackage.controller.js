@@ -7,6 +7,7 @@ import SubscriptionPayment from "../models/SubscriptionPayment.js";
 import Invoice from "../models/Invoice.js";
 import Technician from "../models/Technician.js";
 import transporter from "../config/nodemailer.js";
+import { getIo } from "../config/realtime.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from 'url';
@@ -393,6 +394,7 @@ export const getSubscriptionHistory = async (req, res) => {
       console.error('Attach invoice batch error', attachErr);
       for (const h of history) h.invoice_pdf = null;
     }
+
 
     return res.status(200).json({ success: true, message: 'Purchase history retrieved', data: history });
   } catch (error) {
@@ -874,6 +876,26 @@ export const verifyRazorpayPayment = async (req, res) => {
             invoice_pdf: `/uploads/invoices/${invoiceFilename}`,
           });
           await invoiceDoc.save();
+
+          // Emit a synthetic SubscriptionHistory db_change so clients subscribed
+          // to SubscriptionHistory will receive an update and can refresh their
+          // view (this avoids the user needing to manually refresh to see invoice).
+          try {
+            const io = getIo();
+            if (io && paymentRecord.HistoryID) {
+              // fetch the history document (populate PackageID) and attach invoice_pdf
+              const histDoc = await SubscriptionHistory.findById(paymentRecord.HistoryID)
+                .populate({ path: 'PackageID', select: 'name coins price description' })
+                .lean();
+
+              if (histDoc) {
+                histDoc.invoice_pdf = invoiceDoc.invoice_pdf;
+                io.emit('db_change', { model: 'SubscriptionHistory', operation: 'update', doc: histDoc });
+              }
+            }
+          } catch (emitErr) {
+            console.warn('Realtime emit for SubscriptionHistory after invoice save failed', emitErr);
+          }
 
           // send email with attachment if email exists
           if (tech?.Email) {
