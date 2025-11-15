@@ -38,6 +38,7 @@ import { EmailVerify } from "./pages/EmailVerify";
 import { ResetPassword } from "./pages/ResetPassword";
 import { ToastContainer } from "react-toastify";
 import { AppContext } from "./context/AppContext";
+import ServiceOrbitLoader from "./components/ServiceOrbitLoader";
 import "react-toastify/dist/ReactToastify.css";
 import { Technicion } from "./pages/Technicion";
 import { LoginCustomer } from "./pages/LoginCustomer";
@@ -75,7 +76,7 @@ const ProtectedRoute = ({ children, role }) => {
   if (loadingUser) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        Loading...
+        <ServiceOrbitLoader show={true} size={140} />
       </div>
     );
   }
