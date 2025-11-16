@@ -20,6 +20,7 @@ const TechnicianProfile = () => {
     services: "",
     Password: "",
     ConfirmPassword: "",
+    photo: "",
   });
 
   // Profile State
@@ -415,7 +416,47 @@ const TechnicianProfile = () => {
   const handleFileSelect = (e, fileType) => {
     const file = e.target.files[0];
     if (file) {
+      // Validate file for photo uploads
       if (fileType === "photo") {
+        // Allowed extensions and mime types
+        const allowedExt = ["png", "jpeg", "jpg", "webp"];
+        const allowedMimes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!allowedExt.includes(ext)) {
+          setErrors((prev) => ({
+            ...prev,
+            photo: "Invalid file extension. Allowed: PNG, JPEG, JPG, WebP"
+          }));
+          return;
+        }
+
+        if (!allowedMimes.includes(file.type)) {
+          setErrors((prev) => ({
+            ...prev,
+            photo: "Invalid file type. Only PNG, JPEG, JPG, WebP are allowed"
+          }));
+          return;
+        }
+
+        // 500 KB limit
+        const MAX_FILE_SIZE = 500 * 1024;
+        if (file.size > MAX_FILE_SIZE) {
+          const kb = (file.size / 1024).toFixed(2);
+          const msg = `File size must be less than 500 KB. Your file is ${kb} KB`;
+          setErrors((prev) => ({
+            ...prev,
+            photo: msg
+          }));
+          return;
+        }
+
+        // Clear photo errors on success
+        setErrors((prev) => ({
+          ...prev,
+          photo: ""
+        }));
+
         setPhotoFile(file);
         // Generate preview URL immediately
         const reader = new FileReader();
@@ -433,6 +474,12 @@ const TechnicianProfile = () => {
     // Validate form before saving
     if (!validateForm()) {
       toast.error("Please fix all errors before saving");
+      return;
+    }
+
+    // Check for photo validation errors
+    if (errors.photo) {
+      toast.error(errors.photo);
       return;
     }
 
@@ -779,6 +826,11 @@ const TechnicianProfile = () => {
                     />
                   </label>
                 </div>
+                
+                {/* Inline photo error message */}
+                {errors.photo && (
+                  <p className="text-red-500 text-xs font-medium text-center mt-2">{errors.photo}</p>
+                )}
                 
                 <h2 className="text-xl font-bold text-gray-900 mt-4">{profile.Name || "Technician Name"}</h2>
                 <p className="text-gray-600 text-sm mt-1">Service Technician</p>
