@@ -2,7 +2,7 @@ import express from "express";
 import multer from "multer";
 import { mkdir } from "fs/promises";
 import { existsSync } from "fs";
-import { getAllCategories, createCategory, updateCategory, deleteCategory } from "../controllers/serviceCategory.controller.js";
+import { getAllCategories,getAllActiveCategories, createCategory, updateCategory, deleteCategory } from "../controllers/serviceCategory.controller.js";
 import userAuth from "../middleware/userAuth.js";
 import { ALLOWED_MIMETYPES, MAX_FILE_SIZE } from "../utils/imageUtils.js";
 
@@ -55,6 +55,9 @@ const upload = multer({
 
 // GET /api/service-categories - Public (list active categories)
 router.get("/", getAllCategories);
+
+// GET /api/service-categories/active - ONLY active categories
+router.get("/active", getAllActiveCategories);
 
 // POST /api/service-categories - Admin only (create category)
 router.post("/", userAuth, upload.single("image"), createCategory);

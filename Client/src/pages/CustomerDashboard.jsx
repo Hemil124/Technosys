@@ -49,7 +49,7 @@ const CustomerDashboard = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const { data } = await axios.get(`${backendUrl}/api/service-categories`);
+        const { data } = await axios.get(`${backendUrl}/api/service-categories/active`);
         // support both variants: { categories: [] } or { data: [] }
         setCategories(data.categories || data.data || []);
       } catch (err) {

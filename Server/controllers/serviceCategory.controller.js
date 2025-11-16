@@ -161,6 +161,20 @@ export const getAllCategories = async (req, res) => {
   }
 };
 
+export const getAllActiveCategories = async (req, res) => {
+  try {
+    // Return all categories (public endpoint). Admins and non-admins will receive
+    // the full list; frontend can choose how to present active/inactive ones.
+    const categories = await ServiceCategory.find({isActive: true })
+      .sort({ name: 1 })
+      .select("name isActive image");
+
+    return res.json({ success: true, data: categories });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export const createCategory = async (req, res) => {
   try {
     if (req.userType !== 'admin') {
