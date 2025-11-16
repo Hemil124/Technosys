@@ -8,6 +8,7 @@ import { AppContext } from "../context/AppContext";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { Navbar } from "../components/Navbar";
+import MapPicker from "../components/MapPicker";
 
 export const Login = () => {
   const navigate = useNavigate();
@@ -54,10 +55,14 @@ export const Login = () => {
     name: "",
     password: "",
     address: "",
+    addressObj: {},
+    latitude: undefined,
+    longitude: undefined,
     serviceCategoryID: "",
     bankAccountNo: "",
     ifscCode: "",
   });
+  const [showMapPickerSignup, setShowMapPickerSignup] = useState(false);
 
   const [idProof, setIdProof] = useState(null);
   const [photo, setPhoto] = useState(null);
@@ -140,7 +145,7 @@ export const Login = () => {
         break;
 
       case "address":
-        if (!value.trim()) error = "Address is required";
+        // Address is auto-generated from structured fields; skip validation
         break;
 
       case "serviceCategoryID":
@@ -546,6 +551,19 @@ export const Login = () => {
     }
   }, [state, location.state]);
 
+  // Sync structured address fields into the read-only `address` for realtime preview
+  React.useEffect(() => {
+    const addr = formData.addressObj || {};
+    const parts = [];
+    // Show houseNumber and city primarily, include other parts if available
+    if (addr.houseNumber) parts.push(addr.houseNumber);
+    if (addr.city) parts.push(addr.city);
+    if (addr.street) parts.push(addr.street);
+    if (addr.pincode) parts.push(addr.pincode);
+    const addressStr = parts.filter(Boolean).join(", ");
+    setFormData((prev) => ({ ...prev, address: addressStr }));
+  }, [formData.addressObj]);
+
   const removeFile = (fileType) => {
     if (fileType === "idProof") {
       setIdProof(null);
@@ -568,6 +586,22 @@ export const Login = () => {
       newTouched[key] = true;
       newErrors[key] = validateField(key, formData[key]);
     });
+
+    // Validate structured address subfields (houseNumber and pincode required)
+    const houseVal = formData.addressObj?.houseNumber || "";
+    const pinVal = formData.addressObj?.pincode || "";
+    newTouched.houseNumber = true;
+    newTouched.pincode = true;
+    if (!houseVal || String(houseVal).trim().length === 0) {
+      newErrors.houseNumber = "House/Flat number is required";
+    } else {
+      newErrors.houseNumber = "";
+    }
+    if (!pinVal || String(pinVal).trim().length === 0) {
+      newErrors.pincode = "Pincode is required";
+    } else {
+      newErrors.pincode = "";
+    }
 
     // Validate mobile and email
     newTouched.mobile = true;
@@ -614,7 +648,20 @@ export const Login = () => {
         formDataToSend.append("name", formData.name);
         formDataToSend.append("email", email);
         formDataToSend.append("password", formData.password);
-        formDataToSend.append("address", formData.address);
+        // Address: prefer structured object if present
+        try {
+          if (formData.addressObj && typeof formData.addressObj === "object" && Object.keys(formData.addressObj).length > 0) {
+            formDataToSend.append("Address", JSON.stringify(formData.addressObj));
+          } else {
+            formDataToSend.append("address", formData.address || "");
+          }
+        } catch (err) {
+          formDataToSend.append("address", formData.address || "");
+        }
+        if (formData.latitude && formData.longitude) {
+          formDataToSend.append("latitude", String(formData.latitude));
+          formDataToSend.append("longitude", String(formData.longitude));
+        }
         formDataToSend.append("serviceCategoryID", formData.serviceCategoryID);
         formDataToSend.append("bankAccountNo", formData.bankAccountNo);
         formDataToSend.append("ifscCode", formData.ifscCode);
@@ -638,12 +685,15 @@ export const Login = () => {
 
           // Reset form data
           setFormData({
-            name: "",
-            password: "",
-            address: "",
-            serviceCategoryID: "",
-            bankAccountNo: "",
-            ifscCode: "",
+              name: "",
+              password: "",
+              address: "",
+              addressObj: {},
+              latitude: undefined,
+              longitude: undefined,
+              serviceCategoryID: "",
+              bankAccountNo: "",
+              ifscCode: "",
           });
           setMobile("");
           setEmail("");
@@ -993,21 +1043,69 @@ export const Login = () => {
                         d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                       />
                     </svg>
-                    <input
-                      onChange={handleInputChange}
-                      onBlur={handleBlur}
-                      value={formData.address}
-                      name="address"
-                      className="w-full bg-transparent outline-none text-sm"
-                      type="text"
-                      placeholder="Your complete address"
-                      required
-                    />
+                    <div className="flex items-center gap-2 w-full">
+                      <input
+                        // address is read-only and auto-filled from structured fields
+                        value={formData.address}
+                        name="address"
+                        className="flex-1 bg-transparent outline-none text-sm px-2 py-1"
+                        type="text"
+                        placeholder="Your complete address"
+                        readOnly
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowMapPickerSignup(true)}
+                        className="px-3 py-1 bg-blue-600 text-white rounded-md text-sm"
+                      >
+                        Pick on map
+                      </button>
+                    </div>
                   </div>
                   {errors.address && (
                     <p className="text-red-500 text-xs mt-1">
                       {errors.address}
                     </p>
+                  )}
+                </div>
+
+                {/* Structured address fields (optional) */}
+                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <input
+                    type="text"
+                    placeholder="House/Flat No"
+                    value={formData.addressObj?.houseNumber || ""}
+                    onChange={(e) => setFormData({ ...formData, addressObj: { ...(formData.addressObj || {}), houseNumber: e.target.value } })}
+                    name="houseNumber"
+                    className="px-3 py-2 border rounded-lg"
+                  />
+                  {errors.houseNumber && (
+                    <p className="text-red-500 text-xs mt-1">{errors.houseNumber}</p>
+                  )}
+                  <input
+                    type="text"
+                    placeholder="Street"
+                    value={formData.addressObj?.street || ""}
+                    onChange={(e) => setFormData({ ...formData, addressObj: { ...(formData.addressObj || {}), street: e.target.value } })}
+                    className="px-3 py-2 border rounded-lg"
+                  />
+                  <input
+                    type="text"
+                    placeholder="City"
+                    value={formData.addressObj?.city || ""}
+                    onChange={(e) => setFormData({ ...formData, addressObj: { ...(formData.addressObj || {}), city: e.target.value } })}
+                    className="px-3 py-2 border rounded-lg"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Pincode"
+                    value={formData.addressObj?.pincode || ""}
+                    onChange={(e) => setFormData({ ...formData, addressObj: { ...(formData.addressObj || {}), pincode: e.target.value } })}
+                    name="pincode"
+                    className="px-3 py-2 border rounded-lg"
+                  />
+                  {errors.pincode && (
+                    <p className="text-red-500 text-xs mt-1">{errors.pincode}</p>
                   )}
                 </div>
 
@@ -1576,6 +1674,33 @@ export const Login = () => {
           </button>
         </div>
       </div>
+
+      {/* Map Picker Modal for Signup */}
+      {showMapPickerSignup && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-lg w-full max-w-4xl overflow-hidden">
+            <MapPicker
+              initialLat={formData.latitude}
+              initialLng={formData.longitude}
+              onClose={() => setShowMapPickerSignup(false)}
+              onSave={({ address, lat, lng }) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  addressObj: address || {},
+                  latitude: lat,
+                  longitude: lng,
+                    address:
+                    (address?.houseNumber ? address.houseNumber + " " : "") +
+                    (address?.street ? address.street + ", " : "") +
+                    (address?.city ? address.city + ", " : "") +
+                    (address?.pincode ? address.pincode : ""),
+                }));
+                setShowMapPickerSignup(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* OTP Verification Modal */}
       {showOtpModal && (

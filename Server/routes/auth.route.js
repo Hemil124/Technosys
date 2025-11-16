@@ -23,8 +23,8 @@ import {
   verifyEmailOtp,
   sendCustomerMobileOtp,
   verifyCustomerMobileOtp,
-  updateCustomerProfile,
-  getCustomerProfile,
+  // updateCustomerProfile,
+  // getCustomerProfile,
   logoutCustomer,
 } from "../controllers/auth.controller.js";
 
@@ -146,8 +146,8 @@ authRouter.post('/customer/verify-mobile-otp', verifyCustomerMobileOtp);
 authRouter.post('/customer/logout', logoutCustomer);
 
 // Customer profile routes (protected)
-authRouter.get('/customer/profile', userAuth, getCustomerProfile);
-authRouter.put('/customer/profile', userAuth, updateCustomerProfile);
+// authRouter.get('/customer/profile', userAuth, getCustomerProfile);
+// authRouter.put('/customer/profile', userAuth, updateCustomerProfile);
 
 // Google OAuth – start
 authRouter.get(

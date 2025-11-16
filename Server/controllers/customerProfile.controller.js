@@ -207,14 +207,48 @@ export const getCustomerProfile = async (req, res) => {
 export const updateCustomerProfile = async (req, res) => {
   try {
     const customerId = req.params.id;
-    const { Name, Mobile, Email, Address } = req.body;
+      const { Name, Mobile, Email } = req.body;
 
-    const updateData = {
-      Name: Name || req.body.name,
-      Mobile: Mobile || req.body.mobile, 
-      Email: Email || req.body.email,
-      Address: Address || req.body.address,
-    };
+      const updateData = {};
+
+      // Basic fields (keep backward compatibility with different casing)
+      if (Name || req.body.name) updateData.Name = Name || req.body.name;
+      if (Mobile || req.body.mobile) updateData.Mobile = Mobile || req.body.mobile;
+      if (Email || req.body.email) updateData.Email = Email || req.body.email;
+
+      // Address: accept either an object `Address` or flat fields: houseNumber, street, city, pincode
+      const addrFromBody = req.body.Address || req.body.address;
+      const houseNumber = req.body.houseNumber || req.body.house_number || (addrFromBody && addrFromBody.houseNumber);
+      const street = req.body.street || (addrFromBody && addrFromBody.street);
+      const city = req.body.city || (addrFromBody && addrFromBody.city);
+      const pincode = req.body.pincode || req.body.pin || (addrFromBody && addrFromBody.pincode);
+
+      if (addrFromBody || houseNumber || street || city || pincode) {
+        updateData.Address = {
+          houseNumber: houseNumber || "",
+          street: street || "",
+          city: city || "",
+          pincode: pincode || "",
+        };
+      }
+
+      // Location: accept `latitude` & `longitude` or `lat` & `lng` or `location.coordinates`
+      const lat = req.body.latitude || req.body.lat || (req.body.location && req.body.location.lat);
+      const lng = req.body.longitude || req.body.lng || (req.body.location && req.body.location.lng);
+      const coordsFromBody = req.body.location && req.body.location.coordinates;
+
+      if ((lat && lng) || (Array.isArray(coordsFromBody) && coordsFromBody.length >= 2)) {
+        if (Array.isArray(coordsFromBody) && coordsFromBody.length >= 2) {
+          // assume [lng, lat]
+          updateData.location = { type: "Point", coordinates: coordsFromBody };
+        } else {
+          const latNum = parseFloat(lat);
+          const lngNum = parseFloat(lng);
+          if (!Number.isNaN(latNum) && !Number.isNaN(lngNum)) {
+            updateData.location = { type: "Point", coordinates: [lngNum, latNum] };
+          }
+        }
+      }
 
     // const updatedCustomer = await Customer.findByIdAndUpdate(
     //   customerId,

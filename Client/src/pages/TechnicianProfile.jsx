@@ -3,6 +3,7 @@ import axios from "axios";
 import { AppContext } from "../context/AppContext";
 import { toast } from "react-toastify";
 import { Eye, EyeOff, Lock, Upload, Loader2, Save, X, Phone, Mail, User, Building, CreditCard, Shield, Camera, FileText } from "lucide-react";
+import MapPicker from "../components/MapPicker";
 
 const TechnicianProfile = () => {
   const { backendUrl } = useContext(AppContext);
@@ -32,6 +33,7 @@ const TechnicianProfile = () => {
     Photo: "",
     IDProof: "",
   });
+  const [showMapPicker, setShowMapPicker] = useState(false);
 
   // Bank Details State
   const [bankDetails, setBankDetails] = useState({
@@ -130,6 +132,14 @@ const TechnicianProfile = () => {
           Address: technician.Address || "",
           Photo: technician.Photo || "",
           IDProof: technician.IDProof || "",
+          latitude:
+            technician.location && Array.isArray(technician.location.coordinates)
+              ? technician.location.coordinates[1]
+              : undefined,
+          longitude:
+            technician.location && Array.isArray(technician.location.coordinates)
+              ? technician.location.coordinates[0]
+              : undefined,
         });
 
         setBankDetails({
@@ -782,7 +792,7 @@ const TechnicianProfile = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold text-gray-900 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             My Profile
           </h1>
           <p className="text-gray-600 mt-3 text-lg">Manage your profile information and services</p>
@@ -1001,27 +1011,69 @@ const TechnicianProfile = () => {
                   )}
                 </div>
 
-                {/* Address Field */}
+                {/* Address Field (structured with map picker) */}
                 <div className="md:col-span-2 space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">
-                    Complete Address
+                    Address (you can pick on map)
                   </label>
-                  <textarea
-                    value={profile.Address}
-                    onChange={(e) => {
-                      handleProfileChange("Address", e.target.value);
-                      validateField("Address", e.target.value);
-                    }}
-                    onBlur={(e) => validateField("Address", e.target.value)}
-                    rows="3"
-                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none ${
-                      errors.Address ? "border-red-500 bg-red-50" : "border-gray-200 hover:border-gray-300 focus:border-blue-500"
-                    }`}
-                    placeholder="Enter your complete address (min 5, max 200 characters)"
-                  />
-                  {errors.Address && (
-                    <p className="text-red-500 text-sm font-medium">{errors.Address}</p>
-                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      value={(profile.Address && profile.Address.houseNumber) || ""}
+                      onChange={(e) =>
+                        handleProfileChange("Address", { ...(profile.Address || {}), houseNumber: e.target.value })
+                      }
+                      className="w-full px-4 py-3 border-2 rounded-xl"
+                      placeholder="House/Flat Number"
+                    />
+                    <input
+                      type="text"
+                      value={(profile.Address && profile.Address.street) || ""}
+                      onChange={(e) =>
+                        handleProfileChange("Address", { ...(profile.Address || {}), street: e.target.value })
+                      }
+                      className="w-full px-4 py-3 border-2 rounded-xl"
+                      placeholder="Street (optional)"
+                    />
+                    
+                    <input
+                      type="text"
+                      value={(profile.Address && profile.Address.city) || ""}
+                      onChange={(e) =>
+                        handleProfileChange("Address", { ...(profile.Address || {}), city: e.target.value })
+                      }
+                      className="w-full px-4 py-3 border-2 rounded-xl"
+                      placeholder="City"
+                    />
+                    <input
+                      type="text"
+                      value={(profile.Address && profile.Address.pincode) || ""}
+                      onChange={(e) =>
+                        handleProfileChange("Address", { ...(profile.Address || {}), pincode: e.target.value })
+                      }
+                      className="w-full px-4 py-3 border-2 rounded-xl"
+                      placeholder="Pincode"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowMapPicker(true)}
+                        className="px-4 py-3 bg-blue-600 text-white rounded-xl"
+                      >
+                        Pick on map
+                      </button>
+                      <div className="text-sm text-gray-500">
+                        {profile.latitude && profile.longitude ? (
+                          <div>
+                            Lat: {Number(profile.latitude).toFixed(6)}, Lng: {Number(profile.longitude).toFixed(6)}
+                          </div>
+                        ) : (
+                          <div className="italic">No pin selected</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {errors.Address && <p className="text-red-500 text-sm font-medium">{errors.Address}</p>}
                 </div>
               </div>
             </div>
@@ -1382,6 +1434,19 @@ const TechnicianProfile = () => {
             )}
           </div>
         </div>
+      )}
+
+      {/* Map picker modal */}
+      {showMapPicker && (
+        <MapPicker
+          initialLat={profile.latitude}
+          initialLng={profile.longitude}
+          onSave={(res) => {
+            setProfile({ ...profile, Address: res.address, latitude: res.lat, longitude: res.lng });
+            setShowMapPicker(false);
+          }}
+          onClose={() => setShowMapPicker(false)}
+        />
       )}
 
       {/* Email Verification Modal */}

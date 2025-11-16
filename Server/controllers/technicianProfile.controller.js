@@ -519,13 +519,40 @@ export const updateTechnicianProfile = async (req, res) => {
       });
     }
 
-    // Prepare fields to update
+    // Prepare fields to update (keep backward compatibility)
     const updateFields = {};
-    const allowedFields = ["Name", "Address"];
+    if (req.body.Name || req.body.name) updateFields.Name = req.body.Name || req.body.name;
 
-    for (const field of allowedFields) {
-      if (req.body[field] !== undefined && req.body[field] !== null) {
-        updateFields[field] = req.body[field];
+    // Address: accept object or flat fields
+    const addrFromBody = req.body.Address || req.body.address;
+    const houseNumber = req.body.houseNumber || req.body.house_number || (addrFromBody && addrFromBody.houseNumber);
+    const street = req.body.street || (addrFromBody && addrFromBody.street);
+    const city = req.body.city || (addrFromBody && addrFromBody.city);
+    const pincode = req.body.pincode || req.body.pin || (addrFromBody && addrFromBody.pincode);
+
+    if (addrFromBody || houseNumber || street || city || pincode) {
+      updateFields.Address = {
+        houseNumber: houseNumber || "",
+        street: street || "",
+        city: city || "",
+        pincode: pincode || "",
+      };
+    }
+
+    // Location: accept `latitude`/`longitude`, `lat`/`lng`, or `location.coordinates`
+    const lat = req.body.latitude || req.body.lat || (req.body.location && req.body.location.lat);
+    const lng = req.body.longitude || req.body.lng || (req.body.location && req.body.location.lng);
+    const coordsFromBody = req.body.location && req.body.location.coordinates;
+
+    if ((lat && lng) || (Array.isArray(coordsFromBody) && coordsFromBody.length >= 2)) {
+      if (Array.isArray(coordsFromBody) && coordsFromBody.length >= 2) {
+        updateFields.location = { type: "Point", coordinates: coordsFromBody };
+      } else {
+        const latNum = parseFloat(lat);
+        const lngNum = parseFloat(lng);
+        if (!Number.isNaN(latNum) && !Number.isNaN(lngNum)) {
+          updateFields.location = { type: "Point", coordinates: [lngNum, latNum] };
+        }
       }
     }
 

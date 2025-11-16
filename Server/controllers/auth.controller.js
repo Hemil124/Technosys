@@ -37,20 +37,103 @@ export const register = async (req, res) => {
       ifscCode,
     } = req.body;
 
+    // Normalize address: accept `address` as object, JSON string (FormData) or flat fields
+    let addrFromBody = address || req.body.Address || req.body.address;
+    // If Address was sent as a JSON string (FormData), parse it
+    if (typeof addrFromBody === "string") {
+      try {
+        addrFromBody = JSON.parse(addrFromBody);
+      } catch (e) {
+        // keep as string if not valid JSON
+      }
+    }
+
+    const houseNumber = req.body.houseNumber || req.body.house_number || (addrFromBody && addrFromBody.houseNumber) || "";
+    const street = req.body.street || (addrFromBody && addrFromBody.street) || "";
+    const city = req.body.city || (addrFromBody && addrFromBody.city) || "";
+    const pincode = req.body.pincode || req.body.pin || (addrFromBody && addrFromBody.pincode) || "";
+
+    const addressObj = {
+      houseNumber,
+      street,
+      city,
+      pincode,
+    };
+
+    // Location: accept latitude/longitude or lat/lng or location.coordinates
+    const lat = req.body.latitude || req.body.lat || (req.body.location && req.body.location.lat);
+    const lng = req.body.longitude || req.body.lng || (req.body.location && req.body.location.lng);
+    const coordsFromBody = req.body.location && req.body.location.coordinates;
+    let locationObj = undefined;
+    if ((lat && lng) || (Array.isArray(coordsFromBody) && coordsFromBody.length >= 2)) {
+      if (Array.isArray(coordsFromBody) && coordsFromBody.length >= 2) {
+        locationObj = { type: "Point", coordinates: coordsFromBody };
+      } else {
+        const latNum = parseFloat(lat);
+        const lngNum = parseFloat(lng);
+        if (!Number.isNaN(latNum) && !Number.isNaN(lngNum)) {
+          locationObj = { type: "Point", coordinates: [lngNum, latNum] };
+        }
+      }
+    }
+
+    // --- DEBUG LOGS: show incoming payload for easier troubleshooting ---
+    try {
+      console.log("[register] req.body:", JSON.stringify(req.body));
+    } catch (e) {
+      console.log("[register] req.body (unserializable)", req.body);
+    }
+    console.log("[register] req.files keys:", req.files ? Object.keys(req.files) : req.files);
+    console.log("[register] raw req.body.Address:", req.body.Address);
+    console.log("[register] parsed addressObj:", addressObj);
+    console.log("[register] parsed lat/lng:", { lat, lng, coordsFromBody });
+
     // Check required fields
-    if (
-      !name ||
-      !mobileNumber ||
-      !email ||
-      !password ||
-      !address ||
-      !serviceCategoryID ||
-      !bankAccountNo ||
-      !ifscCode
-    ) {
-      return res
-        .status(400)
-        .json({ success: false, message: "All fields are required" });
+    // Requirement: street is OPTIONAL; everything else required (landmark removed).
+    const missingFields = [];
+    if (!name) missingFields.push("name");
+    if (!mobileNumber) missingFields.push("mobileNumber");
+    if (!email) missingFields.push("email");
+    if (!password) missingFields.push("password");
+
+    // For address, prefer structured object. If structured present, require specific subfields
+    const hasAddressString = (typeof address === "string" && address.trim().length > 0) || (typeof req.body.Address === "string" && req.body.Address.trim().length > 0);
+    const hasStructuredAddress = addressObj && Object.values(addressObj).some((v) => v && String(v).trim().length > 0);
+
+    // If structured address provided, require houseNumber, city, pincode (street optional)
+    if (hasStructuredAddress) {
+      if (!addressObj.houseNumber || String(addressObj.houseNumber).trim().length === 0) missingFields.push("address.houseNumber");
+      if (!addressObj.city || String(addressObj.city).trim().length === 0) missingFields.push("address.city");
+      if (!addressObj.pincode || String(addressObj.pincode).trim().length === 0) missingFields.push("address.pincode");
+    } else if (!hasAddressString) {
+      // no structured address and no address string at all
+      missingFields.push("address");
+    }
+
+    if (!serviceCategoryID) missingFields.push("serviceCategoryID");
+    if (!bankAccountNo) missingFields.push("bankAccountNo");
+    if (!ifscCode) missingFields.push("ifscCode");
+
+    if (missingFields.length > 0) {
+      console.log("[register] missing required fields:", missingFields);
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields",
+        missing: missingFields,
+        received: {
+          bodyPreview: {
+            name: !!name,
+            mobileNumber: !!mobileNumber,
+            email: !!email,
+            password: !!password,
+            addressString: hasAddressString,
+            structuredAddressPresent: hasStructuredAddress,
+            serviceCategoryID: !!serviceCategoryID,
+            bankAccountNo: !!bankAccountNo,
+            ifscCode: !!ifscCode,
+          },
+        },
+      });
     }
 
     // ✅ Ensure OTPs are verified
@@ -112,19 +195,23 @@ export const register = async (req, res) => {
     const idProofPath = `/uploads/idProofs/${req.files.idProof[0].filename}`;
 
     // ✅ Create technician (core profile)
-    const technician = new Technician({
+    const technicianPayload = {
       Name: name,
       MobileNumber: mobileNumber,
       Email: email,
       Password: hashedPassword,
-      Address: address,
+      Address: addressObj,
       IDProof: idProofPath,
       Photo: photoPath,
       VerifyStatus: "Pending",
       isMobileVerified: true,
       isEmailVerified: true,
       ActiveStatus: "Active",
-    });
+    };
+
+    if (locationObj) technicianPayload.location = locationObj;
+
+    const technician = new Technician(technicianPayload);
 
     await technician.save();
 
@@ -219,8 +306,7 @@ export const register = async (req, res) => {
   }
 };
 
-
-
+// ================= LOGIN =================
 export const login = async (req, res) => {
   const { email, password, recaptchaToken } = req.body;
   // Find login block info
@@ -439,7 +525,6 @@ export const googleLogin = async (req, res) => {
   }
 };
 
-// // ================= LOGOUT =================
 // export const logout = async (req, res) => {
 //   try {
 //     res.clearCookie("token", {
@@ -495,7 +580,6 @@ const twilioClient = twilio(
   process.env.TWILIO_AUTH_TOKEN
 );
 
-// // Verify Mobile OTP
 // export const verifyMobileOtp = async (req, res) => {
 //   try {
 //     const { mobile, otp } = req.body;
@@ -821,7 +905,6 @@ export const verifyEmailOtp = async (req, res) => {
   }
 };
 
-// ================= SEND VERIFY OTP =================
 // export const sendVerifyotp = async (req, res) => {
 //   try {
 //     const userId = req.userId;
@@ -1074,158 +1157,6 @@ export const resetPassword = async (req, res) => {
 };
 
 
-//------------------------------------------------Customer-----------------------------------------------------
-// export const sendCustomerMobileOtp = async (req, res) => {
-//   console.log("Request body:", req.body); 
-//   try {
-//     const { mobile } = req.body;
-
-//     if (!mobile) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Mobile number is required"
-//       });
-//     }
-
-//     if (mobile.length !== 10 || !/^\d+$/.test(mobile)) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Enter valid 10-digit mobile number"
-//       });
-//     }
-
-//     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-//     const otpExpiry = new Date(Date.now() + 15 * 60 * 1000);
-
-//     // Upsert OTP record for this mobile
-//     await TempOtpVerification.findOneAndUpdate(
-//       { contactType: "mobile", contactValue: mobile },
-//       { otp, otpExpiry, isVerified: false },
-//       { upsert: true, new: true }
-//     );
-
-//     if (process.env.NODE_ENV === "production") {
-//       // Twilio SMS
-//       await twilioClient.messages.create({
-//         body: `Your Technosys verification code is: ${otp}`,
-//         from: process.env.TWILIO_PHONE_NUMBER,
-//         to: `+91${mobile}`,
-//       });
-//       return res.status(200).json({
-//         success: true,
-//         message: "OTP sent successfully",
-//         mobile
-//       });
-//     } else {
-//       // Dev mode → return OTP
-//       return res.status(200).json({
-//         success: true,
-//         message: "OTP sent successfully (Dev Mode)",
-//         otp,
-//         mobile,
-//       });
-//     }
-//   } catch (error) {
-//     console.error("Send mobile OTP error:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Internal server error"
-//     });
-//   }
-// };
-
-// // Verify Mobile OTP for Customer
-// export const verifyCustomerMobileOtp = async (req, res) => {
-//   try {
-//     const { mobile, otp } = req.body;
-
-//     if (!mobile || !otp) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Mobile number and OTP are required"
-//       });
-//     }
-
-//     const record = await TempOtpVerification.findOne({
-//       contactType: "mobile",
-//       contactValue: mobile,
-//     });
-
-//     if (!record) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "OTP not found. Please request again."
-//       });
-//     }
-
-//     if (record.otp !== otp) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Invalid OTP"
-//       });
-//     }
-
-//     if (record.otpExpiry < new Date()) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "OTP has expired"
-//       });
-//     }
-
-//     // Check if customer exists
-//     let customer = await Customer.findOne({ Mobile: mobile });
-
-//     if (!customer) {
-//       // Create new customer if doesn't exist
-//       customer = new Customer({
-//         Name: "Customer", // Default name, can be updated later
-//         Mobile: mobile,
-//       });
-//       await customer.save();
-//     }
-
-//     // Mark OTP as verified
-//     record.isVerified = true;
-//     await record.save();
-
-//     // Generate JWT token
-//     const token = jwt.sign(
-//       {
-//         id: customer._id,
-//         type: "customer",
-//         mobile: customer.Mobile,
-//       },
-//       process.env.JWT_SECRET,
-//       { expiresIn: "7d" }
-//     );
-
-//     res.cookie("token", token, {
-//       httpOnly: true,
-//       secure: process.env.NODE_ENV === "production",
-//       sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-//       maxAge: 7 * 24 * 60 * 60 * 1000,
-//     });
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "Login successful",
-//       data: {
-//         id: customer._id,
-//         name: customer.Name,
-//         mobile: customer.Mobile,
-//         email: customer.Email,
-//         role: "customer",
-//       },
-//     });
-//   } catch (error) {
-//     console.error("Verify mobile OTP error:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Internal server error"
-//     });
-//   }
-// };
-
 export const sendCustomerMobileOtp = async (req, res) => {
   console.log("Customer OTP request body:", req.body); 
   try {
@@ -1383,87 +1314,87 @@ export const verifyCustomerMobileOtp = async (req, res) => {
 };
 
 
-// Update Customer Profile
-export const updateCustomerProfile = async (req, res) => {
-  try {
-    const { name, email, address } = req.body;
-    const customerId = req.userId;
+// // Update Customer Profile
+// export const updateCustomerProfile = async (req, res) => {
+//   try {
+//     const { name, email, address } = req.body;
+//     const customerId = req.userId;
 
-    const customer = await Customer.findById(customerId);
-    if (!customer) {
-      return res.status(404).json({
-        success: false,
-        message: "Customer not found"
-      });
-    }
+//     const customer = await Customer.findById(customerId);
+//     if (!customer) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Customer not found"
+//       });
+//     }
 
-    // Update fields if provided
-    if (name) customer.Name = name;
-    if (email) customer.Email = email;
-    if (address) customer.Address = address;
+//     // Update fields if provided
+//     if (name) customer.Name = name;
+//     if (email) customer.Email = email;
+//     if (address) customer.Address = address;
 
-    await customer.save();
+//     await customer.save();
 
-    return res.status(200).json({
-      success: true,
-      message: "Profile updated successfully",
-      data: {
-        id: customer._id,
-        name: customer.Name,
-        mobile: customer.Mobile,
-        email: customer.Email,
-        address: customer.Address,
-      },
-    });
-  } catch (error) {
-    console.error("Update profile error:", error);
+//     return res.status(200).json({
+//       success: true,
+//       message: "Profile updated successfully",
+//       data: {
+//         id: customer._id,
+//         name: customer.Name,
+//         mobile: customer.Mobile,
+//         email: customer.Email,
+//         address: customer.Address,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Update profile error:", error);
     
-    if (error.code === 11000) {
-      return res.status(409).json({
-        success: false,
-        message: "Email already exists"
-      });
-    }
+//     if (error.code === 11000) {
+//       return res.status(409).json({
+//         success: false,
+//         message: "Email already exists"
+//       });
+//     }
     
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error"
-    });
-  }
-};
+//     return res.status(500).json({
+//       success: false,
+//       message: "Internal server error"
+//     });
+//   }
+// };
 
-// Get Customer Profile
-export const getCustomerProfile = async (req, res) => {
-  try {
-    const customerId = req.userId;
+// // Get Customer Profile
+// export const getCustomerProfile = async (req, res) => {
+//   try {
+//     const customerId = req.userId;
 
-    const customer = await Customer.findById(customerId);
-    if (!customer) {
-      return res.status(404).json({
-        success: false,
-        message: "Customer not found"
-      });
-    }
+//     const customer = await Customer.findById(customerId);
+//     if (!customer) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Customer not found"
+//       });
+//     }
 
-    return res.status(200).json({
-      success: true,
-      data: {
-        id: customer._id,
-        name: customer.Name,
-        mobile: customer.Mobile,
-        email: customer.Email,
-        address: customer.Address,
-        createdAt: customer.createdAt,
-      },
-    });
-  } catch (error) {
-    console.error("Get profile error:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error"
-    });
-  }
-};
+//     return res.status(200).json({
+//       success: true,
+//       data: {
+//         id: customer._id,
+//         name: customer.Name,
+//         mobile: customer.Mobile,
+//         email: customer.Email,
+//         address: customer.Address,
+//         createdAt: customer.createdAt,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Get profile error:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Internal server error"
+//     });
+//   }
+// };
 
 // Logout Customer
 export const logoutCustomer = async (req, res) => {
