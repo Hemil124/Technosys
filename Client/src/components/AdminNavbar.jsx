@@ -98,7 +98,6 @@ const AdminSidebar = () => {
 
   // Navigation items
   const navItems = [
-    // { name: "Dashboard", path: "/admin/dashboard", icon: <LayoutDashboard size={20} /> },
     { name: "Customers", path: "/admin/customers", icon: <Users size={20} /> },
     { name: "Categories", path: "/admin/categories", icon: <FolderOpen size={20} /> },
     { name: "Subscriptions", path: "/admin/subscriptions", icon: <CreditCard size={20} /> },
@@ -190,7 +189,7 @@ const AdminSidebar = () => {
                 </div>
 
                 {/* Other navigation items */}
-                {navItems.slice(1).map((item) => (
+                {navItems.map((item) => (
                   <NavLink
                     key={item.name}
                     to={item.path}
@@ -331,7 +330,7 @@ const AdminSidebar = () => {
                 </div>
 
                 {/* Other mobile navigation items */}
-                {navItems.slice(1).map((item) => (
+                {navItems.map((item) => (
                   <NavLink
                     key={item.name}
                     to={item.path}
