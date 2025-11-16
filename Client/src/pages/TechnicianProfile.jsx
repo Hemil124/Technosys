@@ -1448,7 +1448,6 @@ const TechnicianProfile = () => {
           onClose={() => setShowMapPicker(false)}
         />
       )}
-
       {/* Email Verification Modal */}
       {showEmailVerification && (
         <div className="fixed inset-0 bg-gradient-to-br from-blue-200 to-purple-400 flex items-center justify-center p-4 z-50" onClick={(e) => {
