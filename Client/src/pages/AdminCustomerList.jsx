@@ -1,18 +1,18 @@
 import React, { useEffect, useState, useContext, useRef } from "react";
 import axios from "axios";
 import { AppContext } from "../context/AppContext";
-import { 
-  Search, 
-  Filter, 
-  ChevronDown, 
+import {
+  Search,
+  Filter,
+  ChevronDown,
   ChevronUp,
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Calendar, 
-  CheckCircle, 
-  Clock, 
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  CheckCircle,
+  Clock,
   Loader2,
   Users,
   Check,
@@ -29,7 +29,7 @@ function AdminCustomerList() {
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  
+
   // Status search
   const [statusSearch, setStatusSearch] = useState("");
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
@@ -57,7 +57,7 @@ function AdminCustomerList() {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const { data } = await axios.get(`${backendUrl}/api/admin/customers/all`, {
+      const { data } = await axios.get(`${backendUrl}/api/admin/customers`, {
         withCredentials: true,
       });
       if (data.success) setCustomers(data.customers);
@@ -143,11 +143,10 @@ function AdminCustomerList() {
         <button
           onClick={() => onChange(Math.max(1, page - 1))}
           disabled={page === 1}
-          className={`px-4 py-2 rounded-lg border text-sm transition-all duration-200 ${
-            page === 1
+          className={`px-4 py-2 rounded-lg border text-sm transition-all duration-200 ${page === 1
               ? "opacity-40 cursor-not-allowed"
               : "hover:bg-gray-100 shadow-sm"
-          }`}
+            }`}
         >
           Previous
         </button>
@@ -161,11 +160,10 @@ function AdminCustomerList() {
             <button
               key={i}
               onClick={() => onChange(p)}
-              className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm border transition-all ${
-                p === page
+              className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm border transition-all ${p === page
                   ? "bg-gray-900 text-white shadow-md scale-110 border-gray-900"
                   : "hover:bg-gray-100 text-gray-700 border-gray-300"
-              }`}
+                }`}
             >
               {p}
             </button>
@@ -175,11 +173,10 @@ function AdminCustomerList() {
         <button
           onClick={() => onChange(Math.min(totalPages, page + 1))}
           disabled={page === totalPages}
-          className={`px-4 py-2 rounded-lg border text-sm transition-all duration-200 ${
-            page === totalPages
+          className={`px-4 py-2 rounded-lg border text-sm transition-all duration-200 ${page === totalPages
               ? "opacity-40 cursor-not-allowed"
               : "hover:bg-gray-100 shadow-sm"
-          }`}
+            }`}
         >
           Next
         </button>
@@ -273,7 +270,7 @@ function AdminCustomerList() {
                 >
                   <Filter className="h-4 w-4" />
                   <span>
-                    {statusFilter !== "all" 
+                    {statusFilter !== "all"
                       ? statusOptions.find(s => s.value === statusFilter)?.label
                       : "All Status"
                     }
@@ -331,8 +328,8 @@ function AdminCustomerList() {
                 No customers found
               </h3>
               <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                {searchTerm || statusFilter !== 'all' 
-                  ? "Try adjusting your search terms or filters" 
+                {searchTerm || statusFilter !== 'all'
+                  ? "Try adjusting your search terms or filters"
                   : "No customers registered in the system yet"
                 }
               </p>
@@ -362,8 +359,8 @@ function AdminCustomerList() {
                   </thead>
                   <tbody className="divide-y divide-gray-200/50">
                     {paginated.map((customer) => (
-                      <tr 
-                        key={customer._id} 
+                      <tr
+                        key={customer._id}
                         className="hover:bg-gray-50/50 transition-colors duration-200 group"
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -402,19 +399,21 @@ function AdminCustomerList() {
                         <td className="px-6 py-4">
                           <div className="flex items-start space-x-2 max-w-xs">
                             <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm text-gray-600 line-clamp-2">
-                              {customer.Address || "—"}
+                            <span className="text-sm text-gray-600">
+                              {customer.Address && typeof customer.Address === "object"
+                                ? `${customer.Address.houseNumber || ""}, ${customer.Address.street || ""}, ${customer.Address.city || ""}, ${customer.Address.pincode || ""}`
+                                : customer.Address || "—"}
                             </span>
+
                           </div>
                         </td>
 
                         <td className="px-6 py-4">
                           <span
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border transition-all duration-300 ${
-                              customer.isProfileComplete
+                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border transition-all duration-300 ${customer.isProfileComplete
                                 ? "bg-green-100 text-green-800 border-green-200 shadow-sm"
                                 : "bg-yellow-100 text-yellow-800 border-yellow-200 shadow-sm"
-                            }`}
+                              }`}
                           >
                             {customer.isProfileComplete ? (
                               <>
