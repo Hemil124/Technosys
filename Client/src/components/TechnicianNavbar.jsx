@@ -11,6 +11,11 @@ import {
   Settings,
   LogOut,
   User,
+  Menu,
+  X,
+  Home,
+  CreditCard,
+  MessageSquare,
 } from "lucide-react";
 import { assets } from "../assets/assets";
 
@@ -75,7 +80,6 @@ const TechnicianSidebar = () => {
     return () => unsubscribe && unsubscribe();
   }, [backendUrl, userData, realtimeSubscribe]);
 
-
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -102,56 +106,55 @@ const TechnicianSidebar = () => {
     }
   };
 
-const CoinBadge = ({ coins }) => (
-  <span className="inline-flex items-center gap-2 bg-white text-white px-3 py-1 rounded-full text-sm font-semibold shadow border border-gray-300">
-    <svg width="20" height="20" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="10" fill="#FFD54A" />
-      <text x="12" y="16" fontSize="12" textAnchor="middle" fill="#111" fontWeight="bold">
-        C
-      </text>
-    </svg>
-    <span className="text-sm text-black">{Number(coins).toFixed(2)}</span>
-  </span>
-);
-
-
-
-
+  const CoinBadge = ({ coins }) => (
+    <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 px-4 py-2 rounded-xl shadow-lg border border-yellow-300 flex items-center space-x-2 transition-all duration-300 hover:scale-105">
+      <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-inner">
+        <span className="text-yellow-600 font-bold text-xs">C</span>
+      </div>
+      <span className="font-bold text-sm">{Number(coins).toFixed(2)}</span>
+    </div>
+  );
 
   // Technician nav items
   const navItems = [
-    { name: "Availability", path: "/technician/availability", icon: <Clock size={18} /> },
-    { name: "Bookings", path: "/technician/bookings", icon: <CalendarCheck size={18} /> },
-    { name: "Subscription", path: "/technician/subscription", icon: <Layers size={18} /> },
-    { name: "Feedback", path: "/technician/feedbacks", icon: <Star size={18} /> },
+    // { name: "Dashboard", path: "/technician/dashboard", icon: <Home size={20} /> },
+    { name: "Availability", path: "/technician/availability", icon: <Clock size={20} /> },
+    { name: "Bookings", path: "/technician/bookings", icon: <CalendarCheck size={20} /> },
+    { name: "Subscription", path: "/technician/subscription", icon: <CreditCard size={20} /> },
+    { name: "Feedback", path: "/technician/feedbacks", icon: <MessageSquare size={20} /> },
+    { name: "Settings", path: "/technician/settings", icon: <Settings size={20} /> },
   ];
 
   return (
     <>
       {/* Technician Navbar */}
-      <div className="w-full bg-gray-900 text-white fixed top-0 z-50 shadow-md">
+      <div className="w-full bg-white/90 backdrop-blur-sm border-b border-gray-200/50 text-gray-900 fixed top-0 z-50 shadow-lg">
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Left - Logo & Navigation */}
-            <div className="flex items-center">
+            <div className="flex items-center space-x-8">
               {/* Logo */}
               <div
                 onClick={() => navigate("/technician/dashboard")}
-                className="flex items-center cursor-pointer mr-8"
+                className="flex items-center cursor-pointer transition-all duration-300 hover:scale-105"
               >
                 <img src={assets.navbarlogo} alt="Logo" className="w-10 h-10" />
+                <span className="ml-3 text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  Technosys
+                </span>
               </div>
 
               {/* Desktop Nav */}
-              <nav className="hidden md:flex space-x-1">
+              <nav className="hidden lg:flex space-x-1">
                 {navItems.map((item) => (
                   <NavLink
                     key={item.name}
                     to={item.path}
                     className={({ isActive }) =>
-                      `flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all ${isActive
-                        ? "bg-blue-600 text-white shadow-md"
-                        : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                      `flex items-center px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 hover:scale-105 ${
+                        isActive
+                          ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
+                          : "text-gray-700 hover:bg-gray-100/80 hover:text-blue-600"
                       }`
                     }
                   >
@@ -163,74 +166,62 @@ const CoinBadge = ({ coins }) => (
             </div>
 
             {/* Right - Profile menu */}
-            <div className="flex items-center space-x-3">
-              {/* Coin balance badge (shown before profile) */}
-              {/* <div className="hidden sm:flex items-center px-3 py-1 rounded-md bg-white text-gray-900" title="Coin Balance">
-                <div style={{ fontWeight: 600, marginRight: 8 }}>{coinBalance ?? 0}</div>
-                <div style={{ fontSize: 12, color: '#6b7280' }}>coins</div>
-              </div> */}
+            <div className="flex items-center space-x-4">
+              {/* Coin balance badge */}
               <div className="hidden sm:flex">
                 <CoinBadge coins={coinBalance ?? 0} />
               </div>
+
               {/* Mobile menu toggle */}
               <button
                 onClick={() => setMenuOpen(!menuOpen)}
-                className="md:hidden p-2 rounded-md hover:bg-gray-800"
+                className="lg:hidden p-2 rounded-xl hover:bg-gray-100/80 transition-all duration-300"
               >
-                <svg
-                  className="h-6 w-6"
-                  stroke="currentColor"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d={
-                      menuOpen
-                        ? "M6 18L18 6M6 6l12 12"
-                        : "M4 6h16M4 12h16M4 18h16"
-                    }
-                  />
-                </svg>
+                {menuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
 
               {/* Profile menu */}
               <div className="relative profile-menu">
                 <button
                   onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-                  className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
+                  className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold hover:from-blue-600 hover:to-purple-600 transition-all duration-300 hover:scale-105 shadow-lg"
                 >
-                  {userData?.name?.charAt(0).toUpperCase() || <User size={16} />}
+                  {userData?.name?.charAt(0).toUpperCase() || <User size={18} />}
                 </button>
 
                 {profileMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-gray-200 z-50">
+                  <div className="absolute right-0 mt-2 w-56 bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-200/50 py-2 z-50 animate-scaleIn">
+                    <div className="px-4 py-3 border-b border-gray-200/50">
+                      <div className="text-sm font-semibold text-gray-900">{userData?.name}</div>
+                      <div className="text-xs text-gray-500 truncate">{userData?.email}</div>
+                    </div>
+                    
                     <NavLink
                       to="/technician/profile"
                       onClick={() => setProfileMenuOpen(false)}
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                      className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-blue-50/80 hover:text-blue-600 transition-colors duration-200"
                     >
-                      <User size={16} className="mr-3" />
+                      <User size={18} className="mr-3" />
                       Profile
                     </NavLink>
+                    
                     <NavLink
                       to="/technician/settings"
                       onClick={() => setProfileMenuOpen(false)}
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                      className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-blue-50/80 hover:text-blue-600 transition-colors duration-200"
                     >
-                      <Settings size={16} className="mr-3" />
+                      <Settings size={18} className="mr-3" />
                       Settings
                     </NavLink>
+                    
                     <button
                       onClick={() => {
                         logout();
                         setProfileMenuOpen(false);
                       }}
-                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 border-t border-gray-100"
+                      className="flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-red-50/80 hover:text-red-600 border-t border-gray-200/50 transition-colors duration-200"
                     >
-                      <LogOut size={16} className="mr-3" />
+                      <LogOut size={18} className="mr-3" />
                       Logout
                     </button>
                   </div>
@@ -241,17 +232,18 @@ const CoinBadge = ({ coins }) => (
 
           {/* Mobile menu */}
           {menuOpen && (
-            <div className="md:hidden bg-gray-800 border-t border-gray-700 mobile-menu">
-              <div className="px-2 py-3 space-y-1">
+            <div className="lg:hidden bg-white/95 backdrop-blur-sm border-t border-gray-200/50 mobile-menu animate-fadeIn">
+              <div className="px-2 py-4 space-y-2">
                 {navItems.map((item) => (
                   <NavLink
                     key={item.name}
                     to={item.path}
                     onClick={() => setMenuOpen(false)}
                     className={({ isActive }) =>
-                      `flex items-center px-3 py-2 rounded-md text-base font-medium transition-all ${isActive
-                        ? "bg-blue-600 text-white"
-                        : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                      `flex items-center px-4 py-3 rounded-xl text-base font-medium transition-all duration-300 ${
+                        isActive
+                          ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
+                          : "text-gray-700 hover:bg-gray-100/80 hover:text-blue-600"
                       }`
                     }
                   >
@@ -259,6 +251,13 @@ const CoinBadge = ({ coins }) => (
                     {item.name}
                   </NavLink>
                 ))}
+                
+                {/* Mobile Coin Balance */}
+                <div className="px-4 py-3 border-t border-gray-200/50 mt-4">
+                  <div className="flex justify-center">
+                    <CoinBadge coins={coinBalance ?? 0} />
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -267,6 +266,24 @@ const CoinBadge = ({ coins }) => (
 
       {/* Spacer */}
       <div className="h-16"></div>
+
+      {/* Add custom animations */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes scaleIn {
+          from { transform: scale(0.95); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+        .animate-scaleIn {
+          animation: scaleIn 0.2s ease-out;
+        }
+      `}</style>
     </>
   );
 };
