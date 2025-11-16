@@ -13,6 +13,7 @@ import LoginBlock from "../models/LoginBlock.js";
 import axios from "axios";
 import Customer from "../models/Customer.js";
 import nodemailer from "nodemailer";
+import { processUploadedImage, deleteImageFile } from "../utils/imageUtils.js";
 
 
 //date = 12-10-25
@@ -87,9 +88,28 @@ export const register = async (req, res) => {
     // ✅ Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // ✅ File paths
+    // ✅ Process and convert photo to WebP
+    let photoPath = null;
+    try {
+      const photoResult = await processUploadedImage(req.files.photo[0], "uploads/photos");
+      if (!photoResult.success) {
+        return res.status(400).json({
+          success: false,
+          message: `Photo upload error: ${photoResult.message}`
+        });
+      }
+      photoPath = photoResult.filePath;
+      console.log(`Photo processed and converted to WebP: ${photoPath}`);
+    } catch (photoError) {
+      console.error("Photo processing error:", photoError);
+      return res.status(400).json({
+        success: false,
+        message: "Failed to process photo. Please ensure it's a valid image (PNG, JPEG, JPG, WebP) under 500 KB"
+      });
+    }
+
+    // ✅ File path for ID Proof
     const idProofPath = `/uploads/idProofs/${req.files.idProof[0].filename}`;
-    const photoPath = `/uploads/photos/${req.files.photo[0].filename}`;
 
     // ✅ Create technician (core profile)
     const technician = new Technician({
@@ -177,7 +197,13 @@ export const register = async (req, res) => {
     if (error.code === "LIMIT_FILE_SIZE") {
       return res
         .status(400)
-        .json({ success: false, message: "File too large. Max size 5MB" });
+        .json({ success: false, message: "File too large. Maximum file size is 500 KB" });
+    }
+
+    if (error.message && error.message.includes("Invalid photo format")) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid photo format. Supported: PNG, JPEG, JPG, WebP" });
     }
 
     if (error.code === 11000) {

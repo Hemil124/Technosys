@@ -145,6 +145,7 @@
 import ServiceCategory from "../models/ServiceCategory.js";
 import SubServiceCategory from "../models/SubServiceCategory.js"; // Add this import
 import { getIo } from "../config/realtime.js";
+import { processUploadedImage, deleteImageFile } from "../utils/imageUtils.js";
 
 export const getAllCategories = async (req, res) => {
   try {
@@ -188,10 +189,14 @@ export const createCategory = async (req, res) => {
       return res.status(409).json({ success: false, message: 'Category already exists' });
     }
 
-    // If an image was uploaded by multer, save its path
+    // Process uploaded image: validate, convert to WebP, and get DB path
     let imagePath = null;
-    if (req.file && req.file.filename) {
-      imagePath = `/uploads/categories/${req.file.filename}`;
+    if (req.file) {
+      const imageResult = await processUploadedImage(req.file, 'uploads/categories');
+      if (!imageResult.success) {
+        return res.status(400).json({ success: false, message: imageResult.message });
+      }
+      imagePath = imageResult.filePath;
     }
 
     const category = await ServiceCategory.create({ name: name.trim(), isActive, image: imagePath });
@@ -247,6 +252,7 @@ export const updateCategory = async (req, res) => {
 
     // Store previous active status to detect changes
     const wasActive = category.isActive;
+  const oldImagePath = category.image;
 
     // Update category
     category.name = name.trim();
@@ -254,9 +260,17 @@ export const updateCategory = async (req, res) => {
       category.isActive = isActive;
     }
 
-    // If a new image was uploaded, update the image path
-    if (req.file && req.file.filename) {
-      category.image = `/uploads/categories/${req.file.filename}`;
+    // If a new image was uploaded, process it and update the path
+    if (req.file) {
+      const imageResult = await processUploadedImage(req.file, 'uploads/categories');
+      if (!imageResult.success) {
+        return res.status(400).json({ success: false, message: imageResult.message });
+      }
+      category.image = imageResult.filePath;
+      // Delete old image file if it exists
+      if (oldImagePath) {
+        await deleteImageFile(oldImagePath);
+      }
     }
 
     await category.save();

@@ -9,6 +9,7 @@ import twilio from "twilio";
 import { mkdir, unlink } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
+import { processUploadedImage, deleteImageFile } from "../utils/imageUtils.js";
 
 // Initialize Twilio
 const twilioClient = twilio(
@@ -595,12 +596,28 @@ export const updateTechnicianProfile = async (req, res) => {
     // Handle file uploads from multer
     if (req.files) {
       if (req.files.photo && req.files.photo[0]) {
-        // Delete old photo if it exists
-        if (currentTechnician.Photo) {
-          await deleteOldFile(currentTechnician.Photo);
+        try {
+          // Process and convert photo to WebP
+          const photoResult = await processUploadedImage(req.files.photo[0], "uploads/photos");
+          if (!photoResult.success) {
+            return res.status(400).json({
+              success: false,
+              message: `Photo upload error: ${photoResult.message}`
+            });
+          }
+          // Delete old photo if it exists
+          if (currentTechnician.Photo) {
+            await deleteImageFile(currentTechnician.Photo);
+          }
+          updateFields.Photo = photoResult.filePath;
+          console.log("Photo updated and converted to WebP:", updateFields.Photo);
+        } catch (photoError) {
+          console.error("Photo processing error:", photoError);
+          return res.status(400).json({
+            success: false,
+            message: "Failed to process photo. Please ensure it's a valid image (PNG, JPEG, JPG, WebP) under 500 KB"
+          });
         }
-        updateFields.Photo = `/uploads/photos/${req.files.photo[0].filename}`;
-        console.log("Photo updated:", updateFields.Photo);
       }
       if (req.files.idProof && req.files.idProof[0]) {
         // Delete old ID proof if it exists

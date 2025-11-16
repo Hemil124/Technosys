@@ -105,8 +105,12 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     
     // Cache control for better performance
-    if (path.endsWith('.jpg') || path.endsWith('.png') || path.endsWith('.jpeg')) {
+    if (path.endsWith('.jpg') || path.endsWith('.png') || path.endsWith('.jpeg') || path.endsWith('.webp')) {
       res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day cache for images
+      // Add correct MIME type for WebP
+      if (path.endsWith('.webp')) {
+        res.setHeader('Content-Type', 'image/webp');
+      }
     }
   }
 }));

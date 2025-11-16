@@ -69,6 +69,8 @@ export const AdminCategories = () => {
 
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [categoryErrors, setCategoryErrors] = useState({ name: "", image: "" });
+  const [subCategoryErrors, setSubCategoryErrors] = useState({ name: "", image: "", description: "", price: "", coinsRequired: "" });
   const [dragOverArea, setDragOverArea] = useState(null); // 'category' | 'subCategory' | null
   const [submitting, setSubmitting] = useState(false);
   const [togglingId, setTogglingId] = useState(null);
@@ -234,6 +236,7 @@ export const AdminCategories = () => {
     setCategoryForm({ name: "", isActive: true });
     setImageFile(null);
     setImagePreview(null);
+    setCategoryErrors({ name: "", image: "" });
     setIsCategoryModalOpen(true);
   };
 
@@ -248,21 +251,26 @@ export const AdminCategories = () => {
     } else {
       setImagePreview(null);
     }
+    setCategoryErrors({ name: "", image: "" });
     setIsCategoryModalOpen(true);
   };
 
   const handleSubmitCategory = async (e) => {
     e.preventDefault();
 
-    if (!categoryForm.name.trim()) {
-      toast.error("Category name is required");
-      return;
-    }
+    // Clear previous errors
+    setCategoryErrors({ name: "", image: "" });
 
-    if (!editingCategory && !imageFile) {
-      toast.error("Category image is required for new categories");
-      return;
+    let hasError = false;
+    if (!categoryForm.name.trim()) {
+      setCategoryErrors((s) => ({ ...s, name: "Category name is required" }));
+      hasError = true;
     }
+    if (!editingCategory && !imageFile) {
+      setCategoryErrors((s) => ({ ...s, image: "Category image is required for new categories" }));
+      hasError = true;
+    }
+    if (hasError) return;
 
     setSubmitting(true);
 
@@ -304,10 +312,12 @@ export const AdminCategories = () => {
       serviceCategoryId: "",
       price: "",
       coinsRequired: "",
+      description: "",
       isActive: true
     });
     setImageFile(null);
     setImagePreview(null);
+    setSubCategoryErrors({ name: "", image: "", description: "", price: "", coinsRequired: "" });
     setIsSubCategoryModalOpen(true);
   };
 
@@ -326,52 +336,59 @@ export const AdminCategories = () => {
     } else {
       setImagePreview(null);
     }
+    setSubCategoryErrors({ name: "", image: "", description: "", price: "", coinsRequired: "" });
     setIsSubCategoryModalOpen(true);
   };
 
   const handleSubmitSubCategory = async (e) => {
     e.preventDefault();
 
+    // Clear previous errors
+    setSubCategoryErrors({ name: "", image: "", description: "", price: "", coinsRequired: "" });
+
+    let hasError = false;
     if (!subCategoryForm.name.trim()) {
-      toast.error("Sub-category name is required");
-      return;
+      setSubCategoryErrors((s) => ({ ...s, name: "Sub-category name is required" }));
+      hasError = true;
     }
 
     if (!subCategoryForm.serviceCategoryId) {
       toast.error("Please select a parent category");
-      return;
+      hasError = true;
     }
 
     // New: require description, price and coins
     if (!subCategoryForm.description || !subCategoryForm.description.trim()) {
-      toast.error("Description is required");
-      return;
+      setSubCategoryErrors((s) => ({ ...s, description: "Description is required" }));
+      hasError = true;
     }
 
     if (!subCategoryForm.price || String(subCategoryForm.price).trim() === "") {
-      toast.error("Price is required");
-      return;
+      setSubCategoryErrors((s) => ({ ...s, price: "Price is required" }));
+      hasError = true;
     }
 
     if (!subCategoryForm.coinsRequired || String(subCategoryForm.coinsRequired).trim() === "") {
-      toast.error("Coins required is required");
-      return;
+      setSubCategoryErrors((s) => ({ ...s, coinsRequired: "Coins required is required" }));
+      hasError = true;
     }
 
     // Image required: if creating new, imageFile must be present.
     // If editing, require either an existing preview (already has image) or a new imageFile.
     if (!editingSubCategory) {
       if (!imageFile) {
-        toast.error("Sub-category image is required for new sub-categories");
-        return;
+        setSubCategoryErrors((s) => ({ ...s, image: "Sub-category image is required for new sub-categories" }));
+        hasError = true;
       }
     } else {
       // editing: if there's no existing preview (no image currently) and no new image selected, require image
       if (!imageFile && !imagePreview) {
-        toast.error("Sub-category image is required");
-        return;
+        setSubCategoryErrors((s) => ({ ...s, image: "Sub-category image is required" }));
+        hasError = true;
       }
     }
+
+    if (hasError) return;
 
     setSubmitting(true);
 
@@ -448,17 +465,42 @@ export const AdminCategories = () => {
     }
   };
 
-  // Image handling
+  // Image handling - FIXED FILE SIZE VALIDATION
   const processImageFile = (file) => {
     if (!file) return false;
-    if (!file.type || !file.type.startsWith("image/")) {
-      toast.error("Only image files are allowed");
+    
+    // Allowed extensions and mime types
+    const allowedExt = ["png", "jpeg", "jpg", "webp"];
+    const allowedMimes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!allowedExt.includes(ext)) {
+      const msg = "Invalid file extension. Allowed: PNG, JPEG, JPG, WebP";
+      setCategoryErrors((s) => ({ ...s, image: msg }));
+      setSubCategoryErrors((s) => ({ ...s, image: msg }));
       return false;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error("Image must be less than 2MB");
+
+    if (!allowedMimes.includes(file.type)) {
+      const msg = "Invalid file type. Only PNG, JPEG, JPG, WebP are allowed";
+      setCategoryErrors((s) => ({ ...s, image: msg }));
+      setSubCategoryErrors((s) => ({ ...s, image: msg }));
       return false;
     }
+
+    // ✅ FIXED: 500 KB limit (500 * 1024 bytes)
+    const MAX_FILE_SIZE = 500 * 1024; // 500 KB in bytes
+    if (file.size > MAX_FILE_SIZE) {
+      const kb = (file.size / 1024).toFixed(2);
+      const msg = `File size must be less than 500 KB. Your file is ${kb} KB`;
+      setCategoryErrors((s) => ({ ...s, image: msg }));
+      setSubCategoryErrors((s) => ({ ...s, image: msg }));
+      return false;
+    }
+
+    // clear image errors on success
+    setCategoryErrors((s) => ({ ...s, image: "" }));
+    setSubCategoryErrors((s) => ({ ...s, image: "" }));
 
     setImageFile(file);
     const reader = new FileReader();
@@ -469,7 +511,9 @@ export const AdminCategories = () => {
 
   const handleImageChange = (e) => {
     const file = e.target.files && e.target.files[0];
-    processImageFile(file);
+    if (file) {
+      processImageFile(file);
+    }
   };
 
   const onDropImage = (e, area) => {
@@ -501,6 +545,8 @@ export const AdminCategories = () => {
   const removeImage = () => {
     setImageFile(null);
     setImagePreview(null);
+    setCategoryErrors((s) => ({ ...s, image: "" }));
+    setSubCategoryErrors((s) => ({ ...s, image: "" }));
   };
 
   if (loading) {
@@ -513,7 +559,6 @@ export const AdminCategories = () => {
       </div>
     );
   }
-
 
   // 🔥 PREMIUM Pagination (Black Active Button)
   const Pagination = ({ page, totalPages, onPageChange }) => {
@@ -585,8 +630,6 @@ export const AdminCategories = () => {
       </div>
     );
   };
-
-
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
@@ -802,8 +845,6 @@ export const AdminCategories = () => {
                   />
                 </div>
               )}
-
-
             </div>
           </>
         )}
@@ -1055,7 +1096,7 @@ export const AdminCategories = () => {
               )}
               {/* Pagination Footer for Sub-Categories */}
               {filteredSubCategories.length > 0 && (
-                <div className="py-6 bg-white flex justify-center  ">
+                <div className="py-6 bg-white flex justify-center">
                   <Pagination
                     page={currentSubPage}
                     totalPages={totalSubPages}
@@ -1063,8 +1104,6 @@ export const AdminCategories = () => {
                   />
                 </div>
               )}
-
-
             </div>
           </>
         )}
@@ -1100,6 +1139,9 @@ export const AdminCategories = () => {
                         placeholder="Enter category name"
                         disabled={submitting}
                       />
+                      {categoryErrors.name && (
+                        <p className="text-sm text-red-600 mt-1">{categoryErrors.name}</p>
+                      )}
                     </div>
 
                     <div>
@@ -1145,12 +1187,13 @@ export const AdminCategories = () => {
                               Upload Category Image
                             </span>
                             <p className="text-xs text-gray-500 mt-1">
-                              Drop image here or click to upload — JPG, PNG (2MB max) {!editingCategory && <span className="text-red-600 font-medium">- Required</span>}
+                              PNG, JPEG, JPG, WebP (Max 500 KB)
+                              {!editingCategory && <span className="text-red-600 font-medium"> - Required</span>}
                             </p>
                             <input
                               id="category-image-input"
                               type="file"
-                              accept="image/*"
+                              accept=".png,.jpg,.jpeg,.webp"
                               onChange={handleImageChange}
                               disabled={submitting}
                               className="hidden"
@@ -1163,6 +1206,9 @@ export const AdminCategories = () => {
                         <div className="mt-3 flex justify-center">
                           <img src={imagePreview} alt="preview" className="h-24 w-24 object-cover rounded" />
                         </div>
+                      )}
+                      {categoryErrors.image && (
+                        <p className="text-sm text-red-600 mt-2 text-center">{categoryErrors.image}</p>
                       )}
                     </div>
                   </div>
@@ -1250,11 +1296,21 @@ export const AdminCategories = () => {
                         type="text"
                         id="subCategoryName"
                         value={subCategoryForm.name}
-                        onChange={(e) => setSubCategoryForm({ ...subCategoryForm, name: e.target.value })}
+                        onChange={(e) => {
+                          setSubCategoryForm({ ...subCategoryForm, name: e.target.value });
+                          if (!e.target.value.trim()) {
+                            setSubCategoryErrors((s) => ({ ...s, name: 'Sub-category name is required' }));
+                          } else {
+                            setSubCategoryErrors((s) => ({ ...s, name: '' }));
+                          }
+                        }}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Enter sub-category name"
                         disabled={submitting}
                       />
+                      {subCategoryErrors.name && (
+                        <p className="text-sm text-red-600 mt-1">{subCategoryErrors.name}</p>
+                      )}
                     </div>
 
                     <div>
@@ -1264,53 +1320,82 @@ export const AdminCategories = () => {
                       <textarea
                         id="subCategoryDescription"
                         value={subCategoryForm.description}
-                        onChange={(e) => setSubCategoryForm({ ...subCategoryForm, description: e.target.value })}
+                        onChange={(e) => {
+                          setSubCategoryForm({ ...subCategoryForm, description: e.target.value });
+                          if (!e.target.value.trim()) {
+                            setSubCategoryErrors((s) => ({ ...s, description: 'Description is required' }));
+                          } else {
+                            setSubCategoryErrors((s) => ({ ...s, description: '' }));
+                          }
+                        }}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         placeholder="Short description about this sub-category"
                         rows={3}
                         disabled={submitting}
                       />
+                      {subCategoryErrors.description && (
+                        <p className="text-sm text-red-600 mt-1">{subCategoryErrors.description}</p>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-                          Price (₹)
+                          Price (₹) *
                         </label>
                         <input
                           type="number"
                           id="price"
                           value={subCategoryForm.price}
-                          onChange={(e) => setSubCategoryForm({ ...subCategoryForm, price: e.target.value })}
+                          onChange={(e) => {
+                            setSubCategoryForm({ ...subCategoryForm, price: e.target.value });
+                            if (!e.target.value.trim()) {
+                              setSubCategoryErrors((s) => ({ ...s, price: 'Price is required' }));
+                            } else {
+                              setSubCategoryErrors((s) => ({ ...s, price: '' }));
+                            }
+                          }}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           placeholder="0.00"
                           min="0"
                           step="0.01"
                           disabled={submitting}
                         />
+                        {subCategoryErrors.price && (
+                          <p className="text-sm text-red-600 mt-1">{subCategoryErrors.price}</p>
+                        )}
                       </div>
                       <div>
                         <label htmlFor="coinsRequired" className="block text-sm font-medium text-gray-700 mb-1">
-                          Coins Required
+                          Coins Required *
                         </label>
                         <input
                           type="number"
                           id="coinsRequired"
                           value={subCategoryForm.coinsRequired}
-                          onChange={(e) => setSubCategoryForm({ ...subCategoryForm, coinsRequired: e.target.value })}
+                          onChange={(e) => {
+                            setSubCategoryForm({ ...subCategoryForm, coinsRequired: e.target.value });
+                            if (!e.target.value.trim()) {
+                              setSubCategoryErrors((s) => ({ ...s, coinsRequired: 'Coins required is required' }));
+                            } else {
+                              setSubCategoryErrors((s) => ({ ...s, coinsRequired: '' }));
+                            }
+                          }}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                           placeholder="0.00"
+                          placeholder="0.00"
                           min="0"
-                          step="0.01"     // ⭐ allows decimals
+                          step="0.01"
                           disabled={submitting}
                         />
-
+                        {subCategoryErrors.coinsRequired && (
+                          <p className="text-sm text-red-600 mt-1">{subCategoryErrors.coinsRequired}</p>
+                        )}
                       </div>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Sub-Category Image
+                        Sub-Category Image {!editingSubCategory && "*"}
                       </label>
                       <div
                         onDragOver={onDragOver}
@@ -1351,12 +1436,13 @@ export const AdminCategories = () => {
                               Upload Sub-Category Image
                             </span>
                             <p className="text-xs text-gray-500 mt-1">
-                              Drop image here or click to upload — JPG, PNG (2MB max)
+                              PNG, JPEG, JPG, WebP (Max 500 KB)
+                              {!editingSubCategory && <span className="text-red-600 font-medium"> - Required</span>}
                             </p>
                             <input
                               id="subcategory-image-input"
                               type="file"
-                              accept="image/*"
+                              accept=".png,.jpg,.jpeg,.webp"
                               onChange={handleImageChange}
                               disabled={submitting}
                               className="hidden"
@@ -1369,6 +1455,9 @@ export const AdminCategories = () => {
                         <div className="mt-3 flex justify-center">
                           <img src={imagePreview} alt="preview" className="h-24 w-24 object-cover rounded" />
                         </div>
+                      )}
+                      {subCategoryErrors.image && (
+                        <p className="text-sm text-red-600 mt-2 text-center">{subCategoryErrors.image}</p>
                       )}
                     </div>
                   </div>

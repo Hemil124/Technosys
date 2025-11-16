@@ -5,6 +5,7 @@ import { mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import userAuth from "../middleware/userAuth.js";
 import jwt from "jsonwebtoken";
+import { ALLOWED_EXTENSIONS, ALLOWED_MIMETYPES, MAX_FILE_SIZE } from "../utils/imageUtils.js";
 // import {
 //   isAuthenticated, login, logout, register, resetPassword,
 //   sendResetOtp, sendVerifyotp, verifyEmail
@@ -66,6 +67,9 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
+  // Check file extension
+  const ext = file.originalname.split(".").pop().toLowerCase();
+  
   // Check file types
   if (file.fieldname === "idProof") {
     if (
@@ -77,11 +81,17 @@ const fileFilter = (req, file, cb) => {
       cb(new Error("Only PDF and image files are allowed for ID proof"), false);
     }
   } else if (file.fieldname === "photo") {
-    if (file.mimetype.startsWith("image/")) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only image files are allowed for photo"), false);
+    // Validate extension for photo
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      cb(new Error(`Invalid photo format. Only PNG, JPEG, JPG, WebP are allowed`), false);
+      return;
     }
+    // Validate MIME type
+    if (!ALLOWED_MIMETYPES.includes(file.mimetype)) {
+      cb(new Error("Invalid file type for photo"), false);
+      return;
+    }
+    cb(null, true);
   } else {
     cb(new Error("Invalid fieldname"), false);
   }
@@ -91,7 +101,7 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: MAX_FILE_SIZE, // 500KB limit
   },
 });
 

@@ -4,6 +4,7 @@ import { mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { getAllCategories, createCategory, updateCategory, deleteCategory } from "../controllers/serviceCategory.controller.js";
 import userAuth from "../middleware/userAuth.js";
+import { ALLOWED_MIMETYPES, MAX_FILE_SIZE } from "../utils/imageUtils.js";
 
 const router = express.Router();
 
@@ -32,17 +33,24 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-	if (file.mimetype && file.mimetype.startsWith("image/")) {
-		cb(null, true);
-	} else {
-		cb(new Error("Only image files are allowed for category image"), false);
+	// Validate extension
+	const ext = file.originalname.split(".").pop().toLowerCase();
+	if (!['png', 'jpeg', 'jpg', 'webp'].includes(ext)) {
+		cb(new Error("Invalid file extension. Only PNG, JPEG, JPG, WebP are allowed"), false);
+		return;
 	}
+	// Validate MIME type
+	if (!ALLOWED_MIMETYPES.includes(file.mimetype)) {
+		cb(new Error("Invalid file type. Only image files (PNG, JPEG, JPG, WebP) are allowed"), false);
+		return;
+	}
+	cb(null, true);
 };
 
 const upload = multer({
 	storage,
 	fileFilter,
-	limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+	limits: { fileSize: MAX_FILE_SIZE }, // 500KB (consistent with other uploads)
 });
 
 // GET /api/service-categories - Public (list active categories)

@@ -3,6 +3,7 @@ import multer from "multer";
 import { mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import userAuth from "../middleware/userAuth.js";
+import { ALLOWED_EXTENSIONS, ALLOWED_MIMETYPES, MAX_FILE_SIZE } from "../utils/imageUtils.js";
 import {
   getTechnicianProfile,
   getTechnicianMobile,
@@ -53,10 +54,21 @@ const storage = multer.diskStorage({
 
 // File filter for images only
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype && file.mimetype.startsWith("image/")) {
+  if (file.fieldname === "photo") {
+    // Validate extension
+    const ext = file.originalname.split(".").pop().toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      cb(new Error(`Invalid photo format. Only PNG, JPEG, JPG, WebP are allowed`), false);
+      return;
+    }
+    // Validate MIME type
+    if (!ALLOWED_MIMETYPES.includes(file.mimetype)) {
+      cb(new Error("Invalid file type for photo"), false);
+      return;
+    }
     cb(null, true);
   } else {
-    cb(new Error("Only image files are allowed"), false);
+    cb(new Error("Invalid fieldname"), false);
   }
 };
 
@@ -64,7 +76,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: MAX_FILE_SIZE }, // 500KB limit
 });
 
 // GET /api/technician/profile - Get technician profile (protected)

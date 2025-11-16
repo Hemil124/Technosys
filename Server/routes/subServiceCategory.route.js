@@ -3,6 +3,7 @@ import multer from "multer";
 import { mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import userAuth from "../middleware/userAuth.js";
+import { ALLOWED_MIMETYPES, MAX_FILE_SIZE } from "../utils/imageUtils.js";
 import {
   getAllSubCategories,
   createSubCategory,
@@ -37,17 +38,22 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype && file.mimetype.startsWith("image/")) {
+  if (file.fieldname === "image") {
+    // Validate MIME type using imageUtils whitelist
+    if (!ALLOWED_MIMETYPES.includes(file.mimetype)) {
+      cb(new Error("Invalid file type. Only image files (PNG, JPEG, JPG, WebP) are allowed"), false);
+      return;
+    }
     cb(null, true);
   } else {
-    cb(new Error("Only image files are allowed for sub-category image"), false);
+    cb(null, true);
   }
 };
 
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
+  limits: { fileSize: 500 * 1024 }, // 500KB (consistent with other uploads)
 });
 
 // GET /api/sub-service-categories - list, optional ?serviceCategoryId=

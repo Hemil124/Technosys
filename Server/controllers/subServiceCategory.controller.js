@@ -1,5 +1,6 @@
 import SubServiceCategory from "../models/SubServiceCategory.js";
 import ServiceCategory from "../models/ServiceCategory.js";
+import { processUploadedImage, deleteImageFile } from "../utils/imageUtils.js";
 
 // GET /api/sub-service-categories?serviceCategoryId=
 export const getAllSubCategories = async (req, res) => {
@@ -58,9 +59,14 @@ export const createSubCategory = async (req, res) => {
     });
     if (exists) return res.status(409).json({ success: false, message: 'Sub-category already exists for this category' });
 
+    // Process uploaded image: validate, convert to WebP, and get DB path
     let imagePath = null;
-    if (req.file && req.file.filename) {
-      imagePath = `/uploads/subcategories/${req.file.filename}`;
+    if (req.file) {
+      const imageResult = await processUploadedImage(req.file, 'uploads/subcategories');
+      if (!imageResult.success) {
+        return res.status(400).json({ success: false, message: imageResult.message });
+      }
+      imagePath = imageResult.filePath;
     }
 
     const sub = await SubServiceCategory.create({
@@ -108,8 +114,18 @@ export const updateSubCategory = async (req, res) => {
     if (coinsRequired !== undefined) sub.coinsRequired = Number(coinsRequired);
     if (description !== undefined) sub.description = String(description || "").trim();
 
-    if (req.file && req.file.filename) {
-      sub.image = `/uploads/subcategories/${req.file.filename}`;
+    // Handle image upload with WebP conversion
+    const oldImagePath = sub.image;
+    if (req.file) {
+      const imageResult = await processUploadedImage(req.file, 'uploads/subcategories');
+      if (!imageResult.success) {
+        return res.status(400).json({ success: false, message: imageResult.message });
+      }
+      sub.image = imageResult.filePath;
+      // Delete old image file if it exists
+      if (oldImagePath) {
+        await deleteImageFile(oldImagePath);
+      }
     }
 
     if (req.body.isActive !== undefined) {

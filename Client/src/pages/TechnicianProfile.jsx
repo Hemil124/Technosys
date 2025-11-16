@@ -761,7 +761,7 @@ const TechnicianProfile = () => {
                       alt="Profile"
                       className="w-32 h-32 rounded-full object-cover border-4 border-blue-100 shadow-md mx-auto"
                       onError={(e) => {
-                        e.target.src = profile.Photo;
+                        console.error("Error loading photo from:", e.target.src);
                       }}
                     />
                   ) : (
@@ -773,7 +773,7 @@ const TechnicianProfile = () => {
                     <Camera className="w-4 h-4" />
                     <input
                       type="file"
-                      accept="image/*"
+                      accept=".png,.jpg,.jpeg,.webp"
                       onChange={(e) => handleFileSelect(e, "photo")}
                       className="hidden"
                     />
@@ -813,7 +813,7 @@ const TechnicianProfile = () => {
                       alt="ID Proof"
                       className="w-full h-40 object-cover rounded-lg border-2 border-blue-100 shadow-sm"
                       onError={(e) => {
-                        e.target.src = profile.IDProof;
+                        console.error("Error loading ID proof from:", e.target.src);
                       }}
                     />
                   </div>

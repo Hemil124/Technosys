@@ -114,7 +114,7 @@ export const Login = () => {
 
       case "email":
         if (!value) error = "Email is required";
-        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
+        else if (!/^(?=.{6,254}$)([a-z0-9_\-\.]+)@([a-z0-9\-]+\.)+([a-z]{2,})$/.test(value.toLowerCase()))
           error = "Invalid email format";
         break;
 
@@ -229,19 +229,23 @@ export const Login = () => {
     const value = e.target.value;
     setEmail(value);
 
-    if (touched.email) {
-      const error = validateField("email", value);
-      setErrors({ ...errors, email: error });
-    }
+    // Always validate on change (real-time validation)
+    const error = validateField("email", value);
+    setErrors({ ...errors, email: error });
   };
 
   // File validation
   const handleFileChange = (e, fileType) => {
     const file = e.target.files[0];
     if (file) {
-      // Check file size (5MB max)
-      if (file.size > 5 * 1024 * 1024) {
-        setErrors({ ...errors, [fileType]: "File size must be less than 5MB" });
+      // Check file size (500KB max)
+      const MAX_FILE_SIZE = 500 * 1024; // 500 KB
+      if (file.size > MAX_FILE_SIZE) {
+        const fileSizeKB = (file.size / 1024).toFixed(2);
+        setErrors({ 
+          ...errors, 
+          [fileType]: `File size must be less than 500 KB. Your file is ${fileSizeKB} KB` 
+        });
         return;
       }
 
@@ -255,12 +259,17 @@ export const Login = () => {
           "application/pdf",
         ];
       } else if (fileType === "photo") {
-        allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
+        allowedTypes = [
+          "image/jpeg",
+          "image/jpg",
+          "image/png",
+          "image/webp",
+        ];
       }
 
       if (!allowedTypes.includes(file.type)) {
         const allowedFormats =
-          fileType === "idProof" ? "JPG, PNG, PDF" : "JPG, PNG";
+          fileType === "idProof" ? "JPG, PNG, PDF" : "PNG, JPEG, JPG, WebP";
         setErrors({
           ...errors,
           [fileType]: `Only ${allowedFormats} files are allowed`,
@@ -1096,6 +1105,7 @@ export const Login = () => {
                         placeholder="e.g., ABCD0123456"
                         pattern="[A-Z]{4}0[A-Z0-9]{6}"
                         title="IFSC code format: ABCD0123456"
+                        maxLength="11"
                         required
                       />
                     </div>
@@ -1156,7 +1166,7 @@ export const Login = () => {
                             Upload ID Proof
                           </span>
                           <p className="text-xs text-gray-500 mt-1">
-                            PDF, JPG, PNG (5MB max)
+                            PDF, JPG, PNG (Max 500 KB)
                           </p>
                           <input
                             id="idProof"
@@ -1219,14 +1229,14 @@ export const Login = () => {
                             Upload Photo
                           </span>
                           <p className="text-xs text-gray-500 mt-1">
-                            JPG, PNG (5MB max)
+                            PNG, JPEG, JPG, WebP (Max 500 KB)
                           </p>
                           <input
                             id="photo"
                             onChange={(e) => handleFileChange(e, "photo")}
                             className="hidden"
                             type="file"
-                            accept=".jpg,.jpeg,.png"
+                            accept=".jpg,.jpeg,.png,.webp"
                             required
                           />
                         </label>
