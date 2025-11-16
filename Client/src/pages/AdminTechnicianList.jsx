@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useContext } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { Search, Filter, ChevronDown } from "lucide-react";
+import { Search, Filter, ChevronDown, Loader2 } from "lucide-react";
 import { AppContext } from "../context/AppContext";
 
 function AdminTechnicianList() {
@@ -265,67 +265,75 @@ function AdminTechnicianList() {
         </div>
 
         {/* TABLE */}
-        <div className="overflow-x-auto rounded-xl  shadow">
-          <table className="w-full text-left">
-            <thead className="bg-gradient-to-r from-blue-50 to-blue-100 text-gray-700">
-              <tr>
-                <th className="px-6 py-3 text-xs font-semibold uppercase">Profile</th>
-                <th className="px-6 py-3 text-xs font-semibold uppercase">Name</th>
-                <th className="px-6 py-3 text-xs font-semibold uppercase">Email</th>
-                <th className="px-6 py-3 text-xs font-semibold uppercase">Mobile</th>
-                <th className="px-6 py-3 text-xs font-semibold uppercase">Category</th>
-                <th className="px-6 py-3 text-xs font-semibold uppercase">Status</th>
-                <th className="px-6 py-3 text-xs font-semibold uppercase">Registered</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {paginated.map((tech) => (
-                <tr key={tech._id} className="hover:bg-gray-50 border-b">
-
-                  <td className="px-6 py-4">
-                    {tech.Photo ? (
-                      <img
-                        src={getPhotoUrl(tech.Photo)}
-                        className="w-12 h-12 object-cover rounded-full border shadow"
-                        onError={(e) => (e.target.style.display = "none")}
-                      />
-                    ) : (
-                      <DefaultAvatar name={tech.Name} />
-                    )}
-                  </td>
-
-                  <td className="px-6 py-4 font-medium">{tech.Name}</td>
-                  <td className="px-6 py-4">{tech.Email}</td>
-                  <td className="px-6 py-4">{tech.MobileNumber}</td>
-
-                  <td className="px-6 py-4">
-                    <span className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-full">
-                      {tech.ServiceCategoryID?.name || "N/A"}
-                    </span>
-                  </td>
-
-                  <td className="px-6 py-4">
-                    <span
-                      className={`px-3 py-1 text-sm rounded-full ${tech.VerifyStatus === "Approved"
-                        ? "bg-green-100 text-green-700"
-                        : tech.VerifyStatus === "Pending"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-red-100 text-red-700"
-                        }`}
-                    >
-                      {tech.VerifyStatus}
-                    </span>
-                  </td>
-
-                  <td className="px-6 py-4 text-gray-600">
-                    {new Date(tech.createdAt).toLocaleDateString()}
-                  </td>
+        {loading ? (
+          <div className="py-16 flex flex-col items-center justify-center bg-white rounded-2xl shadow border border-gray-200">
+            <Loader2 className="animate-spin h-8 w-8 text-blue-600 mb-4" />
+            <p className="text-gray-600">Loading technicians...</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-xl shadow">
+            <table className="w-full text-left">
+              <thead className="bg-gradient-to-r from-blue-50 to-blue-100 text-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-xs font-semibold uppercase">Profile</th>
+                  <th className="px-6 py-3 text-xs font-semibold uppercase">Name</th>
+                  <th className="px-6 py-3 text-xs font-semibold uppercase">Email</th>
+                  <th className="px-6 py-3 text-xs font-semibold uppercase">Mobile</th>
+                  <th className="px-6 py-3 text-xs font-semibold uppercase">Category</th>
+                  <th className="px-6 py-3 text-xs font-semibold uppercase">Status</th>
+                  <th className="px-6 py-3 text-xs font-semibold uppercase">Registered</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+
+              <tbody>
+                {paginated.map((tech) => (
+                  <tr key={tech._id} className="hover:bg-gray-50 border-b">
+                    <td className="px-6 py-4">
+                      {tech.Photo ? (
+                        <img
+                          src={getPhotoUrl(tech.Photo)}
+                          className="w-12 h-12 object-cover rounded-full border shadow"
+                          onError={(e) => (e.target.style.display = "none")}
+                          alt={tech.Name}
+                        />
+                      ) : (
+                        <DefaultAvatar name={tech.Name} />
+                      )}
+                    </td>
+
+                    <td className="px-6 py-4 font-medium">{tech.Name}</td>
+                    <td className="px-6 py-4">{tech.Email}</td>
+                    <td className="px-6 py-4">{tech.MobileNumber}</td>
+
+                    <td className="px-6 py-4">
+                      <span className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-full">
+                        {tech.ServiceCategoryID?.name || "N/A"}
+                      </span>
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <span
+                        className={`px-3 py-1 text-sm rounded-full ${tech.VerifyStatus === "Approved"
+                            ? "bg-green-100 text-green-700"
+                            : tech.VerifyStatus === "Pending"
+                              ? "bg-yellow-100 text-yellow-700"
+                              : "bg-red-100 text-red-700"
+                          }`}
+                      >
+                        {tech.VerifyStatus}
+                      </span>
+                    </td>
+
+                    <td className="px-6 py-4 text-gray-600">
+                      {new Date(tech.createdAt).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
 
         {/* PAGINATION */}
         {filtered.length > 0 && (
