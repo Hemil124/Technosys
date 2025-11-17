@@ -29,7 +29,12 @@ const TechnicianProfile = () => {
     Name: "",
     MobileNumber: "",
     Email: "",
-    Address: "",
+    Address: {
+      houseNumber: "",
+      street: "",
+      city: "",
+      pincode: "",
+    },
     Photo: "",
     IDProof: "",
   });
@@ -273,16 +278,29 @@ const TechnicianProfile = () => {
       }
     }
 
-    // Address validation
-    if (!profile.Address || profile.Address.trim().length === 0) {
-      newErrors.Address = "Address is required";
-      isValid = false;
-    } else if (profile.Address.trim().length < 5) {
-      newErrors.Address = "Address must be at least 5 characters";
-      isValid = false;
-    } else if (profile.Address.length > 200) {
-      newErrors.Address = "Address must not exceed 200 characters";
-      isValid = false;
+    // Address validation: support structured Address object or legacy string
+    if (profile.Address && typeof profile.Address === "object") {
+      const house = (profile.Address.houseNumber || "").toString().trim();
+      const pin = (profile.Address.pincode || "").toString().trim();
+      if (!house) {
+        newErrors.Address = "House/Flat number is required";
+        isValid = false;
+      } else if (!pin) {
+        newErrors.Address = "Pincode is required";
+        isValid = false;
+      }
+    } else {
+      // legacy textarea string
+      if (!profile.Address || profile.Address.trim().length === 0) {
+        newErrors.Address = "Address is required";
+        isValid = false;
+      } else if (profile.Address.trim().length < 5) {
+        newErrors.Address = "Address must be at least 5 characters";
+        isValid = false;
+      } else if (profile.Address.length > 200) {
+        newErrors.Address = "Address must not exceed 200 characters";
+        isValid = false;
+      }
     }
 
     // Bank details validation (REQUIRED)
@@ -347,14 +365,27 @@ const TechnicianProfile = () => {
         break;
 
       case "Address":
-        if (!value || value.trim().length === 0) {
-          newErrors.Address = "Address is required";
-        } else if (value.trim().length < 5) {
-          newErrors.Address = "Address must be at least 5 characters";
-        } else if (value.length > 200) {
-          newErrors.Address = "Address must not exceed 200 characters";
+        // value may be structured object or legacy string
+        if (value && typeof value === "object") {
+          const house = (value.houseNumber || "").toString().trim();
+          const pin = (value.pincode || "").toString().trim();
+          if (!house) {
+            newErrors.Address = "House/Flat number is required";
+          } else if (!pin) {
+            newErrors.Address = "Pincode is required";
+          } else {
+            newErrors.Address = "";
+          }
         } else {
-          newErrors.Address = "";
+          if (!value || value.trim().length === 0) {
+            newErrors.Address = "Address is required";
+          } else if (value.trim().length < 5) {
+            newErrors.Address = "Address must be at least 5 characters";
+          } else if (value.length > 200) {
+            newErrors.Address = "Address must not exceed 200 characters";
+          } else {
+            newErrors.Address = "";
+          }
         }
         break;
 
@@ -483,7 +514,7 @@ const TechnicianProfile = () => {
   const handleSaveProfile = async () => {
     // Validate form before saving
     if (!validateForm()) {
-      toast.error("Please fix all errors before saving");
+      toast.error("Please fill all fields before saving");
       return;
     }
 
@@ -500,7 +531,13 @@ const TechnicianProfile = () => {
 
       // Add basic profile fields
       formData.append("Name", profile.Name);
-      formData.append("Address", profile.Address);
+      // Address must be sent as a JSON string when using multipart/form-data
+      formData.append("Address", JSON.stringify(profile.Address || {}));
+      // Include lat/lng so backend can update GeoJSON location
+      if (profile.latitude !== undefined && profile.longitude !== undefined) {
+        formData.append("latitude", String(profile.latitude));
+        formData.append("longitude", String(profile.longitude));
+      }
       
       // Fetch current technician data to compare
       const currentRes = await axios.get(`${backendUrl}/api/technician/profile`, {
@@ -530,14 +567,9 @@ const TechnicianProfile = () => {
       // Note: Services are NOT sent because technicians cannot edit services
       // Services are managed by admin only
 
-      const res = await axios.patch(
-        `${backendUrl}/api/technician/profile`,
-        formData,
-        {
-          withCredentials: true,
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
+      const res = await axios.patch(`${backendUrl}/api/technician/profile`, formData, {
+        withCredentials: true,
+      });
 
       if (res.data.success) {
         toast.success(res.data.message || "Profile updated successfully");

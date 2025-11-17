@@ -291,7 +291,7 @@ const CustomerProfile = () => {
 
   const handleSaveProfile = async () => {
     if (!validateForm()) {
-      toast.error("Please fix all errors before saving");
+      toast.error("Please fill all fields before saving");
       return;
     }
 

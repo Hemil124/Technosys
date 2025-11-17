@@ -217,7 +217,14 @@ export const updateCustomerProfile = async (req, res) => {
       if (Email || req.body.email) updateData.Email = Email || req.body.email;
 
       // Address: accept either an object `Address` or flat fields: houseNumber, street, city, pincode
-      const addrFromBody = req.body.Address || req.body.address;
+      let addrFromBody = req.body.Address || req.body.address;
+      if (typeof addrFromBody === "string" && addrFromBody.trim().length > 0) {
+        try {
+          addrFromBody = JSON.parse(addrFromBody);
+        } catch (e) {
+          // keep as string if not valid JSON
+        }
+      }
       const houseNumber = req.body.houseNumber || req.body.house_number || (addrFromBody && addrFromBody.houseNumber);
       const street = req.body.street || (addrFromBody && addrFromBody.street);
       const city = req.body.city || (addrFromBody && addrFromBody.city);

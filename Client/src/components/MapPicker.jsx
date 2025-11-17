@@ -47,20 +47,56 @@ export default function MapPicker({ initialLat, initialLng, onSave, onClose }) {
   const [loadingMap, setLoadingMap] = useState(true);
   const [addressPreview, setAddressPreview] = useState(null);
   const [pos, setPos] = useState({ lat: initialLat || 21.1702, lng: initialLng || 72.8311 });
+  const [hasUserLocation, setHasUserLocation] = useState(false);
 
   useEffect(() => {
     let mounted = true;
+
+    const tryGetCurrentPosition = (timeout = 5000) =>
+      new Promise((resolve, reject) => {
+        if (!navigator.geolocation) return reject(new Error("Geolocation not supported"));
+        let resolved = false;
+        const onSuccess = (p) => {
+          if (resolved) return;
+          resolved = true;
+          resolve({ lat: p.coords.latitude, lng: p.coords.longitude });
+        };
+        const onError = (err) => {
+          if (resolved) return;
+          resolved = true;
+          reject(err);
+        };
+        navigator.geolocation.getCurrentPosition(onSuccess, onError, { enableHighAccuracy: true, maximumAge: 0 });
+        setTimeout(() => {
+          if (!resolved) {
+            resolved = true;
+            reject(new Error("Geolocation timeout"));
+          }
+        }, timeout);
+      });
+
     (async () => {
       try {
+        // Try to obtain user location first; if successful, use it as starting pos
+        try {
+          const userPos = await tryGetCurrentPosition(5000);
+          if (!mounted) return;
+          setPos(userPos);
+          setHasUserLocation(true);
+        } catch (e) {
+          // ignore - we'll use initialLat/initialLng or default
+        }
+
         loadCss(LEAFLET_CSS);
         await loadScript(LEAFLET_JS);
         if (!mounted) return;
         const L = window.L;
         if (!L) throw new Error("Leaflet failed to load");
 
-        // create map
+        // create map using current pos state at the time of initialisation
+        const start = { lat: pos.lat, lng: pos.lng };
         mapRef.current = L.map(containerRef.current, {
-          center: [pos.lat, pos.lng],
+          center: [start.lat, start.lng],
           zoom: 16,
         });
 
@@ -68,7 +104,7 @@ export default function MapPicker({ initialLat, initialLng, onSave, onClose }) {
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
         }).addTo(mapRef.current);
 
-        markerRef.current = L.marker([pos.lat, pos.lng], { draggable: true }).addTo(mapRef.current);
+        markerRef.current = L.marker([start.lat, start.lng], { draggable: true }).addTo(mapRef.current);
 
         markerRef.current.on("dragend", async (e) => {
           const p = e.target.getLatLng();
@@ -85,8 +121,8 @@ export default function MapPicker({ initialLat, initialLng, onSave, onClose }) {
           setAddressPreview(geo);
         });
 
-        // initial reverse geocode
-        const geo = await reverseGeocode(pos.lat, pos.lng);
+        // initial reverse geocode for start
+        const geo = await reverseGeocode(start.lat, start.lng);
         setAddressPreview(geo);
         setLoadingMap(false);
       } catch (err) {
@@ -94,6 +130,7 @@ export default function MapPicker({ initialLat, initialLng, onSave, onClose }) {
         setLoadingMap(false);
       }
     })();
+
     return () => {
       mounted = false;
       try {
@@ -113,6 +150,28 @@ export default function MapPicker({ initialLat, initialLng, onSave, onClose }) {
     onSave && onSave({ address: addressObj, lat: pos.lat, lng: pos.lng, display_name: addressPreview?.display_name || "" });
   };
 
+  const handleUseMyLocation = async () => {
+    try {
+      const p = await new Promise((resolve, reject) => {
+        if (!navigator.geolocation) return reject(new Error("Geolocation not supported"));
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          (err) => reject(err),
+          { enableHighAccuracy: true }
+        );
+      });
+      setPos(p);
+      setHasUserLocation(true);
+      if (markerRef.current) markerRef.current.setLatLng([p.lat, p.lng]);
+      if (mapRef.current) mapRef.current.setView([p.lat, p.lng], 16);
+      const geo = await reverseGeocode(p.lat, p.lng);
+      setAddressPreview(geo);
+    } catch (err) {
+      console.warn("Could not get current location:", err && err.message ? err.message : err);
+      // keep existing pos
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl mx-4 overflow-hidden">
@@ -120,6 +179,7 @@ export default function MapPicker({ initialLat, initialLng, onSave, onClose }) {
           <h3 className="text-lg font-semibold">Pick Location on Map</h3>
           <div className="flex items-center gap-2">
             <button onClick={onClose} className="px-3 py-1 rounded bg-gray-100">Close</button>
+            <button onClick={handleUseMyLocation} className="px-3 py-1 rounded bg-green-600 text-white">Use current location</button>
             <button onClick={handleSave} className="px-3 py-1 rounded bg-blue-600 text-white">Save</button>
           </div>
         </div>

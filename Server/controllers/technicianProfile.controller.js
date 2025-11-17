@@ -523,8 +523,15 @@ export const updateTechnicianProfile = async (req, res) => {
     const updateFields = {};
     if (req.body.Name || req.body.name) updateFields.Name = req.body.Name || req.body.name;
 
-    // Address: accept object or flat fields
-    const addrFromBody = req.body.Address || req.body.address;
+    // Address: accept object or flat fields. If Address was posted as JSON string, parse it.
+    let addrFromBody = req.body.Address || req.body.address;
+    if (typeof addrFromBody === "string" && addrFromBody.trim().length > 0) {
+      try {
+        addrFromBody = JSON.parse(addrFromBody);
+      } catch (e) {
+        // keep as string if not valid JSON
+      }
+    }
     const houseNumber = req.body.houseNumber || req.body.house_number || (addrFromBody && addrFromBody.houseNumber);
     const street = req.body.street || (addrFromBody && addrFromBody.street);
     const city = req.body.city || (addrFromBody && addrFromBody.city);
