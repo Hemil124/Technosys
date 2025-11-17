@@ -3,6 +3,7 @@ import axios from "axios";
 import { AppContext } from "../context/AppContext";
 import { toast } from "react-toastify";
 import { Loader2, Save, X, User, Phone, Mail } from "lucide-react";
+import MapPicker from "../components/MapPicker.jsx";
 
 const CustomerProfile = () => {
   const { backendUrl, userData } = useContext(AppContext);
@@ -22,8 +23,16 @@ const CustomerProfile = () => {
     Name: "",
     Mobile: "",
     Email: "",
-    Address: "",
+    Address: {
+      houseNumber: "",
+      street: "",
+      city: "",
+      pincode: "",
+    },
+    latitude: undefined,
+    longitude: undefined,
   });
+  const [showMapPicker, setShowMapPicker] = useState(false);
 
   // File Upload State
   // No photo upload for customers - removed photo state
@@ -80,7 +89,18 @@ const CustomerProfile = () => {
           Name: customer.Name || customer.name || "",
           Mobile: customer.Mobile || customer.mobile || "",
           Email: customer.Email || customer.email || "",
-          Address: customer.Address || customer.address || "",
+          Address:
+            customer.Address && typeof customer.Address === "object"
+              ? customer.Address
+              : customer.Address || customer.address || { houseNumber: "", street: "", city: "", pincode: "" },
+          latitude:
+            customer.location && Array.isArray(customer.location.coordinates)
+              ? customer.location.coordinates[1]
+              : undefined,
+          longitude:
+            customer.location && Array.isArray(customer.location.coordinates)
+              ? customer.location.coordinates[0]
+              : undefined,
         });
         // Clear any stale validation errors after loading profile
         setErrors({ Name: "", Mobile: "", Email: "", Address: "" });
@@ -139,16 +159,29 @@ const CustomerProfile = () => {
       }
     }
 
-    // Address validation
-    if (!profile.Address || profile.Address.trim().length === 0) {
-      newErrors.Address = "Address is required";
-      isValid = false;
-    } else if (profile.Address.trim().length < 5) {
-      newErrors.Address = "Address must be at least 5 characters";
-      isValid = false;
-    } else if (profile.Address.length > 200) {
-      newErrors.Address = "Address must not exceed 200 characters";
-      isValid = false;
+    // Address validation: support structured Address object or legacy string
+    if (profile.Address && typeof profile.Address === "object") {
+      const house = (profile.Address.houseNumber || "").toString().trim();
+      const pin = (profile.Address.pincode || "").toString().trim();
+      if (!house) {
+        newErrors.Address = "House/Flat number is required";
+        isValid = false;
+      } else if (!pin) {
+        newErrors.Address = "Pincode is required";
+        isValid = false;
+      }
+    } else {
+      // legacy textarea string
+      if (!profile.Address || profile.Address.trim().length === 0) {
+        newErrors.Address = "Address is required";
+        isValid = false;
+      } else if (profile.Address.trim().length < 5) {
+        newErrors.Address = "Address must be at least 5 characters";
+        isValid = false;
+      } else if (profile.Address.length > 200) {
+        newErrors.Address = "Address must not exceed 200 characters";
+        isValid = false;
+      }
     }
 
     setErrors(newErrors);
@@ -192,14 +225,23 @@ const CustomerProfile = () => {
         break;
 
       case "Address":
-        if (!value || value.trim().length === 0) {
-          newErrors.Address = "Address is required";
-        } else if (value.trim().length < 5) {
-          newErrors.Address = "Address must be at least 5 characters";
-        } else if (value.length > 200) {
-          newErrors.Address = "Address must not exceed 200 characters";
+        // support structured Address object or legacy textarea string
+        if (value && typeof value === "object") {
+          const house = (value.houseNumber || "").toString().trim();
+          const pin = (value.pincode || "").toString().trim();
+          if (!house) newErrors.Address = "House/Flat number is required";
+          else if (!pin) newErrors.Address = "Pincode is required";
+          else newErrors.Address = "";
         } else {
-          newErrors.Address = "";
+          if (!value || value.trim().length === 0) {
+            newErrors.Address = "Address is required";
+          } else if (value.trim().length < 5) {
+            newErrors.Address = "Address must be at least 5 characters";
+          } else if (value.length > 200) {
+            newErrors.Address = "Address must not exceed 200 characters";
+          } else {
+            newErrors.Address = "";
+          }
         }
         break;
 
@@ -262,6 +304,13 @@ const CustomerProfile = () => {
         Email: profile.Email,
         Address: profile.Address,
       };
+
+      // include lat/lng when present so backend can update GeoJSON location
+      if (profile.latitude !== undefined && profile.longitude !== undefined) {
+        updateData.latitude = profile.latitude;
+        updateData.longitude = profile.longitude;
+      }
+      
 
       const res = await axios.put(
         `${backendUrl}/api/customer-profile/${customerId}`,
@@ -542,31 +591,68 @@ const CustomerProfile = () => {
                   )}
                 </div>
 
-                {/* Address Field */}
+                {/* Address Field (structured with map picker) */}
                 <div className="md:col-span-2 space-y-2">
                   <label className="block text-sm font-semibold text-gray-700">
-                    Complete Address
+                    Address (you can pick on map)
                   </label>
-                  <textarea
-                    value={profile.Address}
-                    onChange={(e) => {
-                      handleProfileChange("Address", e.target.value);
-                      validateField("Address", e.target.value);
-                    }}
-                    onBlur={(e) => validateField("Address", e.target.value)}
-                    rows="3"
-                    className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none ${
-                      errors.Address
-                        ? "border-red-500 bg-red-50"
-                        : "border-gray-200 hover:border-gray-300 focus:border-blue-500"
-                    }`}
-                    placeholder="Enter your complete address (min 5, max 200 characters)"
-                  />
-                  {errors.Address && (
-                    <p className="text-red-500 text-sm font-medium">
-                      {errors.Address}
-                    </p>
-                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      value={(profile.Address && profile.Address.houseNumber) || ""}
+                      onChange={(e) =>
+                        handleProfileChange("Address", { ...(profile.Address || {}), houseNumber: e.target.value })
+                      }
+                      className="w-full px-4 py-3 border-2 rounded-xl"
+                      placeholder="House/Flat Number"
+                    />
+                    <input
+                      type="text"
+                      value={(profile.Address && profile.Address.street) || ""}
+                      onChange={(e) =>
+                        handleProfileChange("Address", { ...(profile.Address || {}), street: e.target.value })
+                      }
+                      className="w-full px-4 py-3 border-2 rounded-xl"
+                      placeholder="Street (optional)"
+                    />
+                    <input
+                      type="text"
+                      value={(profile.Address && profile.Address.city) || ""}
+                      onChange={(e) =>
+                        handleProfileChange("Address", { ...(profile.Address || {}), city: e.target.value })
+                      }
+                      className="w-full px-4 py-3 border-2 rounded-xl"
+                      placeholder="City (optional)"
+                    />
+                    <input
+                      type="text"
+                      value={(profile.Address && profile.Address.pincode) || ""}
+                      onChange={(e) =>
+                        handleProfileChange("Address", { ...(profile.Address || {}), pincode: e.target.value })
+                      }
+                      className="w-full px-4 py-3 border-2 rounded-xl"
+                      placeholder="Pincode"
+                    />
+                    <div className="flex items-center gap-2 md:col-span-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowMapPicker(true)}
+                        className="px-4 py-3 bg-blue-600 text-white rounded-xl"
+                      >
+                        Pick on map
+                      </button>
+                      <div className="text-sm text-gray-500">
+                        {profile.latitude && profile.longitude ? (
+                          <div>
+                            Lat: {Number(profile.latitude).toFixed(6)}, Lng: {Number(profile.longitude).toFixed(6)}
+                          </div>
+                        ) : (
+                          <div className="italic">No pin selected</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {errors.Address && <p className="text-red-500 text-sm font-medium">{errors.Address}</p>}
                 </div>
               </div>
             </div>
@@ -597,6 +683,19 @@ const CustomerProfile = () => {
           </div>
         </div>
       </div>
+
+      {/* Map picker modal */}
+      {showMapPicker && (
+        <MapPicker
+          initialLat={profile.latitude}
+          initialLng={profile.longitude}
+          onSave={(res) => {
+            setProfile({ ...profile, Address: res.address, latitude: res.lat, longitude: res.lng });
+            setShowMapPicker(false);
+          }}
+          onClose={() => setShowMapPicker(false)}
+        />
+      )}
 
       {/* Line 601 omitted */}
       {showEmailVerification && (

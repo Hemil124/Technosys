@@ -89,7 +89,6 @@ export const register = async (req, res) => {
     console.log("[register] parsed lat/lng:", { lat, lng, coordsFromBody });
 
     // Check required fields
-    // Requirement: street is OPTIONAL; everything else required (landmark removed).
     const missingFields = [];
     if (!name) missingFields.push("name");
     if (!mobileNumber) missingFields.push("mobileNumber");
