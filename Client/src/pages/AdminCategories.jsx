@@ -1407,7 +1407,7 @@ export const AdminCategories = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Category Image{" "}
                         {!editingCategory && (
-                          <span className="text-red-600">*</span>
+                          <span >*</span>
                         )}
                       </label>
                       <div
@@ -1460,7 +1460,7 @@ export const AdminCategories = () => {
                             <p className="text-xs text-gray-500 mt-2">
                               PNG, JPEG, JPG, WebP (Max 500 KB)
                               {!editingCategory && (
-                                <span className="text-red-600 font-medium">
+                                <span className=" font-medium">
                                   {" "}
                                   - Required
                                 </span>
@@ -1781,7 +1781,7 @@ export const AdminCategories = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Sub-Category Image{" "}
                         {!editingSubCategory && (
-                          <span className="text-red-600">*</span>
+                          <span >*</span>
                         )}
                       </label>
                       <div
@@ -1834,7 +1834,7 @@ export const AdminCategories = () => {
                             <p className="text-xs text-gray-500 mt-2">
                               PNG, JPEG, JPG, WebP (Max 500 KB)
                               {!editingSubCategory && (
-                                <span className="text-red-600 font-medium">
+                                <span className="font-medium">
                                   {" "}
                                   - Required
                                 </span>
