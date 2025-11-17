@@ -62,7 +62,7 @@ const AdminSidebar = () => {
       if (data.success) {
         setIsLoggedIn(false);
         setUserData(null);
-        navigate("/login");
+        navigate("/");
         toast.success("Logged out successfully");
       } else {
         toast.error(data.message || "Logout failed");
