@@ -523,7 +523,7 @@ function AdminTechnicianList() {
       </div>
 
       {/* Add custom animations */}
-      <style jsx>{`
+      <style>{`
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }

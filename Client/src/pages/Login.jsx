@@ -1,5 +1,3 @@
-
-
 import React, { useState, useContext, useEffect, useRef } from "react";
 import ReCAPTCHA from "react-google-recaptcha";
 import { assets } from "../assets/assets";
@@ -33,6 +31,10 @@ export const Login = () => {
     ifscCode: "",
     idProof: "",
     photo: "",
+    houseNumber: "",
+    street: "",
+    city: "",
+    pincode: "",
   });
 
   const [touched, setTouched] = useState({
@@ -44,6 +46,10 @@ export const Login = () => {
     serviceCategoryID: false,
     bankAccountNo: false,
     ifscCode: false,
+    houseNumber: false,
+    street: false,
+    city: false,
+    pincode: false,
   });
 
   // OTP Countdown states
@@ -144,9 +150,18 @@ export const Login = () => {
             "Password must contain at least one special character (@$!%*?&)";
         break;
 
-      case "address":
-        // Address is auto-generated from structured fields; skip validation
-        break;
+        case "address":
+          // Address is auto-generated from structured fields; skip validation
+          break;
+
+        case "houseNumber":
+          if (!value || String(value).trim().length === 0) error = "House/Flat is required";
+          break;
+        // street and city are optional — no validation
+        case "pincode":
+          if (!value || String(value).trim().length === 0) error = "Pincode is required";
+          else if (!/^[0-9]{1,6}$/.test(String(value))) error = "Pincode must be numeric and max 6 digits";
+          break;
 
       case "serviceCategoryID":
         if (!value) error = "Service category is required";
@@ -204,19 +219,22 @@ export const Login = () => {
       [name]: filteredValue,
     });
 
-    if (touched[name]) {
-      const error = validateField(name, filteredValue);
-      setErrors({ ...errors, [name]: error });
+    // Mark field as touched and validate in real-time
+    if (!touched[name]) {
+      setTouched((prev) => ({ ...prev, [name]: true }));
     }
+    const error = validateField(name, filteredValue);
+    setErrors((prev) => ({ ...prev, [name]: error }));
   };
 
   // Handle blur events
   const handleBlur = (e) => {
     const { name } = e.target;
-    setTouched({ ...touched, [name]: true });
+    setTouched((prev) => ({ ...prev, [name]: true }));
 
-    const error = validateField(name, formData[name]);
-    setErrors({ ...errors, [name]: error });
+    const value = name === "mobile" ? mobile : name === "email" ? email : formData[name];
+    const error = validateField(name, value);
+    setErrors((prev) => ({ ...prev, [name]: error }));
   };
 
   // Special handlers for mobile and email
@@ -224,10 +242,11 @@ export const Login = () => {
     const value = e.target.value.replace(/\D/g, "").slice(0, 10);
     setMobile(value);
 
-    if (touched.mobile) {
-      const error = validateField("mobile", value);
-      setErrors({ ...errors, mobile: error });
+    if (!touched.mobile) {
+      setTouched((prev) => ({ ...prev, mobile: true }));
     }
+    const error = validateField("mobile", value);
+    setErrors((prev) => ({ ...prev, mobile: error }));
   };
 
   const handleEmailChange = (e) => {
@@ -235,8 +254,11 @@ export const Login = () => {
     setEmail(value);
 
     // Always validate on change (real-time validation)
+    if (!touched.email) {
+      setTouched((prev) => ({ ...prev, email: true }));
+    }
     const error = validateField("email", value);
-    setErrors({ ...errors, email: error });
+    setErrors((prev) => ({ ...prev, email: error }));
   };
 
   // File validation
@@ -772,45 +794,66 @@ export const Login = () => {
 
   return (
     
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4 pt-20">
-      {/* <div className="fixed top-5 left-5">
-        <img
-          onClick={() => navigate("/")}
-          src={assets.navbarlogo}
-          alt="Logo"
-          className="w-10 h-10 cursor-pointer transition-transform hover:scale-105"
-        />
-      </div> */}
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-100 flex items-center justify-center p-4 pt-20">
       <Navbar />
 
-      <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row">
-        {/* Left Side - Illustration */}
-        <div className="hidden md:flex md:w-2/5 bg-gradient-to-br from-indigo-600 to-purple-700 p-8 flex-col justify-center items-center text-white">
-          <div className="mb-8 text-center">
-            <h2 className="text-3xl font-bold mb-2">
+      {/* Animated Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse delay-500"></div>
+      </div>
+
+      <div className="w-full max-w-4xl bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row relative z-10 border border-white/20">
+        {/* Left Side - Enhanced Illustration */}
+        <div className="hidden md:flex md:w-2/5 bg-gradient-to-br from-indigo-600 via-purple-600 to-purple-700 p-3 flex-col justify-center items-center text-white relative overflow-hidden">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white to-transparent"></div>
+          </div>
+          
+          <div className="relative z-10 text-center mb-8">
+            <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-6 backdrop-blur-sm border border-white/30">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <h2 className="text-3xl font-bold mb-3 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
               Join Our Technician Network
             </h2>
-            <p className="opacity-90">
+            <p className="opacity-90 text-blue-100 text-lg">
               Connect with customers seeking your expertise
             </p>
           </div>
-          <div className="mt-8 text-center">
+          
+          {/* Feature List */}
+          <div className="relative z-10 space-y-3 mb-8">
+            {['Instant Job Matching', 'Secure Payments', 'Growth Opportunities'].map((feature, index) => (
+              <div key={index} className="flex items-center space-x-3 text-blue-100">
+                <div className="w-2 h-2 bg-white rounded-full"></div>
+                <span className="text-sm">{feature}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="relative z-10 text-center">
             {state === "Sign Up" ? (
               <>
-                <p className="text-sm opacity-80">Already have an account?</p>
+                <p className="text-sm opacity-80 text-blue-100 mb-3">Already have an account?</p>
                 <button
                   onClick={() => setState("Login")}
-                  className="mt-2 px-6 py-2 bg-white text-indigo-700 rounded-full font-medium hover:bg-gray-100 transition-colors"
+                  className="px-8 py-3 bg-white/20 hover:bg-white/30 text-white rounded-2xl font-medium transition-all duration-300 backdrop-blur-sm border border-white/30 hover:border-white/50 hover:scale-105"
                 >
                   Sign In
                 </button>
               </>
             ) : (
               <>
-                <p className="text-sm opacity-80">Don't have an account?</p>
+                <p className="text-sm opacity-80 text-blue-100 mb-3">Don't have an account?</p>
                 <button
                   onClick={() => setState("Sign Up")}
-                  className="mt-2 px-6 py-2 bg-white text-indigo-700 rounded-full font-medium hover:bg-gray-100 transition-colors"
+                  className="px-8 py-3 bg-white/20 hover:bg-white/30 text-white rounded-2xl font-medium transition-all duration-300 backdrop-blur-sm border border-white/30 hover:border-white/50 hover:scale-105"
                 >
                   Sign Up
                 </button>
@@ -819,159 +862,145 @@ export const Login = () => {
           </div>
         </div>
 
-        {/* Right Side - Form */}
-        <div className="w-full md:w-3/5 p-8">
-          {/* Tab Navigation - Mobile */}
-          <div className="md:hidden flex mb-6 bg-gray-100 rounded-lg p-1">
+        {/* Right Side - Enhanced Form */}
+        <div className="w-full md:w-3/5 p-3 md:p-5">
+          {/* Tab Navigation - Enhanced Mobile */}
+          <div className="md:hidden flex mb-8 bg-gradient-to-r from-gray-100 to-gray-50 rounded-2xl p-1.5 shadow-inner">
             <button
               onClick={() => setState("Login")}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 py-2 px-4 rounded-xl text-sm font-semibold transition-all duration-300 ${
                 activeTab === "login"
-                  ? "bg-white text-indigo-700 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
+                  ? "bg-white text-indigo-700 shadow-lg transform scale-105"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-white/50"
               }`}
             >
               Login
             </button>
             <button
               onClick={() => setState("Sign Up")}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 py-2 px-4 rounded-xl text-sm font-semibold transition-all duration-300 ${
                 activeTab === "signup"
-                  ? "bg-white text-indigo-700 shadow-sm"
-                  : "text-gray-600 hover:text-gray-900"
+                  ? "bg-white text-indigo-700 shadow-lg transform scale-105"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-white/50"
               }`}
             >
               Register
             </button>
           </div>
 
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900">
+          {/* Enhanced Header */}
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg mb-4">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-800 to-indigo-600 bg-clip-text text-transparent">
               {state === "Sign Up"
                 ? "Create Technician Account"
                 : "Welcome Back"}
             </h2>
-            <p className="text-gray-600 mt-2">
+            <p className="text-gray-600 mt-3 text-lg">
               {state === "Sign Up"
                 ? "Fill in your details to join our network"
                 : "Sign in to your technician account"}
             </p>
           </div>
 
-          <form onSubmit={onSubmitHandler} className="space-y-6">
+          <form onSubmit={onSubmitHandler} className="space-y-5">
             {state === "Sign Up" && (
-              <div className="space-y-5">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Full Name *
-                    </label>
-                    <div
-                      className={`flex items-center border rounded-lg px-4 py-3 transition-colors ${
-                        errors.name
-                          ? "border-red-500 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500"
-                          : "border-gray-300 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500"
-                      }`}
-                    >
-                      <svg
-                        className="w-5 h-5 text-gray-400 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                        />
-                      </svg>
-                      <input
-                        onChange={handleInputChange}
-                        onBlur={handleBlur}
-                        value={formData.name}
-                        name="name"
-                        className="w-full bg-transparent outline-none text-sm"
-                        type="text"
-                        placeholder="Enter your full name (letters only)"
-                        required
-                      />
-                    </div>
-                    {errors.name && (
-                      <p className="text-red-500 text-xs mt-1">{errors.name}</p>
-                    )}
+              <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                {/* Full Name Field */}
+                <div className="group">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Full Name *
+                  </label>
+                  <div
+                    className={`flex items-center border-2 rounded-xl px-4 py-3 transition-all duration-300 group-hover:shadow-md ${
+                      errors.name
+                        ? "border-red-500 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-200"
+                        : "border-gray-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100"
+                    }`}
+                  >
+                    <svg className="w-5 h-5 text-gray-400 mr-3 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <input
+                      onChange={handleInputChange}
+                      onBlur={handleBlur}
+                      value={formData.name}
+                      name="name"
+                      className="w-full bg-transparent outline-none text-sm placeholder-gray-400"
+                      type="text"
+                      placeholder="Enter your full name (letters)"
+                      required
+                    />
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Service Category *
-                    </label>
-                    <div className="flex items-center border border-gray-300 rounded-lg px-4 py-3 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 transition-colors">
-                      <svg
-                        className="w-5 h-5 text-gray-400 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-4 0H9m4 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v12m4 0V9"
-                        />
+                  {errors.name && (
+                    <p className="text-red-500 text-xs mt-2 flex items-center">
+                      <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                       </svg>
-                      <select
-                        onChange={handleInputChange}
-                        value={formData.serviceCategoryID}
-                        name="serviceCategoryID"
-                        className="w-full bg-transparent outline-none text-sm appearance-none"
-                        required
-                      >
-                        <option value="">Select specialty</option>
-                        {serviceCategories.map((category) => (
-                          <option key={category._id} value={category._id}>
-                            {category.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
+                      {errors.name}
+                    </p>
+                  )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                {/* Service Category Field */}
+                <div className="group">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Service Category *
+                  </label>
+                    <div className="flex items-center border-2 border-gray-200 rounded-xl px-4 py-3 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100 transition-all duration-300 group-hover:shadow-md">
+                    <svg className="w-5 h-5 text-gray-400 mr-3 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-4m-4 0H9m4 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v12m4 0V9" />
+                    </svg>
+                    <select
+                      onChange={handleInputChange}
+                      value={formData.serviceCategoryID}
+                      name="serviceCategoryID"
+                      className="w-full bg-transparent outline-none text-sm appearance-none"
+                      required
+                    >
+                      <option value="">Select specialty</option>
+                      {serviceCategories.map((category) => (
+                        <option key={category._id} value={category._id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {/* Mobile Number Field */}
+                <div className="group">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Mobile Number *
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     <div
-                      className={`flex items-center gap-3 flex-1 px-4 py-3 rounded-lg border transition-colors ${
+                      className={`flex items-center gap-3 flex-1 px-4 py-3 rounded-xl border-2 transition-all duration-300 group-hover:shadow-md ${
                         errors.mobile
-                          ? "border-red-500 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500"
-                          : "border-gray-300 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500"
+                          ? "border-red-500 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-200"
+                          : "border-gray-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100"
                       }`}
                     >
-                      <svg
-                        className="w-5 h-5 text-gray-400 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                        />
+                      <svg className="w-5 h-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                       </svg>
                       <input
                         onChange={handleMobileChange}
-                        onBlur={() => setTouched({ ...touched, mobile: true })}
+                        onBlur={handleBlur}
                         value={mobile}
-                        className="w-full bg-transparent text-sm outline-none text-gray-700 placeholder-gray-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="w-full bg-transparent text-sm outline-none text-gray-700 placeholder-gray-400 disabled:opacity-60 disabled:cursor-not-allowed"
                         type="tel"
                         inputMode="numeric"
                         pattern="[0-9]*"
                         placeholder="10-digit mobile number"
+                        name="mobile"
                         maxLength={10}
                         disabled={isMobileVerified}
                         required
@@ -986,69 +1015,54 @@ export const Login = () => {
                         mobile.length !== 10 ||
                         errors.mobile
                       }
-                      className={`px-6 py-3.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                      className={`px-6 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-300 transform hover:scale-105 ${
                         isMobileVerified
-                          ? "bg-green-100 text-green-800 cursor-not-allowed"
-                          : "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+                          ? "bg-green-100 text-green-800 border-2 border-green-200 cursor-not-allowed"
+                          : "bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border-2 border-indigo-200"
                       } ${
                         isSendingOtp || mobile.length !== 10 || errors.mobile
-                          ? "opacity-50 cursor-not-allowed"
+                          ? "opacity-50 cursor-not-allowed hover:scale-100"
                           : ""
                       }`}
                     >
                       {isMobileVerified
-                        ? "Verified"
+                        ? "✓ Verified"
                         : isSendingOtp
                         ? "Sending..."
                         : "Verify"}
                     </button>
                   </div>
                   {errors.mobile && (
-                    <p className="text-red-500 text-xs mt-1">{errors.mobile}</p>
-                  )}
-                  {mobile.length === 10 && !errors.mobile && (
-                    <p className="text-green-600 text-xs mt-1">
-                      ✓ Valid mobile number
+                    <p className="text-red-500 text-xs mt-2 flex items-center">
+                      <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                      {errors.mobile}
                     </p>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                {/* Address Field */}
+                <div className="group">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Address *
                   </label>
-                  <div
-                    className={`flex items-center border rounded-lg px-4 py-3 transition-colors ${
+                    <div
+                      className={`flex items-center border-2 rounded-xl px-4 py-2 transition-all duration-300 group-hover:shadow-md ${
                       errors.address
-                        ? "border-red-500 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500"
-                        : "border-gray-300 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500"
+                        ? "border-red-500 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-200"
+                        : "border-gray-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100"
                     }`}
                   >
-                    <svg
-                      className="w-5 h-5 text-gray-400 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
+                    <svg className="w-5 h-5 text-gray-400 mr-3 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    <div className="flex items-center gap-2 w-full">
+                    <div className="flex items-center gap-3 w-full">
                       <input
-                        // address is read-only and auto-filled from structured fields
                         value={formData.address}
                         name="address"
-                        className="flex-1 bg-transparent outline-none text-sm px-2 py-1"
+                        className="flex-1 bg-transparent outline-none text-sm placeholder-gray-400"
                         type="text"
                         placeholder="Your complete address"
                         readOnly
@@ -1056,149 +1070,177 @@ export const Login = () => {
                       <button
                         type="button"
                         onClick={() => setShowMapPickerSignup(true)}
-                        className="px-3 py-1 bg-blue-600 text-white rounded-md text-sm"
+                        className="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl text-sm font-semibold transition-all duration-300 hover:from-blue-600 hover:to-blue-700 hover:shadow-lg transform hover:scale-105"
                       >
                         Pick on map
                       </button>
                     </div>
                   </div>
                   {errors.address && (
-                    <p className="text-red-500 text-xs mt-1">
+                    <p className="text-red-500 text-xs mt-2 flex items-center">
+                      <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
                       {errors.address}
                     </p>
                   )}
                 </div>
 
-                {/* Structured address fields (optional) */}
-                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <input
-                    type="text"
-                    placeholder="House/Flat No"
-                    value={formData.addressObj?.houseNumber || ""}
-                    onChange={(e) => setFormData({ ...formData, addressObj: { ...(formData.addressObj || {}), houseNumber: e.target.value } })}
-                    name="houseNumber"
-                    className="px-3 py-2 border rounded-lg"
-                  />
-                  {errors.houseNumber && (
-                    <p className="text-red-500 text-xs mt-1">{errors.houseNumber}</p>
-                  )}
-                  <input
-                    type="text"
-                    placeholder="Street"
-                    value={formData.addressObj?.street || ""}
-                    onChange={(e) => setFormData({ ...formData, addressObj: { ...(formData.addressObj || {}), street: e.target.value } })}
-                    className="px-3 py-2 border rounded-lg"
-                  />
-                  <input
-                    type="text"
-                    placeholder="City"
-                    value={formData.addressObj?.city || ""}
-                    onChange={(e) => setFormData({ ...formData, addressObj: { ...(formData.addressObj || {}), city: e.target.value } })}
-                    className="px-3 py-2 border rounded-lg"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Pincode"
-                    value={formData.addressObj?.pincode || ""}
-                    onChange={(e) => setFormData({ ...formData, addressObj: { ...(formData.addressObj || {}), pincode: e.target.value } })}
-                    name="pincode"
-                    className="px-3 py-2 border rounded-lg"
-                  />
-                  {errors.pincode && (
-                    <p className="text-red-500 text-xs mt-1">{errors.pincode}</p>
-                  )}
+                {/* Structured Address Fields */}
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="group">
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">House/Flat *</label>
+                      <div className={`flex items-center border-2 rounded-xl px-4 py-3 transition-all duration-300 group-hover:shadow-md ${errors.houseNumber ? "border-red-500 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-200" : "border-gray-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100"}`}>
+                        <input
+                          type="text"
+                          placeholder="House/Flat"
+                          value={formData.addressObj?.houseNumber || ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setFormData({ ...formData, addressObj: { ...(formData.addressObj || {}), houseNumber: value } });
+                            if (!touched.houseNumber) setTouched((prev) => ({ ...prev, houseNumber: true }));
+                            setErrors((prev) => ({ ...prev, houseNumber: validateField("houseNumber", value) }));
+                          }}
+                          onBlur={() => {
+                            setTouched((prev) => ({ ...prev, houseNumber: true }));
+                            setErrors((prev) => ({ ...prev, houseNumber: validateField("houseNumber", formData.addressObj?.houseNumber || "") }));
+                          }}
+                          name="houseNumber"
+                          className="w-full bg-transparent outline-none text-sm placeholder-gray-400"
+                        />
+                      </div>
+                      {touched.houseNumber && errors.houseNumber && (
+                        <p className="text-red-500 text-xs mt-2 flex items-center">{errors.houseNumber}</p>
+                      )}
+                    </div>
+
+                    <div className="group">
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Street</label>
+                      <div className="flex items-center border-2 rounded-xl px-4 py-3 transition-all duration-300 group-hover:shadow-md border-gray-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100">
+                        <input
+                          type="text"
+                          placeholder="Street"
+                          value={formData.addressObj?.street || ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setFormData({ ...formData, addressObj: { ...(formData.addressObj || {}), street: value } });
+                            if (!touched.street) setTouched((prev) => ({ ...prev, street: true }));
+                          }}
+                          name="street"
+                          className="w-full bg-transparent outline-none text-sm placeholder-gray-400"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="group">
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">City</label>
+                      <div className="flex items-center border-2 rounded-xl px-4 py-3 transition-all duration-300 group-hover:shadow-md border-gray-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100">
+                        <input
+                          type="text"
+                          placeholder="City"
+                          value={formData.addressObj?.city || ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setFormData({ ...formData, addressObj: { ...(formData.addressObj || {}), city: value } });
+                            if (!touched.city) setTouched((prev) => ({ ...prev, city: true }));
+                          }}
+                          name="city"
+                          className="w-full bg-transparent outline-none text-sm placeholder-gray-400"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="group">
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Pincode *</label>
+                      <div className={`flex items-center border-2 rounded-xl px-4 py-3 transition-all duration-300 group-hover:shadow-md ${errors.pincode ? "border-red-500 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-200" : "border-gray-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100"}`}>
+                        <input
+                          type="text"
+                          placeholder="Pincode"
+                          value={formData.addressObj?.pincode || ""}
+                          onChange={(e) => {
+                            let value = e.target.value.replace(/\D/g, "").slice(0, 6);
+                            setFormData({ ...formData, addressObj: { ...(formData.addressObj || {}), pincode: value } });
+                            if (!touched.pincode) setTouched((prev) => ({ ...prev, pincode: true }));
+                            setErrors((prev) => ({ ...prev, pincode: validateField("pincode", value) }));
+                          }}
+                          onBlur={() => {
+                            setTouched((prev) => ({ ...prev, pincode: true }));
+                            setErrors((prev) => ({ ...prev, pincode: validateField("pincode", formData.addressObj?.pincode || "") }));
+                          }}
+                          name="pincode"
+                          className="w-full bg-transparent outline-none text-sm placeholder-gray-400"
+                        />
+                      </div>
+                      {touched.pincode && errors.pincode && (
+                        <p className="text-red-500 text-xs mt-2 flex items-center">{errors.pincode}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                {/* Bank Account Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Bank Account No. *
                     </label>
                     <div
-                      className={`flex items-center border rounded-lg px-4 py-3 transition-colors ${
+                      className={`flex items-center border-2 rounded-xl px-4 py-3 transition-all duration-300 group-hover:shadow-md ${
                         errors.bankAccountNo
-                          ? "border-red-500 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500"
-                          : "border-gray-300 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500"
+                          ? "border-red-500 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-200"
+                          : "border-gray-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100"
                       }`}
                     >
-                      <svg
-                        className="w-5 h-5 text-gray-400 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                        />
+                      <svg className="w-5 h-5 text-gray-400 mr-3 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                       </svg>
                       <input
                         onChange={handleInputChange}
                         onBlur={handleBlur}
                         value={formData.bankAccountNo}
                         name="bankAccountNo"
-                        className="w-full bg-transparent outline-none text-sm"
+                        className="w-full bg-transparent outline-none text-sm placeholder-gray-400"
                         type="text"
                         inputMode="numeric"
                         pattern="[0-9]*"
-                        placeholder="Enter account number (numbers only)"
+                        placeholder="Enter account number"
                         maxLength={18}
                         required
                       />
                     </div>
-                    <div className="flex justify-between mt-1">
-                      {errors.bankAccountNo ? (
-                        <p className="text-red-500 text-xs">
-                          {errors.bankAccountNo}
-                        </p>
-                      ) : (
-                        formData.bankAccountNo.length > 0 && (
-                          <p className="text-gray-500 text-xs">
-                            {formData.bankAccountNo.length}/18 digits
-                          </p>
-                        )
-                      )}
-                      {formData.bankAccountNo.length > 0 &&
-                        !errors.bankAccountNo && (
-                          <p className="text-green-600 text-xs">
-                            ✓ Numbers only
-                          </p>
-                        )}
-                    </div>
+                    {errors.bankAccountNo && (
+                      <p className="text-red-500 text-xs mt-2 flex items-center">
+                        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                        {errors.bankAccountNo}
+                      </p>
+                    )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       IFSC Code *
                     </label>
                     <div
-                      className={`flex items-center border rounded-lg px-4 py-3 transition-colors ${
+                      className={`flex items-center border-2 rounded-xl px-4 py-2.5 transition-all duration-300 group-hover:shadow-md ${
                         errors.ifscCode
-                          ? "border-red-500 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500"
-                          : "border-gray-300 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500"
+                          ? "border-red-500 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-200"
+                          : "border-gray-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100"
                       }`}
                     >
-                      <svg
-                        className="w-5 h-5 text-gray-400 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 6h16M4 12h16m-7 6h7"
-                        />
+                      <svg className="w-5 h-5 text-gray-400 mr-3 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
                       </svg>
                       <input
                         onChange={handleInputChange}
                         onBlur={handleBlur}
                         value={formData.ifscCode}
                         name="ifscCode"
-                        className="w-full bg-transparent outline-none text-sm"
+                        className="w-full bg-transparent outline-none text-sm placeholder-gray-400"
                         type="text"
                         placeholder="e.g., ABCD0123456"
                         pattern="[A-Z]{4}0[A-Z0-9]{6}"
@@ -1208,62 +1250,60 @@ export const Login = () => {
                       />
                     </div>
                     {errors.ifscCode && (
-                      <p className="text-red-500 text-xs mt-1">
+                      <p className="text-red-500 text-xs mt-2 flex items-center">
+                        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
                         {errors.ifscCode}
-                      </p>
-                    )}
-                    {formData.ifscCode.length === 11 && !errors.ifscCode && (
-                      <p className="text-green-600 text-xs mt-1">
-                        ✓ Valid IFSC format
                       </p>
                     )}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* File Upload Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* ID Proof Field */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       ID Proof *
                     </label>
                     <div
                       onDragOver={(e) => handleDragOver(e, "idProof")}
                       onDragLeave={(e) => handleDragLeave(e, "idProof")}
                       onDrop={(e) => handleDrop(e, "idProof")}
-                      className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-indigo-400 transition-colors cursor-pointer"
+                      className="border-2 border-dashed border-gray-300 rounded-2xl p-3 text-center hover:border-indigo-400 hover:bg-indigo-50/50 transition-all duration-300 cursor-pointer group-hover:shadow-md"
                     >
                       {idProof ? (
-                        <div className="flex items-center justify-between bg-indigo-50 px-3 py-2 rounded">
-                          <span className="text-sm text-indigo-700 truncate">
-                            {idProofName}
-                          </span>
+                        <div className="flex items-center justify-between bg-gradient-to-r from-indigo-50 to-purple-50 px-4 py-3 rounded-xl border border-indigo-200">
+                          <div className="flex items-center space-x-3">
+                            <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <span className="text-sm text-indigo-700 truncate font-medium">
+                              {idProofName}
+                            </span>
+                          </div>
                           <button
                             type="button"
                             onClick={() => removeFile("idProof")}
-                            className="text-red-500 hover:text-red-700 ml-2"
+                            className="text-red-500 hover:text-red-700 ml-2 transition-colors"
                           >
-                            ×
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
                           </button>
                         </div>
                       ) : (
                         <label htmlFor="idProof" className="cursor-pointer">
-                          <svg
-                            className="w-10 h-10 mx-auto text-gray-400 mb-2"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                            />
-                          </svg>
-                          <span className="block text-indigo-600 hover:text-indigo-700 text-sm font-medium">
+                          <div className="w-12 h-12 mx-auto mb-3 bg-indigo-100 rounded-xl flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
+                            <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                          </div>
+                          <span className="block text-indigo-600 hover:text-indigo-700 text-sm font-semibold mb-2">
                             Upload ID Proof
                           </span>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-gray-500">
                             PDF, JPG, PNG (Max 500 KB)
                           </p>
                           <input
@@ -1278,55 +1318,57 @@ export const Login = () => {
                       )}
                     </div>
                     {errors.idProof && (
-                      <p className="text-red-500 text-xs mt-1">
+                      <p className="text-red-500 text-xs mt-2 flex items-center">
+                        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
                         {errors.idProof}
                       </p>
                     )}
                   </div>
 
                   {/* Photo Field */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Your Photo *
                     </label>
                     <div
                       onDragOver={(e) => handleDragOver(e, "photo")}
                       onDragLeave={(e) => handleDragLeave(e, "photo")}
                       onDrop={(e) => handleDrop(e, "photo")}
-                      className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-indigo-400 transition-colors cursor-pointer"
+                      className="border-2 border-dashed border-gray-300 rounded-2xl p-3 text-center hover:border-indigo-400 hover:bg-indigo-50/50 transition-all duration-300 cursor-pointer group-hover:shadow-md"
                     >
                       {photo ? (
-                        <div className="flex items-center justify-between bg-indigo-50 px-3 py-2 rounded">
-                          <span className="text-sm text-indigo-700 truncate">
-                            {photoName}
-                          </span>
+                        <div className="flex items-center justify-between bg-gradient-to-r from-indigo-50 to-purple-50 px-4 py-3 rounded-xl border border-indigo-200">
+                          <div className="flex items-center space-x-3">
+                            <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span className="text-sm text-indigo-700 truncate font-medium">
+                              {photoName}
+                            </span>
+                          </div>
                           <button
                             type="button"
                             onClick={() => removeFile("photo")}
-                            className="text-red-500 hover:text-red-700 ml-2"
+                            className="text-red-500 hover:text-red-700 ml-2 transition-colors"
                           >
-                            ×
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
                           </button>
                         </div>
                       ) : (
                         <label htmlFor="photo" className="cursor-pointer">
-                          <svg
-                            className="w-10 h-10 mx-auto text-gray-400 mb-2"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-                            />
-                          </svg>
-                          <span className="block text-indigo-600 hover:text-indigo-700 text-sm font-medium">
+                          <div className="w-12 h-12 mx-auto mb-3 bg-indigo-100 rounded-xl flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
+                            <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          <span className="block text-indigo-600 hover:text-indigo-700 text-sm font-semibold mb-2">
                             Upload Photo
                           </span>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-gray-500">
                             PNG, JPEG, JPG, WebP (Max 500 KB)
                           </p>
                           <input
@@ -1341,50 +1383,46 @@ export const Login = () => {
                       )}
                     </div>
                     {errors.photo && (
-                      <p className="text-red-500 text-xs mt-1">
+                      <p className="text-red-500 text-xs mt-2 flex items-center">
+                        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
                         {errors.photo}
                       </p>
                     )}
                   </div>
                 </div>
               </div>
+              </>
             )}
 
-            <div className={`${state === "Sign Up" ? "mt-2" : ""} space-y-5`}>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+            <div className={`${state === "Sign Up" ? "" : ""} space-y-4`}>
+              {/* Email Field */}
+              <div className="group">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Email Address *
                 </label>
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                   <div
-                    className={`flex items-center gap-3 flex-1 border rounded-lg px-4 py-3 transition-colors ${
+                    className={`flex items-center gap-3 flex-1 border-2 rounded-xl px-4 py-3 transition-all duration-300 group-hover:shadow-md ${
                       errors.email
-                        ? "border-red-500 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500"
-                        : "border-gray-300 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500"
+                        ? "border-red-500 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-200"
+                        : "border-gray-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100"
                     }`}
                   >
-                    <svg
-                      className="w-5 h-5 text-gray-400 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                      />
+                    <svg className="w-5 h-5 text-gray-400 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
                     <input
                       onChange={handleEmailChange}
-                      onBlur={() => setTouched({ ...touched, email: true })}
+                      onBlur={handleBlur}
                       value={email}
-                      className="w-full text-sm bg-transparent outline-none text-gray-700 placeholder-gray-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="w-full text-sm bg-transparent outline-none text-gray-700 placeholder-gray-400 disabled:opacity-60 disabled:cursor-not-allowed"
                       type="email"
                       placeholder="Enter your email"
                       disabled={isEmailVerified}
                       required
+                      name="email"
                     />
                   </div>
                   {state === "Sign Up" && (
@@ -1397,18 +1435,18 @@ export const Login = () => {
                         !email.includes("@") ||
                         errors.email
                       }
-                      className={`px-6 py-3.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                      className={`px-6 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-300 transform hover:scale-105 ${
                         isEmailVerified
-                          ? "bg-green-100 text-green-800 cursor-not-allowed"
-                          : "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+                          ? "bg-green-100 text-green-800 border-2 border-green-200 cursor-not-allowed"
+                          : "bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border-2 border-indigo-200"
                       } ${
                         isSendingOtp || !email.includes("@") || errors.email
-                          ? "opacity-50 cursor-not-allowed"
+                          ? "opacity-50 cursor-not-allowed hover:scale-100"
                           : ""
                       }`}
                     >
                       {isEmailVerified
-                        ? "Verified"
+                        ? "✓ Verified"
                         : isSendingOtp
                         ? "Sending..."
                         : "Verify"}
@@ -1416,45 +1454,36 @@ export const Login = () => {
                   )}
                 </div>
                 {errors.email && (
-                  <p className="text-red-500 text-xs mt-1">{errors.email}</p>
-                )}
-                {email.includes("@") && !errors.email && (
-                  <p className="text-green-600 text-xs mt-1">
-                    ✓ Valid email format
+                  <p className="text-red-500 text-xs mt-2 flex items-center">
+                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                    {errors.email}
                   </p>
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              {/* Password Field */}
+              <div className="group">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Password *
                 </label>
                 <div
-                  className={`flex items-center border rounded-lg px-4 py-3 transition-colors ${
+                    className={`flex items-center border-2 rounded-xl px-4 py-2.5 transition-all duration-300 group-hover:shadow-md ${
                     errors.password
-                      ? "border-red-500 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500"
-                      : "border-gray-300 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500"
+                      ? "border-red-500 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-200"
+                      : "border-gray-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-100"
                   }`}
                 >
-                  <svg
-                    className="w-5 h-5 text-gray-400 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                    />
+                  <svg className="w-5 h-5 text-gray-400 mr-3 group-focus-within:text-indigo-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                   <input
                     onChange={handleInputChange}
                     onBlur={handleBlur}
                     value={formData.password}
                     name="password"
-                    className="w-full bg-transparent outline-none text-sm pr-10"
+                    className="w-full bg-transparent outline-none text-sm pr-10 placeholder-gray-400"
                     type={
                       state === "Login"
                         ? showPassword.login
@@ -1464,7 +1493,7 @@ export const Login = () => {
                         ? "text"
                         : "password"
                     }
-                    placeholder="Min 8 chars with uppercase, lowercase, number & special character"
+                    placeholder="Enter your password"
                     required
                   />
                   {/* Show/Hide Password Button */}
@@ -1475,91 +1504,41 @@ export const Login = () => {
                         ? togglePasswordVisibility("login")
                         : togglePasswordVisibility("signup")
                     }
-                    className="text-gray-400 hover:text-gray-600 focus:outline-none transition-colors ml-2"
+                    className="text-gray-400 hover:text-indigo-600 focus:outline-none transition-colors ml-2 p-1 rounded-lg hover:bg-indigo-50"
                   >
                     {state === "Login" ? (
                       showPassword.login ? (
                         // Eye open icon (password visible)
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                          />
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                          />
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
                       ) : (
                         // Eye closed icon (password hidden) - DEFAULT STATE
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                          />
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                         </svg>
                       )
                     ) : showPassword.signup ? (
                       // Eye open icon (password visible)
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                        />
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                       </svg>
                     ) : (
                       // Eye closed icon (password hidden) - DEFAULT STATE
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                        />
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                       </svg>
                     )}
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="text-red-500 text-xs mt-1">{errors.password}</p>
-                )}
-                {formData.password.length >= 8 && !errors.password && (
-                  <p className="text-green-600 text-xs mt-1">
-                    ✓ Strong password
+                  <p className="text-red-500 text-xs mt-2 flex items-center">
+                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                    {errors.password}
                   </p>
                 )}
               </div>
@@ -1569,7 +1548,7 @@ export const Login = () => {
                   <button
                     type="button"
                     onClick={() => navigate("/reset-password")}
-                    className="text-sm text-indigo-600 hover:text-indigo-700 transition-colors"
+                    className="text-sm text-indigo-600 hover:text-indigo-700 font-medium transition-colors hover:underline"
                   >
                     Forgot Password?
                   </button>
@@ -1588,13 +1567,15 @@ export const Login = () => {
                 />
               </div>
             )}
+
+            {/* Enhanced Submit Button */}
             <button
               type="submit"
               disabled={
                 loading ||
                 (state === "Login" && showRecaptcha && !recaptchaToken)
               }
-              className="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium rounded-lg transition-all duration-200 flex items-center justify-center disabled:opacity-70 shadow-md hover:shadow-lg"
+              className="w-full py-3 px-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-2xl transition-all duration-300 flex items-center justify-center disabled:opacity-70 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]"
             >
               {loading ? (
                 <>
@@ -1623,20 +1604,31 @@ export const Login = () => {
                     : "Signing In..."}
                 </>
               ) : state === "Sign Up" ? (
-                "Create Account"
+                <>
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                  </svg>
+                  Create Account
+                </>
               ) : (
-                "Sign In"
+                <>
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                  </svg>
+                  Sign In
+                </>
               )}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          {/* Enhanced Footer Links */}
+          <div className="mt-8 text-center">
             {state === "Sign Up" ? (
               <p className="text-sm text-gray-600">
                 Already have an account?{" "}
                 <button
                   onClick={() => setState("Login")}
-                  className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors"
+                  className="font-semibold text-indigo-600 hover:text-indigo-500 transition-all duration-300 hover:underline"
                 >
                   Sign In
                 </button>
@@ -1646,7 +1638,7 @@ export const Login = () => {
                 Don't have an account?{" "}
                 <button
                   onClick={() => setState("Sign Up")}
-                  className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors"
+                  className="font-semibold text-indigo-600 hover:text-indigo-500 transition-all duration-300 hover:underline"
                 >
                   Register as Technician
                 </button>
@@ -1654,20 +1646,22 @@ export const Login = () => {
             )}
           </div>
 
-          <div className="relative my-6">
+          {/* Enhanced Divider */}
+          <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
+              <div className="w-full border-t border-gray-200"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">
+              <span className="px-4 bg-white text-gray-500 font-medium">
                 Or continue with
               </span>
             </div>
           </div>
 
+          {/* Enhanced Google Login Button */}
           <button
             onClick={handleGoogleLogin}
-            className="w-full flex items-center justify-center gap-3 py-2.5 px-4 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-all duration-200 shadow-sm"
+            className="w-full flex items-center justify-center gap-4 py-2 px-4 border-2 border-gray-200 rounded-2xl text-gray-700 font-semibold hover:bg-gray-50 hover:border-gray-300 transition-all duration-300 shadow-sm hover:shadow-md transform hover:scale-[1.02]"
           >
             <img src={assets.google} alt="Google" className="w-5 h-5" />
             <span>Sign in with Google</span>
@@ -1677,8 +1671,8 @@ export const Login = () => {
 
       {/* Map Picker Modal for Signup */}
       {showMapPickerSignup && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-lg w-full max-w-4xl overflow-hidden">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden transform animate-scale-in">
             <MapPicker
               initialLat={formData.latitude}
               initialLng={formData.longitude}
@@ -1702,15 +1696,15 @@ export const Login = () => {
         </div>
       )}
 
-      {/* OTP Verification Modal */}
+      {/* Enhanced OTP Verification Modal */}
       {showOtpModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-8 rounded-2xl shadow-2xl w-full max-w-md border border-slate-700">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-700/50 transform animate-scale-in">
             {/* Header */}
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-indigo-900 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="text-center mb-8">
+              <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
                 <svg
-                  className="w-8 h-8 text-indigo-300"
+                  className="w-10 h-10 text-white"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1718,41 +1712,24 @@ export const Login = () => {
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={2}
+                    strokeWidth={1.5}
                     d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
                   />
                 </svg>
               </div>
-              <h3 className="text-white text-2xl font-bold mb-2">
+              <h3 className="text-white text-2xl font-bold mb-3">
                 Enter Verification Code
               </h3>
-              <p className="text-indigo-200 mb-1">
+              <p className="text-indigo-200 mb-2">
                 Enter the 6-digit code sent to{" "}
                 <span className="font-semibold text-white">
                   {verificationType === "email" ? email : mobile}
                 </span>
               </p>
-
-              {/* Countdown Timer */}
-              {/* {timeLeft > 0 ? (
-                <div className="flex items-center justify-center space-x-2 mt-2">
-                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                  <p className="text-red-400 text-sm font-medium">
-                    Expires in:{" "}
-                    <span className="font-bold">{formatTime(timeLeft)}</span>
-                  </p>
-                </div>
-              ) : (
-                <div className="mt-2">
-                  <p className="text-red-400 text-sm font-medium">
-                    OTP has expired
-                  </p>
-                </div>
-              )} */}
             </div>
 
             {/* OTP Input Fields */}
-            <div className="flex justify-between gap-3 mb-6">
+            <div className="flex justify-between gap-3 mb-8">
               {Array.from({ length: 6 }).map((_, index) => (
                 <input
                   key={index}
@@ -1764,20 +1741,20 @@ export const Login = () => {
                   onChange={(e) => handleOtpInput(e, index)}
                   onKeyDown={(e) => handleOtpKeyDown(e, index)}
                   onPaste={handleOtpPaste}
-                  className="w-12 h-12 bg-slate-700 text-center text-xl font-semibold rounded-lg text-white border-2 border-slate-600 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+                  className="w-14 h-14 bg-slate-700/50 text-center text-2xl font-bold rounded-xl text-white border-2 border-slate-600 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all duration-300 backdrop-blur-sm"
                   ref={(el) => (otpInputRefs.current[index] = el)}
                   autoFocus={index === 0}
-                  disabled={timeLeft === 0} // Disable inputs when OTP expires
+                  disabled={timeLeft === 0}
                 />
               ))}
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-3">
+            <div className="flex gap-4">
               <button
                 onClick={verifyOtp}
                 disabled={otp.length !== 6 || timeLeft === 0}
-                className="flex-1 py-3.5 bg-gradient-to-r from-indigo-500 to-indigo-700 text-white font-semibold rounded-lg hover:from-indigo-600 hover:to-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-indigo-500/25"
+                className="flex-1 py-2 bg-gradient-to-r from-indigo-500 to-indigo-700 text-white font-bold rounded-2xl hover:from-indigo-600 hover:to-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-indigo-500/25 transform hover:scale-105"
               >
                 {timeLeft === 0 ? "OTP Expired" : "Verify Code"}
               </button>
@@ -1790,7 +1767,7 @@ export const Login = () => {
                   setCanResendOtp(false);
                   resetOtpInputs();
                 }}
-                className="flex-1 py-3.5 border border-slate-600 text-slate-300 font-medium rounded-lg hover:bg-slate-700 hover:text-white transition-all duration-200"
+                className="flex-1 py-2 border-2 border-slate-600 text-slate-300 font-semibold rounded-2xl hover:bg-slate-700 hover:text-white transition-all duration-300"
               >
                 Cancel
               </button>
@@ -1802,14 +1779,14 @@ export const Login = () => {
                 <button
                   onClick={() => sendOtp(verificationType)}
                   disabled={isSendingOtp}
-                  className="text-indigo-400 hover:text-indigo-300 text-sm font-medium disabled:opacity-50 transition-colors underline"
+                  className="text-indigo-400 hover:text-indigo-300 text-sm font-semibold disabled:opacity-50 transition-colors underline"
                 >
                   {isSendingOtp ? "Sending..." : "Resend OTP"}
                 </button>
               ) : (
                 <p className="text-slate-500 text-sm">
                   Resend OTP in{" "}
-                  <span className="font-medium">{formatTime(timeLeft)}</span>
+                  <span className="font-bold text-slate-400">{formatTime(timeLeft)}</span>
                 </p>
               )}
             </div>
