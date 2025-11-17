@@ -265,7 +265,7 @@ const AdminSidebar = () => {
             <div className="lg:hidden bg-white/95 backdrop-blur-sm border-t border-gray-200/50 mobile-menu-group animate-fadeIn">
               <div className="px-2 pt-2 pb-3 space-y-1">
                 {/* Dashboard */}
-                <NavLink
+                {/* <NavLink
                   to="/admin/dashboard"
                   className={({ isActive }) =>
                     `flex items-center px-4 py-3 rounded-xl text-base font-medium transition-all duration-300 ${
@@ -278,7 +278,7 @@ const AdminSidebar = () => {
                 >
                   <LayoutDashboard size={20} className="mr-3" />
                   Dashboard
-                </NavLink>
+                </NavLink> */}
 
                 {/* Mobile Technicians Dropdown */}
                 <div className="mobile-tech-dropdown-group">

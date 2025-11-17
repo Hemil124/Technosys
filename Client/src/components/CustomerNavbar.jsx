@@ -144,13 +144,13 @@ const CustomerNavbar = () => {
                         <History size={18} className="text-blue-500" /> My
                         Bookings
                       </button>
-                      <button
+                      {/* <button
                         onClick={() => handleNavigation("/customer/settings")}
                         className="flex w-full items-center gap-3 px-4 py-3 hover:bg-blue-50 text-gray-700 transition-all"
                       >
                         <Settings size={18} className="text-blue-500" />{" "}
                         Settings
-                      </button>
+                      </button> */}
                     </div>
 
                     <button
