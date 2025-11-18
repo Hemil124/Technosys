@@ -47,6 +47,12 @@ export const getTechnicians = async (req, res) => {
         ? await ServiceCategory.find({ _id: { $in: serviceCategoryIds } }).select('name').lean()
         : [];
 
+      // Normalize Address: convert object to string for display compatibility
+      if (tech.Address && typeof tech.Address === 'object' && !Array.isArray(tech.Address)) {
+        const { houseNumber, street, city, pincode } = tech.Address;
+        tech.Address = [houseNumber, street, city, pincode].filter(Boolean).join(', ') || '';
+      }
+
       // Provide backward-compatible fields expected by frontend
       tech.bankDetails = bank || null;
       tech.serviceCategories = services;
@@ -83,6 +89,12 @@ export const getTechnicianById = async (req, res) => {
       ? await ServiceCategory.find({ _id: { $in: serviceCategoryIds } }).select('name').lean()
       : [];
 
+    // Normalize Address: convert object to string for display compatibility
+    if (technician.Address && typeof technician.Address === 'object' && !Array.isArray(technician.Address)) {
+      const { houseNumber, street, city, pincode } = technician.Address;
+      technician.Address = [houseNumber, street, city, pincode].filter(Boolean).join(', ') || '';
+    }
+
     technician.bankDetails = bank || null;
     technician.serviceCategories = services;
     technician.ServiceCategoryID = services[0] || null;
@@ -112,6 +124,12 @@ export const getTechnicianDetails = async (req, res) => {
     const services = serviceCategoryIds.length
       ? await ServiceCategory.find({ _id: { $in: serviceCategoryIds } }).select('name').lean()
       : [];
+
+    // Normalize Address: convert object to string for display compatibility
+    if (technician.Address && typeof technician.Address === 'object' && !Array.isArray(technician.Address)) {
+      const { houseNumber, street, city, pincode } = technician.Address;
+      technician.Address = [houseNumber, street, city, pincode].filter(Boolean).join(', ') || '';
+    }
 
     technician.bankDetails = bank || null;
     technician.serviceCategories = services;
@@ -150,6 +168,12 @@ export const approveTechnician = async (req, res) => {
       : [];
 
     if (technician) {
+      // Normalize Address: convert object to string for display compatibility
+      if (technician.Address && typeof technician.Address === 'object' && !Array.isArray(technician.Address)) {
+        const { houseNumber, street, city, pincode } = technician.Address;
+        technician.Address = [houseNumber, street, city, pincode].filter(Boolean).join(', ') || '';
+      }
+
       technician.bankDetails = bank || null;
       technician.serviceCategories = services;
       technician.ServiceCategoryID = services[0] || null;
@@ -274,6 +298,12 @@ export const rejectTechnician = async (req, res) => {
       : [];
 
     if (technician) {
+      // Normalize Address: convert object to string for display compatibility
+      if (technician.Address && typeof technician.Address === 'object' && !Array.isArray(technician.Address)) {
+        const { houseNumber, street, city, pincode } = technician.Address;
+        technician.Address = [houseNumber, street, city, pincode].filter(Boolean).join(', ') || '';
+      }
+
       technician.bankDetails = bank || null;
       technician.serviceCategories = services;
       technician.ServiceCategoryID = services[0] || null;

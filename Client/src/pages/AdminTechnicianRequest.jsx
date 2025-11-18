@@ -550,7 +550,6 @@ const TechnicianRequest = () => {
                                 className="w-12 h-12 object-cover rounded-xl border-2 border-white shadow-lg group-hover:scale-105 transition-transform duration-200"
                                 onError={(e) => (e.target.style.display = "none")}
                                 alt={tech.Name}
-                                loading="lazy"
                               />
                             ) : (
                               <DefaultAvatar name={tech.Name} />
