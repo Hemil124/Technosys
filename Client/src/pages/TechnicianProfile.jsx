@@ -21,6 +21,8 @@ const TechnicianProfile = () => {
     services: "",
     Password: "",
     ConfirmPassword: "",
+    HouseNumber: "",
+    Pincode: "",
     photo: "",
   });
 
@@ -243,6 +245,11 @@ const TechnicianProfile = () => {
     return value.replace(/\D/g, "").slice(0, 18);
   };
 
+  const filterHouseInput = (value) => {
+    // Allow alphanumeric and common address punctuation, trim to 50 chars
+    return value.replace(/[^a-zA-Z0-9\s\-\/.,#]/g, "").slice(0, 50);
+  };
+
   // Validation Helper Functions
   const validateForm = () => {
     const newErrors = {};
@@ -284,9 +291,19 @@ const TechnicianProfile = () => {
       const pin = (profile.Address.pincode || "").toString().trim();
       if (!house) {
         newErrors.Address = "House/Flat number is required";
+        newErrors.HouseNumber = "House/Flat number is required";
         isValid = false;
-      } else if (!pin) {
-        newErrors.Address = "Pincode is required";
+      } else if (house.length < 1) {
+        newErrors.HouseNumber = "Enter a valid house/flat number";
+        isValid = false;
+      }
+
+      if (!pin) {
+        newErrors.Address = newErrors.Address || "Pincode is required";
+        newErrors.Pincode = "Pincode is required";
+        isValid = false;
+      } else if (!/^\d{6}$/.test(pin)) {
+        newErrors.Pincode = "Pincode must be 6 digits";
         isValid = false;
       }
     } else {
@@ -407,6 +424,32 @@ const TechnicianProfile = () => {
         } else {
           newErrors.IFSCCode = "";
         }
+        break;
+
+      case "HouseNumber":
+        if (!value || value.trim().length === 0) {
+          newErrors.HouseNumber = "House/Flat number is required";
+        } else if (value.trim().length < 1) {
+          newErrors.HouseNumber = "Enter a valid house/flat number";
+        } else if (!/^[a-zA-Z0-9\s\-\/.,#]+$/.test(value)) {
+          newErrors.HouseNumber = "Invalid characters in house/flat number";
+        } else {
+          newErrors.HouseNumber = "";
+        }
+        // keep legacy Address error in sync
+        if (!newErrors.HouseNumber) newErrors.Address = newErrors.Address || "";
+        break;
+
+      case "Pincode":
+        if (!value || value.trim().length === 0) {
+          newErrors.Pincode = "Pincode is required";
+        } else if (!/^\d{6}$/.test(value.trim())) {
+          newErrors.Pincode = "Pincode must be 6 digits";
+        } else {
+          newErrors.Pincode = "";
+        }
+        // keep legacy Address error in sync
+        if (!newErrors.Pincode) newErrors.Address = newErrors.Address || "";
         break;
 
       case "Password":
@@ -946,21 +989,18 @@ const TechnicianProfile = () => {
                     Full Name
                   </label>
                   <div className="relative">
-                    <input
-                      type="text"
-                      value={profile.Name}
-                      onChange={(e) => {
-                        const filteredValue = filterNameInput(e.target.value);
-                        handleProfileChange("Name", filteredValue);
-                        validateField("Name", filteredValue);
-                      }}
-                      onBlur={(e) => validateField("Name", e.target.value)}
-                      className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
-                        errors.Name ? "border-red-500 bg-red-50" : "border-gray-200 hover:border-gray-300 focus:border-blue-500"
-                      }`}
-                      placeholder="Enter your full name"
-                    />
-                  </div>
+                      <input
+                        type="text"
+                        value={profile.Name}
+                        disabled
+                        aria-disabled="true"
+                        title="Full name cannot be edited"
+                        className={`w-full px-4 py-3 border-2 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                          errors.Name ? "border-red-500 bg-red-50" : "border-gray-200 hover:border-gray-300 focus:border-blue-500"
+                        }`}
+                        placeholder="Full name"
+                      />
+                    </div>
                   {errors.Name && (
                     <p className="text-red-500 text-sm font-medium">{errors.Name}</p>
                   )}
@@ -1049,44 +1089,68 @@ const TechnicianProfile = () => {
                     Address (you can pick on map)
                   </label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <input
-                      type="text"
-                      value={(profile.Address && profile.Address.houseNumber) || ""}
-                      onChange={(e) =>
-                        handleProfileChange("Address", { ...(profile.Address || {}), houseNumber: e.target.value })
-                      }
-                      className="w-full px-4 py-3 border-2 rounded-xl"
-                      placeholder="House/Flat Number"
-                    />
-                    <input
-                      type="text"
-                      value={(profile.Address && profile.Address.street) || ""}
-                      onChange={(e) =>
-                        handleProfileChange("Address", { ...(profile.Address || {}), street: e.target.value })
-                      }
-                      className="w-full px-4 py-3 border-2 rounded-xl"
-                      placeholder="Street (optional)"
-                    />
-                    
-                    <input
-                      type="text"
-                      value={(profile.Address && profile.Address.city) || ""}
-                      onChange={(e) =>
-                        handleProfileChange("Address", { ...(profile.Address || {}), city: e.target.value })
-                      }
-                      className="w-full px-4 py-3 border-2 rounded-xl"
-                      placeholder="City"
-                    />
-                    <input
-                      type="text"
-                      value={(profile.Address && profile.Address.pincode) || ""}
-                      onChange={(e) =>
-                        handleProfileChange("Address", { ...(profile.Address || {}), pincode: e.target.value })
-                      }
-                      className="w-full px-4 py-3 border-2 rounded-xl"
-                      placeholder="Pincode"
-                    />
-                    <div className="flex items-center gap-2">
+                    <div className="space-y-1">
+                      <input
+                        type="text"
+                        value={(profile.Address && profile.Address.houseNumber) || ""}
+                        onChange={(e) => {
+                          const v = filterHouseInput(e.target.value);
+                          handleProfileChange("Address", { ...(profile.Address || {}), houseNumber: v });
+                          validateField("HouseNumber", v);
+                        }}
+                        onBlur={(e) => validateField("HouseNumber", e.target.value)}
+                        className={`w-full px-4 py-3 border-2 rounded-xl ${errors.HouseNumber ? 'border-red-500 bg-red-50' : 'border-gray-200'}`}
+                        placeholder="House/Flat Number"
+                      />
+                      {errors.HouseNumber && (
+                        <p className="text-red-500 text-xs font-medium mt-1">{errors.HouseNumber}</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      <input
+                        type="text"
+                        value={(profile.Address && profile.Address.street) || ""}
+                        onChange={(e) =>
+                          handleProfileChange("Address", { ...(profile.Address || {}), street: e.target.value })
+                        }
+                        className="w-full px-4 py-3 border-2 rounded-xl"
+                        placeholder="Street (optional)"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <input
+                        type="text"
+                        value={(profile.Address && profile.Address.city) || ""}
+                        onChange={(e) =>
+                          handleProfileChange("Address", { ...(profile.Address || {}), city: e.target.value })
+                        }
+                        className="w-full px-4 py-3 border-2 rounded-xl"
+                        placeholder="City"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={(profile.Address && profile.Address.pincode) || ""}
+                        onChange={(e) => {
+                          const v = e.target.value.replace(/\D/g, "").slice(0, 6);
+                          handleProfileChange("Address", { ...(profile.Address || {}), pincode: v });
+                          validateField("Pincode", v);
+                        }}
+                        onBlur={(e) => validateField("Pincode", e.target.value)}
+                        className={`w-full px-4 py-3 border-2 rounded-xl ${errors.Pincode ? 'border-red-500 bg-red-50' : 'border-gray-200'}`}
+                        placeholder="Pincode"
+                      />
+                      {errors.Pincode && (
+                        <p className="text-red-500 text-xs font-medium mt-1">{errors.Pincode}</p>
+                      )}
+                    </div>
+
+                    <div className="col-span-1 md:col-span-2 flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => setShowMapPicker(true)}
