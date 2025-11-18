@@ -21,7 +21,11 @@ export default function TechnicianAvailability() {
   const [date, setDate] = useState(() => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().slice(0, 10); // YYYY-MM-DD
+    // Use local date string (YYYY-MM-DD) to avoid UTC timezone shifts
+    const y = tomorrow.getFullYear();
+    const m = String(tomorrow.getMonth() + 1).padStart(2, "0");
+    const d = String(tomorrow.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
   });
 
   // Calendar state
@@ -29,8 +33,16 @@ export default function TechnicianAvailability() {
   const [showCalendar, setShowCalendar] = useState(false);
   const calendarRef = useRef(null);
 
-  // Prevent selecting past dates in calendar
-  const minDate = new Date().toISOString().slice(0, 10); // today
+  // Helper to format a Date to local YYYY-MM-DD (avoids UTC conversion issues)
+  const formatLocalDate = (dt) => {
+    const yy = dt.getFullYear();
+    const mm = String(dt.getMonth() + 1).padStart(2, "0");
+    const dd = String(dt.getDate()).padStart(2, "0");
+    return `${yy}-${mm}-${dd}`;
+  };
+
+  // Prevent selecting past dates in calendar (local date)
+  const minDate = formatLocalDate(new Date()); // today
 
   // Handle outside click to close calendar
   useEffect(() => {
@@ -72,6 +84,7 @@ export default function TechnicianAvailability() {
   const calendarDays = generateCalendarDays(calendarMonth);
   const monthName = calendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   const today = new Date();
+  const todayStr = formatLocalDate(today);
   
   const handlePrevMonth = () => {
     setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1));
@@ -82,7 +95,7 @@ export default function TechnicianAvailability() {
   };
   
   const handleDateSelect = (day) => {
-    const selectedDate = day.toISOString().slice(0, 10);
+    const selectedDate = formatLocalDate(day);
     if (selectedDate >= minDate) {
       setDate(selectedDate);
       setShowCalendar(false);
@@ -93,7 +106,7 @@ export default function TechnicianAvailability() {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     setCalendarMonth(tomorrow);
-    const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+    const tomorrowStr = formatLocalDate(tomorrow);
     setDate(tomorrowStr);
   };
 
@@ -183,6 +196,12 @@ export default function TechnicianAvailability() {
     toast.info("Selection cleared");
   };
 
+  const selectAllToggle = () => {
+    // Always select all slots (remove deselect behavior)
+    setSelectedSlots(allSlots);
+    toast.info("Selected all slots");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-6">
       <div className="max-w-6xl mx-auto">
@@ -250,10 +269,9 @@ export default function TechnicianAvailability() {
                         if (!day) {
                           return <div key={`empty-${index}`} />;
                         }
-
-                        const dayStr = day.toISOString().slice(0, 10);
+                        const dayStr = formatLocalDate(day);
                         const isSelected = dayStr === date;
-                        const isToday = dayStr === today.toISOString().slice(0, 10);
+                        const isToday = dayStr === todayStr;
                         const isDisabled = dayStr < minDate;
                         const isCurrentMonth = day.getMonth() === calendarMonth.getMonth();
 
@@ -382,12 +400,22 @@ export default function TechnicianAvailability() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200/50">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 pt-6 border-t border-gray-200/50">
+            <button
+              onClick={selectAllToggle}
+              disabled={loading || saving || allSlots.length === 0 || selectedSlots.length === allSlots.length}
+              type="button"
+              className="w-full sm:w-auto px-6 py-3 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:scale-105 flex items-center space-x-2 shadow-sm"
+            >
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <span>Select All</span>
+            </button>
+
             <button
               onClick={clearSelection}
               disabled={loading || saving || selectedSlots.length === 0}
               type="button"
-              className="px-6 py-3 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:scale-105 flex items-center space-x-2 shadow-sm"
+              className="w-full sm:w-auto px-6 py-3 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:scale-105 flex items-center space-x-2 shadow-sm"
             >
               <Trash2 className="h-4 w-4" />
               <span>Clear All</span>
@@ -396,7 +424,7 @@ export default function TechnicianAvailability() {
             <button
               onClick={handleSubmit}
               disabled={loading || saving}
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:scale-105 flex items-center space-x-2 shadow-lg"
+              className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 hover:scale-105 flex items-center justify-center space-x-2 shadow-lg"
             >
               {saving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -412,7 +440,7 @@ export default function TechnicianAvailability() {
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
             <CheckCircle className="h-5 w-5 text-green-600" />
-            <span>How it works</span>
+            <span>How it works?</span>
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
             <div className="space-y-2">
