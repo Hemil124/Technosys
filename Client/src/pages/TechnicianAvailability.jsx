@@ -322,10 +322,10 @@ export default function TechnicianAvailability() {
                   <div className="w-3 h-3 bg-yellow-400 rounded-full shadow-sm" />
                   <span className="text-gray-700">Existing</span>
                 </div>
-                <div className="flex items-center space-x-2">
+                {/* <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 bg-gray-300 rounded-full shadow-sm" />
                   <span className="text-gray-700">Available</span>
-                </div>
+                </div> */}
               </div>
             </div>
           </div>

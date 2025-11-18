@@ -753,12 +753,14 @@ export const Login = () => {
           setRecaptchaToken("");
 
           if (data.userType === "admin") {
-            navigate("/admin"); // Admins go to admin dashboard
-          } else if (data.userType === "technician") {
-            navigate("/technician"); // Technicians go to home
-          } else {
-            navigate("/"); // Fallback for any other role
-          }
+            navigate("/admin/dashboard"); // Admins go to admin dashboard
+          } 
+           if (data.userType === "technician") {
+            navigate("/technician/dashboard"); // Technicians go to home
+          } 
+          // else {
+          //   navigate("/"); // Fallback for any other role
+          // }
         } else {
           toast.error(data?.message || "Login failed");
           // Show reCAPTCHA after first failed attempt

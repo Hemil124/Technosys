@@ -293,26 +293,33 @@ function AdminTechnicianList() {
               />
             </div>
 
-            <div className="flex gap-3 w-full sm:w-auto items-center">
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto items-start sm:items-center">
               {/* Status Filter */}
-              <div className="relative z-30" ref={statusDropdownRef}>
+              <div className="relative z-30 w-full sm:w-auto" ref={statusDropdownRef}>
                 <button
                   onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-                  className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/50 backdrop-blur-sm flex items-center space-x-2 transition-all duration-300 hover:scale-105"
+                  className="w-full sm:w-auto flex items-center justify-between px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/50 backdrop-blur-sm space-x-2 transition-all duration-300 hover:scale-105"
                 >
-                  <Filter className="h-4 w-4" />
-                  <span>
-                    {statusFilter !== "all" 
-                      ? statusOptions.find(s => s.value === statusFilter)?.label
-                      : "All Status"
-                    }
-                  </span>
-                  {showStatusDropdown ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  <div className="flex items-center space-x-2">
+                    <Filter className="h-4 w-4" />
+                    <span className="text-left">
+                      {statusFilter !== "all"
+                        ? statusOptions.find((s) => s.value === statusFilter)?.label
+                        : "All Status"}
+                    </span>
+                  </div>
+                  <div className="ml-4">
+                    {showStatusDropdown ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </div>
                 </button>
 
                 {/* Status Dropdown */}
                 {showStatusDropdown && (
-                  <div className="absolute top-full right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200/50 p-3 z-50 min-w-48">
+                  <div className="absolute top-full left-0 sm:right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200/50 p-3 z-50 w-full sm:min-w-48">
                     <div className="space-y-1">
                       {statusOptions.map((option) => (
                         <div
@@ -332,24 +339,31 @@ function AdminTechnicianList() {
               </div>
 
               {/* Category Filter */}
-              <div className="relative z-30" ref={categoryDropdownRef}>
+              <div className="relative z-30 w-full sm:w-auto" ref={categoryDropdownRef}>
                 <button
                   onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-                  className="px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/50 backdrop-blur-sm flex items-center space-x-2 transition-all duration-300 hover:scale-105"
+                  className="w-full sm:w-auto flex items-center justify-between px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/50 backdrop-blur-sm space-x-2 transition-all duration-300 hover:scale-105"
                 >
-                  <FolderOpen className="h-4 w-4" />
-                  <span>
-                    {categoryFilter
-                      ? categoryList.find((c) => c?._id === categoryFilter)?.name
-                      : "All Categories"
-                    }
-                  </span>
-                  {showCategoryDropdown ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  <div className="flex items-center space-x-2">
+                    <FolderOpen className="h-4 w-4" />
+                    <span className="text-left">
+                      {categoryFilter
+                        ? categoryList.find((c) => c?._id === categoryFilter)?.name
+                        : "All Categories"}
+                    </span>
+                  </div>
+                  <div className="ml-4">
+                    {showCategoryDropdown ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </div>
                 </button>
 
                 {/* Category Dropdown */}
                 {showCategoryDropdown && (
-                  <div className="absolute top-full right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200/50 p-3 z-50 min-w-48">
+                  <div className="absolute top-full left-0 sm:right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200/50 p-3 z-50 w-full sm:min-w-48">
                     <input
                       type="text"
                       value={categorySearch}

@@ -88,7 +88,7 @@ const ProtectedRoute = ({ children, role }) => {
   );
 
   if (!isLoggedIn) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/" />;
   }
 
   // if (role && userData?.role !== role) {
@@ -130,45 +130,31 @@ const AuthRedirectHandler = () => {
       // Redirect to login if not authenticated and trying to access protected routes
       if (!isLoggedIn && !publicRoutes.includes(location.pathname)) {
         console.log("Redirecting to login");
-        navigate("/login");
+        navigate("/");
       }
 
-      //     // Redirect to home if already authenticated and trying to access auth pages
-      //     if (
-      //       isLoggedIn &&
-      //       ["/login", "/reset-password", "/email-verify"].includes(
-      //         location.pathname
-      //       )
-      //     ) {
-      //       {
-      //         if (userData?.role === "admin") {
-      //           console.log("Redirecting to admin");
-      //           navigate("/admin");
-      //         } else {
-      //           console.log("Redirecting to technicion");
-      //           navigate("/technicion");
-      //         }
-      //       }
-      //       // console.log("Redirecting to home");
-      //       // navigate("/");
-      //     }
-      //   }
-      // }, [isLoggedIn, loadingUser, navigate, location.pathname]);
-
-      // Redirect to appropriate dashboard if already authenticated
       if (
         isLoggedIn && publicRoutes.includes(location.pathname)
       ) {
         if (userData?.role === "admin") {
-          navigate("/admin");
-        } else if (userData?.role === "technician") {
-          navigate("/technician");
-        } else if (userData?.role === "customer") {
+          console.log("Redirecting to admin");
+
+          navigate("/admin/dashboard");
+        } 
+        if (userData?.role === "technician") {
+          console.log("Redirecting to technicain");
+
+          navigate("/technician/dashboard");
+        }
+        if (userData?.role === "customer") {
           console.log("Redirecting to customer");
           navigate("/customer");
-        } else {
-          navigate("/");
-        }
+        } 
+        // if (!userData?.role) {
+        //   console.log("Redirecting to Home");
+
+        //   navigate("/");
+        // }
       }
     }
   }, [isLoggedIn, loadingUser, navigate, location.pathname, userData]);
@@ -207,6 +193,7 @@ const App = () => {
       <Routes>
         {/* 🌐 Public and Auth routes */}
         <Route path="/" element={<Home />} />
+         {/* <Route path="/temp" element={<TempPage />} /> */}
         <Route path="/login" element={<Login />} />
         <Route path="/login-customer" element={<LoginCustomer />} />
         <Route path="/email-verify" element={<EmailVerify />} />

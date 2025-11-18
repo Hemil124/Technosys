@@ -20,8 +20,8 @@ export const Navbar = () => {
       if (data.success) {
         setIsLoggedIn(false);
         setUserData(null);
-        // redirect to exact dev server URL
-        // window.location.href = "http://localhost:5175/";
+        navigate("/");
+        toast.success("Logged out successfully");
       } else {
         toast.error(data.message);
       }

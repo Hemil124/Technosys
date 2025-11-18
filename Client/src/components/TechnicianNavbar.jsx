@@ -98,7 +98,7 @@ const TechnicianSidebar = () => {
       if (data.success) {
         setIsLoggedIn(false);
         setUserData(null);
-        navigate("/login");
+        navigate("/");
         toast.success("Logged out successfully");
       } else toast.error(data.message || "Logout failed");
     } catch (error) {
@@ -107,11 +107,11 @@ const TechnicianSidebar = () => {
   };
 
   const CoinBadge = ({ coins }) => (
-    <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-gray-900 px-4 py-2 rounded-xl shadow-lg border border-yellow-300 flex items-center space-x-2 transition-all duration-300 hover:scale-105">
-      <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-inner">
-        <span className="text-yellow-600 font-bold text-xs">C</span>
+    <div className="text-gray-900 bg-gray-900 py-1.5 px-2  rounded-full flex items-center space-x-2 transition-all duration-300 hover:scale-105">
+      <div className="w-6 h-6 bg-yellow-300 rounded-full flex items-center justify-center shadow-inner">
+        <span className="text-black font-bold text-xs">C</span>
       </div>
-      <span className="font-bold text-sm">{Number(coins).toFixed(2)}</span>
+      <span className="font-bold text-white text-sm">{Number(coins).toFixed(2)}</span>
     </div>
   );
 

@@ -331,7 +331,7 @@ export default function AdminSubscriptions() {
   const CoinBadge = ({ coins }) => (
     <div className="flex items-center space-x-2">
       <div className="flex items-center justify-center w-5 h-5 bg-yellow-300 rounded-full">
-        <span className="text-xs font-bold text-yellow-900">₵</span>
+        <span className="text-xs font-bold text-yellow-900">C</span>
       </div>
       <div className="text-gray-600 font-medium text-sm">{Number(coins).toLocaleString()}</div>
     </div>
@@ -412,7 +412,7 @@ export default function AdminSubscriptions() {
         {/* Quick Templates */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Quick Templates
+            Quick Create Template
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             {packageTemplates.map((template, index) => {
@@ -536,7 +536,7 @@ export default function AdminSubscriptions() {
                   {/* Recommended Badge */}
                   {pkg.isActive && (
                     <div className="absolute -top-3 left-4">
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-lg">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-lg">
                         {badge}
                       </span>
                     </div>
