@@ -235,14 +235,14 @@ const AdminSidebar = () => {
                       <div className="text-xs text-gray-500 truncate">{userData?.email}</div>
                     </div>
                     
-                    <NavLink
+                    {/* <NavLink
                       to="/admin/settings"
                       className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-blue-50/80 hover:text-blue-600 transition-colors duration-200"
                       onClick={() => setUserDropdownOpen(false)}
                     >
                       <Settings size={18} className="mr-3" />
                       Settings
-                    </NavLink>
+                    </NavLink> */}
                     
                     <button
                       onClick={() => {

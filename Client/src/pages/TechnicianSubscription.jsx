@@ -450,58 +450,56 @@ export default function TechnicianSubscription() {
                 {pagedHistory.map((h) => (
                   <div
                     key={h._id}
-                    className="px-6 py-4 flex items-center justify-between hover:bg-gray-50/50 transition-colors duration-200 group"
+                    className="px-6 py-4 hover:bg-gray-50/50 transition-colors duration-200 group"
                   >
-                    <div className="flex items-center space-x-4 flex-1">
-                      <div className="flex-shrink-0">
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                          <Package className="h-6 w-6 text-white" />
-                        </div>
-                      </div>
-                      
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3">
-                          <div className="text-lg font-semibold text-gray-900">
-                            {h.PackageID?.name}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="flex items-center space-x-4 flex-1 min-w-0">
+                        <div className="flex-shrink-0">
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                            <Package className="h-6 w-6 text-white" />
                           </div>
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200">
-                            <Check className="h-3 w-3 mr-1" />
-                            Success
-                          </span>
                         </div>
-                        <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
-                          <div className="flex items-center space-x-1">
-                            <div className="flex items-center gap-2">
-                              <CoinBadge coins={h.PackageID?.coins} />
-                              <span className="text-sm text-gray-600">coins</span>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-3">
+                            <div className="text-lg font-semibold text-gray-900 truncate">
+                              {h.PackageID?.name}
+                            </div>
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200">
+                              <Check className="h-3 w-3 mr-1" />
+                              Success
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600 flex-wrap">
+                            <div className="flex items-center space-x-1">
+                              <div className="flex items-center gap-2">
+                                <CoinBadge coins={h.PackageID?.coins} />
+                                <span className="text-sm text-gray-600">coins</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-1 text-green-600 font-medium">
+                              <span>₹{h.PackageID?.price}</span>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-1 text-green-600 font-medium">
-                            <span>₹{h.PackageID?.price}</span>
-                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right">
-                        <div className="text-sm text-gray-600">
-                          {new Date(h.PurchasedAt || h.createdAt).toLocaleDateString()}
+                      <div className="flex-shrink-0 flex items-center space-x-4">
+                        <div className="text-right text-sm text-gray-600">
+                          <div>{new Date(h.PurchasedAt || h.createdAt).toLocaleDateString()}</div>
+                          <div className="text-xs text-gray-500">{new Date(h.PurchasedAt || h.createdAt).toLocaleTimeString()}</div>
                         </div>
-                        <div className="text-xs text-gray-500">
-                          {new Date(h.PurchasedAt || h.createdAt).toLocaleTimeString()}
-                        </div>
+
+                        {h.invoice_pdf && (
+                          <button
+                            onClick={() => window.open(`${backendUrl}${h.invoice_pdf}`, "_blank")}
+                            className="p-2 rounded-xl text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition-all duration-300 hover:scale-105"
+                            title="Download invoice"
+                          >
+                            <Download className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
-                      
-                      {h.invoice_pdf && (
-                        <button
-                          onClick={() => window.open(`${backendUrl}${h.invoice_pdf}`, "_blank")}
-                          className="p-2 rounded-xl text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition-all duration-300 hover:scale-105"
-                          title="Download invoice"
-                        >
-                          <Download className="h-4 w-4" />
-                        </button>
-                      )}
                     </div>
                   </div>
                 ))}

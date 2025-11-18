@@ -912,11 +912,11 @@ export const AdminCategories = () => {
 
                       return (
                         <div
-                          key={category._id}
-                          className="hover:bg-gray-50/50 transition-colors duration-200"
-                        >
-                          <div className="px-6 py-4 flex items-center justify-between">
-                            <div className="flex items-center space-x-4 flex-1">
+                            key={category._id}
+                            className="hover:bg-gray-50/50 transition-colors duration-200"
+                          >
+                            <div className="px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                              <div className="flex items-start sm:items-center space-x-4 flex-1 min-w-0">
                               {category.image ? (
                                 <img
                                   src={`${backendUrl}${category.image}`}
@@ -957,7 +957,7 @@ export const AdminCategories = () => {
                               </div>
                             </div>
 
-                            <div className="flex items-center space-x-3">
+                            <div className="flex items-center space-x-3 mt-3 sm:mt-0">
                               <button
                                 onClick={() => handleEditCategory(category)}
                                 className="text-blue-600 hover:text-blue-800 p-2 rounded-lg transition-all duration-200 hover:bg-blue-50"
@@ -1230,8 +1230,8 @@ export const AdminCategories = () => {
                         key={subCategory._id}
                         className="hover:bg-gray-50/50 transition-colors duration-200"
                       >
-                        <div className="px-6 py-4 flex items-center justify-between">
-                          <div className="flex items-center space-x-4 flex-1">
+                        <div className="px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                          <div className="flex items-start sm:items-center space-x-4 flex-1 min-w-0">
                             {subCategory.image ? (
                               <img
                                 src={`${backendUrl}${subCategory.image}`}
@@ -1287,7 +1287,7 @@ export const AdminCategories = () => {
                             </div>
                           </div>
 
-                          <div className="flex items-center space-x-3">
+                          <div className="flex items-center space-x-3 mt-3 sm:mt-0">
                             <button
                               onClick={() => handleEditSubCategory(subCategory)}
                               className="text-blue-600 hover:text-blue-800 p-2 rounded-lg transition-all duration-200 hover:bg-blue-50"

@@ -512,7 +512,8 @@ const TechnicianRequest = () => {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
+              {/* Desktop table (hidden on small screens) */}
+              <div className="hidden sm:block overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gradient-to-r from-blue-50 to-blue-100/50">
                     <tr>
@@ -655,6 +656,83 @@ const TechnicianRequest = () => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Mobile list (shown on small screens) */}
+              <div className="block sm:hidden">
+                <div className="divide-y divide-gray-200">
+                  {paginated.map((tech) => (
+                    <div key={tech._id} className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center space-x-4">
+                          {tech.Photo ? (
+                            <img
+                              src={getPhotoUrl(tech.Photo)}
+                              className="w-12 h-12 object-cover rounded-xl border-2 border-white shadow-lg"
+                              onError={(e) => (e.target.style.display = "none")}
+                              alt={tech.Name}
+                            />
+                          ) : (
+                            <DefaultAvatar name={tech.Name} />
+                          )}
+                          <div>
+                            <div className="text-base font-semibold text-gray-900">{tech.Name}</div>
+                            <div className="text-sm text-gray-600">{tech.ServiceCategoryID?.name || 'N/A'}</div>
+                          </div>
+                        </div>
+                        <div className="ml-2">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${
+                            tech.VerifyStatus === 'Approved' ? 'bg-green-100 text-green-800 border-green-200' : tech.VerifyStatus === 'Pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 'bg-red-100 text-red-800 border-red-200'
+                          }`}>{tech.VerifyStatus}</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-gray-700">
+                        <div className="flex items-center space-x-2">
+                          <Mail className="h-4 w-4 text-gray-400" />
+                          <span>{tech.Email}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Phone className="h-4 w-4 text-gray-400" />
+                          <span>{tech.MobileNumber}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="h-4 w-4 text-gray-400" />
+                          <span>{new Date(tech.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-col gap-2">
+                        {tech.VerifyStatus === "Pending" && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleApprove(tech._id)}
+                              className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-2 px-3 rounded-xl font-medium transition-all duration-300 hover:scale-105 shadow-lg flex items-center justify-center space-x-2 text-sm"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                              <span>Approve</span>
+                            </button>
+                            <button
+                              onClick={() => setShowRejectModal(tech._id)}
+                              className="flex-1 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white py-2 px-3 rounded-xl font-medium transition-all duration-300 hover:scale-105 shadow-lg flex items-center justify-center space-x-2 text-sm"
+                            >
+                              <XCircle className="h-4 w-4" />
+                              <span>Reject</span>
+                            </button>
+                          </div>
+                        )}
+
+                        <button
+                          onClick={() => openDetails(tech._id)}
+                          className="w-full bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white py-2 px-3 rounded-xl font-medium transition-all duration-300 hover:scale-105 shadow-lg flex items-center justify-center space-x-2 text-sm"
+                        >
+                          <User className="h-4 w-4" />
+                          <span>View Details</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Pagination */}

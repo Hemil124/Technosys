@@ -428,7 +428,8 @@ function AdminTechnicianList() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
+              {/* Desktop table (hidden on small screens) */}
+              <div className="hidden sm:block overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gradient-to-r from-blue-50 to-blue-100/50">
                     <tr>
@@ -523,6 +524,54 @@ function AdminTechnicianList() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Mobile list (shown on small screens) */}
+              <div className="block sm:hidden">
+                <div className="divide-y divide-gray-200">
+                  {paginated.map((tech) => (
+                    <div key={tech._id} className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          {tech.Photo ? (
+                            <img
+                              src={getPhotoUrl(tech.Photo)}
+                              className="w-12 h-12 object-cover rounded-xl border-2 border-white shadow-lg"
+                              onError={(e) => (e.target.style.display = "none")}
+                              alt={tech.Name}
+                            />
+                          ) : (
+                            <DefaultAvatar name={tech.Name} />
+                          )}
+                          <div>
+                            <div className="text-base font-semibold text-gray-900">{tech.Name}</div>
+                            <div className="text-sm text-gray-600">{tech.ServiceCategoryID?.name || 'N/A'}</div>
+                          </div>
+                        </div>
+                        <div>
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${
+                            tech.VerifyStatus === 'Approved' ? 'bg-green-100 text-green-800 border-green-200' : tech.VerifyStatus === 'Pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 'bg-red-100 text-red-800 border-red-200'
+                          }`}>{tech.VerifyStatus}</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-gray-700">
+                        <div className="flex items-center space-x-2">
+                          <Mail className="h-4 w-4 text-gray-400" />
+                          <span>{tech.Email}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Phone className="h-4 w-4 text-gray-400" />
+                          <span>{tech.MobileNumber}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="h-4 w-4 text-gray-400" />
+                          <span>{new Date(tech.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Pagination */}
