@@ -1274,7 +1274,7 @@ export const AdminCategories = () => {
                                 </div>
                                 <div className="flex items-center space-x-2 text-purple-600 font-medium">
                                   <div className="flex items-center justify-center w-4 h-4 bg-yellow-300 rounded-full">
-                                    <span className="text-xs font-bold text-yellow-900">₵</span>
+                                    <span className="text-xs font-bold text-black">C</span>
                                   </div>
                                   <span className="text-sm">{subCategory.coinsRequired} coins</span>
                                 </div>
