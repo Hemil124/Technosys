@@ -1114,7 +1114,7 @@ const TechnicianProfile = () => {
                         onChange={(e) =>
                           handleProfileChange("Address", { ...(profile.Address || {}), street: e.target.value })
                         }
-                        className="w-full px-4 py-3 border-2 rounded-xl"
+                        className="w-full px-4 py-3 border-2 rounded-xl border-gray-200"
                         placeholder="Street (optional)"
                       />
                     </div>
@@ -1126,7 +1126,7 @@ const TechnicianProfile = () => {
                         onChange={(e) =>
                           handleProfileChange("Address", { ...(profile.Address || {}), city: e.target.value })
                         }
-                        className="w-full px-4 py-3 border-2 rounded-xl"
+                        className="w-full px-4 py-3 border-2 rounded-xl border-gray-200"
                         placeholder="City"
                       />
                     </div>

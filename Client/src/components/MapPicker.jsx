@@ -272,12 +272,56 @@ export default function MapPicker({ initialLat, initialLng, onSave, onClose }) {
 
   const handleSave = () => {
     const geo = addressPreview?.address || {};
-    const addressObj = {
-      houseNumber: geo.house_number || geo.house_Number || "",
-      street: geo.road || geo.pedestrian || geo.cycleway || geo.suburb || geo.neighbourhood || geo.village || "",
-      city: geo.city || geo.town || geo.village || geo.county || "",
-      pincode: geo.postcode || geo.postal_code || "",
+
+    const parseDisplayNameFallback = (display_name, addr = {}) => {
+      const out = Object.assign({}, addr);
+      if (!display_name) return out;
+      const parts = (display_name || "").split(",").map((p) => p.trim()).filter(Boolean);
+
+      // Try to extract house number (common pattern: starts with number)
+      if (!out.house_number) {
+        for (let i = 0; i < Math.min(2, parts.length); i++) {
+          const m = parts[i].match(/^([0-9]+[A-Za-z0-9\-\/]*)\b/);
+          if (m) { out.house_number = m[1]; break; }
+        }
+      }
+
+      // Try to pick a sensible road/street value from the display parts
+      if (!out.road) {
+        if (parts.length === 1) {
+          out.road = parts[0];
+        } else if (out.house_number) {
+          const first = parts[0].replace(out.house_number, "").trim();
+          out.road = first || parts[1] || out.road || "";
+        } else {
+          out.road = parts[0] || out.road || "";
+        }
+      }
+
+      // City fallback: choose a middle/near-end part that looks like a city
+      if (!out.city) {
+        if (parts.length >= 3) out.city = parts[parts.length - 3] || parts[parts.length - 2];
+        else if (parts.length >= 2) out.city = parts[parts.length - 2];
+      }
+
+      // Pincode fallback: search for 5-6 digit sequence
+      if (!out.postcode) {
+        const m = display_name.match(/\b(\d{5,6})\b/);
+        if (m) out.postcode = m[1];
+      }
+
+      return out;
     };
+
+    const merged = parseDisplayNameFallback(addressPreview?.display_name || "", geo);
+
+    const addressObj = {
+      houseNumber: merged.house_number || merged.house_Number || merged.houseNumber || "",
+      street: merged.road || merged.pedestrian || merged.cycleway || merged.suburb || merged.neighbourhood || merged.village || "",
+      city: merged.city || merged.town || merged.village || merged.county || "",
+      pincode: merged.postcode || merged.postal_code || "",
+    };
+
     onSave && onSave({ address: addressObj, lat: pos.lat, lng: pos.lng, display_name: addressPreview?.display_name || "" });
   };
 

@@ -1428,6 +1428,7 @@ export const cleanupExpiredOtps = async () => {
     const currentTime = new Date();
     const result = await TempOtpVerification.deleteMany({
       otpExpiry: { $lt: currentTime },
+      isVerified: false,
     });
     
     if (result.deletedCount > 0) {
@@ -1439,7 +1440,7 @@ export const cleanupExpiredOtps = async () => {
 };
 
 // Run cleanup every 5 minutes (more efficient)
-setInterval(cleanupExpiredOtps, 60 * 1000);
+setInterval(cleanupExpiredOtps, 5 * 60 * 1000);
 
 // Run cleanup immediately when server starts
 cleanupExpiredOtps();
