@@ -645,7 +645,7 @@ export const Login = () => {
 
     if (state === "Sign Up") {
       if (hasErrors) {
-        toast.error("Please fix the validation errors before submitting.");
+        toast.error("Please fill the all and valid information before submitting.");
         return;
       }
 
@@ -1109,6 +1109,7 @@ export const Login = () => {
                             setErrors((prev) => ({ ...prev, houseNumber: validateField("houseNumber", formData.addressObj?.houseNumber || "") }));
                           }}
                           name="houseNumber"
+                          required
                           className="w-full bg-transparent outline-none text-sm placeholder-gray-400"
                         />
                       </div>
@@ -1173,6 +1174,7 @@ export const Login = () => {
                             setErrors((prev) => ({ ...prev, pincode: validateField("pincode", formData.addressObj?.pincode || "") }));
                           }}
                           name="pincode"
+                          required
                           className="w-full bg-transparent outline-none text-sm placeholder-gray-400"
                         />
                       </div>
