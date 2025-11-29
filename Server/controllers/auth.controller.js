@@ -396,11 +396,11 @@ export const login = async (req, res) => {
       if (loginBlock) {
         loginBlock.AttemptCount += 1;
         if (loginBlock.AttemptCount >= 3) {
-          loginBlock.BlockedUntil = new Date(Date.now() + 5 * 60 * 1000); // 5 min
+          loginBlock.BlockedUntil = new Date(Date.now() + 30 * 60 * 1000); // 30 min
           await loginBlock.save();
           return res.status(429).json({
             success: false,
-            message: "Too many failed attempts. You are blocked for 5 minutes.",
+            message: "Too many failed attempts. You are blocked for 30 minutes.",
           });
         } else {
           await loginBlock.save();
@@ -410,7 +410,7 @@ export const login = async (req, res) => {
       }
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password",
+        message: "Invalid credentials",
       });
     } else {
       // On successful login, reset block info
