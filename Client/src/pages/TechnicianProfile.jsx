@@ -918,7 +918,15 @@ const TechnicianProfile = () => {
                 )}
                 
                 <h2 className="text-xl font-bold text-gray-900 mt-4">{profile.Name || "Technician Name"}</h2>
-                <p className="text-gray-600 text-sm mt-1">Service Technician</p>
+                <p className="text-gray-600 text-sm mt-1">
+                  {(
+                    selectedServices &&
+                    selectedServices.length > 0 &&
+                    ((selectedServices[0].ServiceCategoryID &&
+                      (selectedServices[0].ServiceCategoryID.name || selectedServices[0].ServiceCategoryID.ServiceName)) ||
+                      selectedServices[0].ServiceName)
+                  ) || "Service Technician"}
+                </p>
                 
                 <div className="mt-4 space-y-2">
                   <div className="flex items-center justify-center gap-2 text-sm text-gray-600">

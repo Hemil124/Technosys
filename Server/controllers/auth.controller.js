@@ -15,6 +15,11 @@ import Customer from "../models/Customer.js";
 import nodemailer from "nodemailer";
 import { processUploadedImage, deleteImageFile } from "../utils/imageUtils.js";
 
+// Branded sender defaults
+const SENDER_NAME = process.env.SENDER_NAME || "Technosys";
+const SENDER_EMAIL = process.env.SENDER_EMAIL || process.env.SMTP_USER || "no-reply@technosys.local";
+const REPLY_TO = process.env.REPLY_TO || SENDER_EMAIL;
+const FRONTEND_URL = (process.env.FRONTEND_URL || process.env.CLIENT_URL || "http://localhost:5175").replace(/\/$/, "");
 
 //date = 12-10-25
 export const register = async (req, res) => {
@@ -254,14 +259,53 @@ export const register = async (req, res) => {
     // ✅ Welcome email
     try {
       await transporter.sendMail({
-        from: process.env.SENDER_EMAIL,
+        from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+        replyTo: REPLY_TO,
         to: email,
         subject: "Welcome to Technosys!",
         html: `
-          <h2 style="color:#4F46E5;">Welcome to Technosys!</h2>
-          <p>Dear ${name},</p>
-          <p>Your technician account has been created successfully and is pending verification.</p>
-          <p>Our team will review your application and notify you once approved.</p>
+          <!doctype html>
+          <html>
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          </head>
+          <body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:#f4f6fb;">
+            <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+              <tr>
+                <td align="center" style="padding:24px 16px;">
+                  <table width="600" cellpadding="0" cellspacing="0" role="presentation" style="background:#ffffff;border-radius:8px;overflow:hidden;">
+                    <tr style="background:#0f172a;color:#ffffff;">
+                      <td style="padding:20px 24px;display:flex;align-items:center;">
+                        <div style="font-weight:700;font-size:20px;">${SENDER_NAME}</div>
+                        <div style="flex:1"></div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:28px 24px;color:#0f172a;">
+                        <h1 style="margin:0 0 8px;font-size:22px;">Welcome, ${name} 👋</h1>
+                        <p style="margin:0 0 16px;color:#475569;line-height:1.5;">Thanks for joining ${SENDER_NAME}! Your technician account has been created and is currently pending verification by our team. We'll notify you by email once your account is approved.</p>
+                        <p style="margin:0 0 18px;color:#475569;line-height:1.5;">In the meantime you can sign in to your dashboard and complete any missing details.</p>
+                        <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:8px;">
+                          <tr>
+                            <td style="border-radius:6px;background:#4f46e5;padding:10px 16px;display:inline-block;">
+                              <a href="${FRONTEND_URL}" style="color:#ffffff;text-decoration:none;font-weight:600;">Open Dashboard</a>
+                            </td>
+                          </tr>
+                        </table>
+                        <hr style="border:none;border-top:1px solid #eef2ff;margin:20px 0;" />
+                        <p style="margin:0;color:#94a3b8;font-size:13px;">If you didn't sign up for ${SENDER_NAME}, please ignore this email or contact our support.</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="background:#f8fafc;padding:12px 24px;color:#9aa4b2;font-size:12px;">© ${new Date().getFullYear()} ${SENDER_NAME}. All rights reserved.</td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </body>
+          </html>
         `,
       });
     } catch (emailError) {
@@ -845,10 +889,32 @@ export const sendEmailOtp = async (req, res) => {
 
     // Send Email
     await transporter.sendMail({
-      from: process.env.SENDER_EMAIL,
+      from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+      replyTo: REPLY_TO,
       to: email,
-      subject: "Technosys Email Verification OTP",
-      html: `<h3>Your OTP is: ${otp}</h3><p>Valid for 2 minutes</p>`,
+      subject: `Your ${SENDER_NAME} verification code`,
+      html: `
+        <!doctype html>
+        <html>
+        <head><meta charset="utf-8"/></head>
+        <body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:#f4f6fb;">
+          <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+            <tr>
+              <td align="center" style="padding:24px 16px;">
+                <table width="600" cellpadding="0" cellspacing="0" role="presentation" style="background:#ffffff;border-radius:8px;overflow:hidden;">
+                  <tr style="background:#0f172a;color:#ffffff;"><td style="padding:18px 24px;font-weight:700;">${SENDER_NAME}</td></tr>
+                  <tr><td style="padding:24px;color:#0f172a;"><h2 style="margin:0 0 12px;font-size:20px;">Email verification code</h2><p style="margin:0 0 18px;color:#475569;">Use the code below to verify your email address. It expires in 2 minutes.</p>
+                    <div style="margin:16px 0;text-align:center;"><div style="display:inline-block;background:#eef2ff;border-radius:8px;padding:14px 20px;font-weight:700;font-size:20px;letter-spacing:4px;color:#0f172a;">${otp}</div></div>
+                    <p style="margin:0;color:#94a3b8;font-size:13px;">If you didn't request this, please ignore this email.</p>
+                  </td></tr>
+                  <tr><td style="background:#f8fafc;padding:12px 24px;color:#9aa4b2;font-size:12px;">© ${new Date().getFullYear()} ${SENDER_NAME}</td></tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `,
     });
 
     return res.status(200).json({
@@ -1091,10 +1157,34 @@ export const sendResetOtp = async (req, res) => {
     );
 
     const mailOptions = {
-      from: process.env.SENDER_EMAIL,
+      from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+      replyTo: REPLY_TO,
       to: user.Email,
-      subject: "Password Reset OTP",
-      text: `Your OTP for resetting your password is ${otp}. Use this OTP to proceed.`,
+      subject: `${SENDER_NAME} Password Reset Code`,
+      html: `
+        <!doctype html>
+        <html>
+        <head><meta charset="utf-8"/></head>
+        <body style="margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:#f4f6fb;">
+          <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+            <tr>
+              <td align="center" style="padding:24px 16px;">
+                <table width="600" cellpadding="0" cellspacing="0" role="presentation" style="background:#ffffff;border-radius:8px;overflow:hidden;">
+                  <tr style="background:#0f172a;color:#ffffff;"><td style="padding:18px 24px;font-weight:700;">${SENDER_NAME}</td></tr>
+                  <tr><td style="padding:24px;color:#0f172a;"><h2 style="margin:0 0 12px;font-size:20px;">Password reset</h2>
+                    <p style="margin:0 0 16px;color:#475569;">You requested to reset your password. Use the code below to continue. This code expires in 2 minutes.</p>
+                    <div style="margin:16px 0;text-align:center;"><div style="display:inline-block;background:#fff4e6;border-radius:8px;padding:14px 20px;font-weight:700;font-size:20px;letter-spacing:4px;color:#92400e;">${otp}</div></div>
+                    <p style="margin:0 0 12px;color:#475569;">If you didn't request a password reset, please ignore this email or contact support.</p>
+                    <p style="margin:0;"><a href="${FRONTEND_URL}/reset-password" style="display:inline-block;padding:10px 16px;background:#4f46e5;color:#ffffff;border-radius:6px;text-decoration:none;font-weight:600;">Reset Password</a></p>
+                  </td></tr>
+                  <tr><td style="background:#f8fafc;padding:12px 24px;color:#9aa4b2;font-size:12px;">© ${new Date().getFullYear()} ${SENDER_NAME}</td></tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `,
     };
 
     await transporter.sendMail(mailOptions);
