@@ -43,7 +43,7 @@ export const getAllSubscriptionPackages = async (req, res) => {
       }
     }
 
-    const packages = await SubscriptionPackage.find({}).sort({ price: 1 });
+    const packages = await SubscriptionPackage.find(filter).sort({ price: 1 });
 
     return res.status(200).json({
       success: true,
