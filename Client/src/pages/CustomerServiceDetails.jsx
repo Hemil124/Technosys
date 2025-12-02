@@ -1,3 +1,544 @@
+// // src/pages/customer/CustomerServiceDetails.jsx
+// import React, { useEffect, useState, useContext } from "react";
+// import axios from "axios";
+// import { useParams, useNavigate } from "react-router-dom";
+// import { Star, ArrowLeft } from "lucide-react";
+// import { toast } from "react-toastify";
+// import { AppContext } from "../context/AppContext";
+
+// const backendUrl = "http://localhost:4000";
+
+// const CustomerServiceDetails = () => {
+
+//   const [showCancelPopup, setShowCancelPopup] = useState(false);
+//   const [cancelLoading, setCancelLoading] = useState(false);
+
+//   const { id } = useParams(); // service id
+//   const navigate = useNavigate();
+//   const { isLoggedIn, userData, backendUrl, socket } = useContext(AppContext);
+
+//   const [service, setService] = useState(null);
+//   const [loading, setLoading] = useState(true);
+//   // Booking modal state
+//   const [showModal, setShowModal] = useState(false);
+//   const [address, setAddress] = useState(null);
+//   const [checkingAddress, setCheckingAddress] = useState(false);
+//   const [houseNumber, setHouseNumber] = useState("");
+//   const [street, setStreet] = useState("");
+//   const [city, setCity] = useState("");
+//   const [pincode, setPincode] = useState("");
+//   const [date, setDate] = useState("");
+//   const [timeSlot, setTimeSlot] = useState("");
+//   const [precheck, setPrecheck] = useState(null);
+//   const [bookingId, setBookingId] = useState(null);
+//   const [stage, setStage] = useState("address");
+//   const [countdown, setCountdown] = useState(0);
+
+//   // Fetch service details
+//   useEffect(() => {
+//     const fetchDetails = async () => {
+//       try {
+//         const { data } = await axios.get(
+//           `${backendUrl}/api/sub-service-categories/${id}`
+//         );
+//         setService(data.subCategory || data.data);
+//       } catch (err) {
+//         console.error("Service fetch error:", err);
+//       } finally {
+//         setLoading(false);
+//       }
+//     };
+
+//     fetchDetails();
+//   }, [id]);
+
+//   // Fetch customer address
+//   const loadCustomerAddress = async () => {
+//     try {
+//       setCheckingAddress(true);
+//       const customerId = userData?._id || userData?.id;
+//       if (!customerId) { setAddress(null); return; }
+//       const { data } = await axios.get(`${backendUrl}/api/customer-profile/${customerId}`, { withCredentials: true });
+//       const customer = data.data || data.customer || data.UserData || data.user;
+//       const addr = customer?.Address && typeof customer.Address === 'object'
+//         ? customer.Address
+//         : (customer?.Address || customer?.address || null);
+//       setAddress(addr);
+//       if (addr) {
+//         setHouseNumber((addr.houseNumber || addr.house_no || "").toString());
+//         setStreet((addr.street || addr.road || "").toString());
+//         setCity((addr.city || addr.town || addr.village || "").toString());
+//         setPincode((addr.pincode || addr.postcode || "").toString());
+//       }
+//     } catch (e) {
+//       console.warn('Address fetch failed', e);
+//       setAddress(null);
+//     } finally {
+//       setCheckingAddress(false);
+//     }
+//   };
+
+//   // Address edits are handled in profile page per request
+
+//   const TIME_SLOTS = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00"];
+
+//   const runPrecheck = async () => {
+//     try {
+//       setPrecheck(null);
+//       const customerId = userData?._id || userData?.id;
+//       if (!customerId) {
+//         setPrecheck({ success: false, message: "Please login to continue" });
+//         toast.error("Please login to continue");
+//         return false;
+//       }
+//       const payload = { CustomerID: customerId, SubCategoryID: id, Date: date, TimeSlot: timeSlot };
+//       const { data } = await axios.post(`${backendUrl}/api/bookings/precheck`, payload, { withCredentials: true });
+//       if (data.success) {
+//         setPrecheck({ success: true, count: data.technicians.length, technicians: data.technicians });
+//         return true;
+//       } else {
+//         setPrecheck({ success: false, message: data.message });
+//         toast.error(data.message);
+//         return false;
+//       }
+//     } catch (e) {
+//       const errorMsg = e.response?.data?.message || "Precheck failed. Please try again.";
+//       setPrecheck({ success: false, message: errorMsg });
+//       toast.error(errorMsg);
+//       return false;
+//     }
+//   };
+
+//   const createBooking = async () => {
+//     try {
+//       // Fix: Pass required customerId and technicianId from precheck
+//       const customerId = userData?._id || userData?.id;
+//       // Find first available technician from precheck
+//       let technicianId = null;
+//       if (precheck && precheck.success && precheck.technicians && precheck.technicians.length > 0) {
+//         technicianId = precheck.technicians[0]._id;
+//       }
+//       const payload = {
+//         CustomerID: customerId,
+//         TechnicianID: technicianId,
+//         SubCategoryID: id,
+//         Date: date,
+//         TimeSlot: timeSlot
+//       };
+//       const { data } = await axios.post(`${backendUrl}/api/bookings/create`, payload, { withCredentials: true });
+//       if (data.success) {
+//         setBookingId(data.data._id);
+//         return data.data._id; // return created booking id to avoid state race
+//       } else {
+//         toast.error(data.message || 'Failed to create booking');
+//         return null;
+//       }
+//     } catch (e) {
+//       const errorMsg = e.response?.data?.message || 'Failed to create booking. Please try again.';
+//       toast.error(errorMsg);
+//       setShowModal(false);
+//       return false;
+//     }
+//   };
+
+//   const simulatePayment = async (id) => {
+//     const bId = id || bookingId;
+//     if (!bId) return;
+//     try { await axios.post(`${backendUrl}/api/bookings/simulate-payment`, { bookingId: bId }, { withCredentials: true }); } catch (e) { }
+//   };
+
+//   const startBroadcast = async (id) => {
+//     const bId = id || bookingId;
+//     if (!bId) return;
+//     try {
+//       const { data } = await axios.post(`${backendUrl}/api/bookings/broadcast`, { bookingId: bId }, { withCredentials: true });
+//       if (data.success) {
+//         setStage("success");
+//         toast.success('Booking request sent to nearby technicians!');
+//       }
+//     } catch (e) {
+//       toast.error('Failed to send booking request');
+//     }
+//   };
+
+//   const cancelBooking = async () => {
+//     if (!bookingId) return;
+//     try {
+//       const { data } = await axios.post(`${backendUrl}/api/bookings/cancel`, { bookingId }, { withCredentials: true });
+//       if (data.success) {
+//         toast.success('Booking cancelled successfully. Refund will be processed.');
+//         setStage("cancelled");
+//       } else {
+//         toast.error(data.message || 'Failed to cancel booking');
+//       }
+//     } catch (e) {
+//       toast.error(e.response?.data?.message || 'Failed to cancel booking');
+//     }
+//   };
+
+//   // Listen for booking acceptance via socket
+//   useEffect(() => {
+//     if (!socket || !bookingId) return;
+
+//     const onAccepted = ({ bookingId: acceptedId }) => {
+//       if (acceptedId === bookingId) {
+//         toast.success('A technician has accepted your booking!');
+//         setStage("accepted");
+//       }
+//     };
+
+//     socket.on('booking-accepted', onAccepted);
+//     return () => socket.off('booking-accepted', onAccepted);
+//   }, [socket, bookingId]);
+
+//   const openBooking = async () => {
+//     if (!isLoggedIn) return navigate("/login-customer");
+//     setShowModal(true);
+//     setStage("select");
+//     setPrecheck(null);
+//     setDate("");
+//     setTimeSlot("");
+//     await loadCustomerAddress();
+//   };
+
+//   if (loading)
+//     return (
+//       <div className="min-h-screen flex justify-center items-center text-gray-500">
+//         Loading…
+//       </div>
+//     );
+
+//   if (!service)
+//     return (
+//       <div className="min-h-screen flex justify-center items-center text-red-500">
+//         Service not found
+//       </div>
+//     );
+
+//   return (
+//     <>
+//       <div className="min-h-screen bg-gray-50">
+//         {/* Back button */}
+//         <div className="p-4">
+//           <button
+//             onClick={() => navigate(-1)}
+//             className="flex items-center gap-2 text-gray-700 hover:text-black"
+//           >
+//             <ArrowLeft size={18} /> Back
+//           </button>
+//         </div>
+
+//         {/* Banner */}
+//         <div className="w-full h-64 md:h-80 bg-gray-200 relative">
+//           <img
+//             src={`${backendUrl}${service.image}`}
+//             alt={service.name}
+//             className="w-full h-full object-cover"
+//           />
+//           <div className="absolute inset-0 bg-black/30" />
+//           <h1 className="absolute bottom-4 left-4 text-white text-3xl font-bold drop-shadow">
+//             {service.name}
+//           </h1>
+//         </div>
+
+//         {/* Content */}
+//         <div className="max-w-4xl mx-auto px-4 py-8">
+//           {/* Title + Price */}
+//           <div className="flex justify-between items-center mb-6">
+//             <h2 className="text-2xl font-bold text-gray-800">{service.name}</h2>
+//             <div className="text-2xl font-semibold text-sky-700">
+//               ₹{service.price}
+//             </div>
+//           </div>
+
+//           {/* Ratings */}
+//           <div className="flex items-center gap-2 mb-6">
+//             <Star className="text-yellow-500" size={20} />
+//             <Star className="text-yellow-500" size={20} />
+//             <Star className="text-yellow-500" size={20} />
+//             <Star className="text-yellow-500" size={20} />
+//             <Star className="text-gray-400" size={20} />
+//             <span className="text-gray-600 ml-2 text-sm">(423 reviews)</span>
+//           </div>
+
+//           {/* Description */}
+//           <div className="bg-white p-6 rounded-xl shadow mb-6">
+//             <h3 className="text-lg font-semibold mb-2">Service Description</h3>
+//             <p className="text-gray-600 leading-relaxed">
+//               {service.description || "No description available."}
+//             </p>
+//           </div>
+
+//           {/* What's Included */}
+//           <div className="bg-white p-6 rounded-xl shadow mb-6">
+//             <h3 className="text-lg font-semibold mb-2">What’s Included</h3>
+//             <ul className="text-gray-600 list-disc pl-6 space-y-2">
+//               <li>Professional technician visit</li>
+//               <li>Required basic tools</li>
+//               <li>Upfront pricing — no hidden charges</li>
+//               <li>Service completion report</li>
+//             </ul>
+//           </div>
+
+//           {/* What's Not Included */}
+//           <div className="bg-white p-6 rounded-xl shadow mb-6">
+//             <h3 className="text-lg font-semibold mb-2">What’s Not Included</h3>
+//             <ul className="text-gray-600 list-disc pl-6 space-y-2">
+//               <li>Material cost (if additional items are needed)</li>
+//               <li>Major repairs beyond scope (charged separately)</li>
+//               <li>Transportation cost (in rare cases)</li>
+//             </ul>
+//           </div>
+
+//           {/* Book Now */}
+//           <div className="text-center mt-8">
+//             <button
+//               onClick={openBooking}
+//               className="bg-sky-600 text-white font-semibold px-8 py-3 rounded-full text-lg hover:bg-sky-700 transition"
+//             >
+//               Book Now
+//             </button>
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* Booking Modal */}
+//       {showModal && (
+//         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+//           <div className="bg-white w-full max-w-2xl rounded-xl shadow-lg max-h-[90vh] overflow-y-auto">
+//             <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+//               <h3 className="text-lg font-semibold">Book Service</h3>
+//               <button className="text-gray-500 hover:text-gray-700" onClick={() => setShowModal(false)}>✕</button>
+//             </div>
+
+//             <div className="p-6 space-y-6">
+//               {/* Service Info Card */}
+//               <div className="bg-gray-50 rounded-lg p-4 flex gap-4">
+//                 <img
+//                   src={`${backendUrl}${service.image}`}
+//                   alt={service.name}
+//                   className="w-20 h-20 rounded-lg object-cover"
+//                 />
+//                 <div className="flex-1">
+//                   <h4 className="font-semibold text-lg">{service.name}</h4>
+//                   <p className="text-2xl font-bold text-sky-600 mt-1">₹{service.price}</p>
+//                 </div>
+//               </div>
+//               {/* Address Section - Always Visible */}
+//               <div className="space-y-3">
+//                 <h4 className="font-semibold text-gray-900">Delivery Address</h4>
+//                 {checkingAddress ? (
+//                   <p className="text-gray-500">Loading address…</p>
+//                 ) : address ? (
+//                   <div className="bg-white border border-gray-200 rounded-lg p-3">
+//                     <p className="text-gray-700">
+//                       {houseNumber}, {street && `${street}, `}{city && `${city}, `}{pincode}
+//                     </p>
+//                     <button
+//                       className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
+//                       onClick={() => navigate('/customer/profile')}
+//                     >
+//                       Change Address
+//                     </button>
+//                   </div>
+//                 ) : (
+//                   <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+//                     <p className="text-red-700 mb-2 font-medium">⚠️ No address found</p>
+//                     <p className="text-red-600 text-sm mb-3">Please add your address with location pin to find nearby technicians.</p>
+//                     <button
+//                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+//                       onClick={() => navigate('/customer/profile')}
+//                     >
+//                       Add Address & Location
+//                     </button>
+//                   </div>
+//                 )}
+//               </div>
+
+//               {/* Date & Time Section - Always Visible */}
+//               <div className="space-y-3">
+//                 <h4 className="font-semibold text-gray-900">Select Date & Time</h4>
+//                 <div className="grid grid-cols-2 gap-3">
+//                   <div>
+//                     <label className="text-sm text-gray-600 mb-1 block">Date</label>
+//                     <input
+//                       type="date"
+//                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+//                       value={date}
+//                       onChange={e => setDate(e.target.value)}
+//                       min={new Date().toISOString().split('T')[0]}
+//                     />
+//                   </div>
+//                   <div>
+//                     <label className="text-sm text-gray-600 mb-1 block">Time Slot</label>
+//                     <select
+//                       className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+//                       value={timeSlot}
+//                       onChange={e => setTimeSlot(e.target.value)}
+//                     >
+//                       <option value="">Select time</option>
+//                       {TIME_SLOTS.map(ts => <option key={ts} value={ts}>{ts}</option>)}
+//                     </select>
+//                   </div>
+//                 </div>
+//                 {precheck && !precheck.success && (
+//                   <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+//                     <p className="text-red-700 text-sm">{precheck.message}</p>
+//                   </div>
+//                 )}
+//               </div>
+
+//               {/* Payment Summary & Action Buttons */}
+//               <div className="border-t pt-4 space-y-4">
+//                 {stage === "success" && (
+//                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+//                     <h4 className="font-semibold text-green-900 mb-1">Booking Created Successfully!</h4>
+//                     <p className="text-green-700 text-sm mb-3">Your booking request has been sent to nearby technicians. You will be notified once a technician accepts.</p>
+//                     <div className="flex gap-2">
+//                       <button
+//                         onClick={() => navigate('/customer/bookings')}
+//                         className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700"
+//                       >
+//                         View My Bookings
+//                       </button>
+//                       <button
+//                         onClick={() => setShowCancelPopup(true)}
+//                         className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700"
+//                       >
+//                         Cancel Booking
+//                       </button>
+
+//                     </div>
+//                   </div>
+//                 )}
+
+//                 {stage === "accepted" && (
+//                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+//                     <h4 className="font-semibold text-blue-900 mb-1">Technician Assigned!</h4>
+//                     <p className="text-blue-700 text-sm mb-3">A technician has accepted your booking request.</p>
+//                     <button
+//                       onClick={() => navigate('/customer/bookings')}
+//                       className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+//                     >
+//                       View Booking Details
+//                     </button>
+//                   </div>
+//                 )}
+
+//                 {stage === "cancelled" && (
+//                   <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+//                     <h4 className="font-semibold text-red-900 mb-1">Booking Cancelled</h4>
+//                     <p className="text-red-700 text-sm mb-3">Your booking has been cancelled. Refund will be processed.</p>
+//                     <button
+//                       onClick={() => {
+//                         setShowModal(false);
+//                         setStage("select");
+//                         setBookingId(null);
+//                       }}
+//                       className="px-4 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700"
+//                     >
+//                       Close
+//                     </button>
+//                   </div>
+//                 )}
+
+//                 {stage !== "success" && stage !== "accepted" && stage !== "cancelled" && (
+//                   <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+//                     <div>
+//                       <p className="text-sm text-gray-600">Total Amount</p>
+//                       <p className="text-2xl font-bold text-gray-900">₹{service.price}</p>
+//                     </div>
+//                     <button
+//                       disabled={!address || !date || !timeSlot}
+//                       className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+//                       onClick={async () => {
+//                         if (!address) {
+//                           toast.error('Please add your address first');
+//                           return;
+//                         }
+//                         if (!date || !timeSlot) {
+//                           toast.error('Please select date and time');
+//                           return;
+//                         }
+//                         // Run precheck
+//                         const precheckOk = await runPrecheck();
+//                         if (!precheckOk) {
+//                           return;
+//                         }
+//                         // Create booking
+//                         const newId = await createBooking();
+//                         if (!newId) {
+//                           // createBooking already showed error toast and closed modal
+//                           return;
+//                         }
+
+//                         // Only continue if booking was created successfully
+//                         await simulatePayment(newId);
+//                         toast.success('Payment simulated successfully');
+//                         await startBroadcast(newId);
+//                       }}
+//                     >
+//                       {stage === "waiting" ? "Processing..." : "Pay Now"}
+//                     </button>
+//                   </div>
+//                 )}
+//               </div>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+//       {/* ⭐ Professional Cancel Confirmation Popup */}
+//       {showCancelPopup && (
+//         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[9999] px-4">
+//           <div className="bg-white w-full max-w-sm rounded-2xl shadow-xl p-6 animate-[fadeIn_0.2s_ease]">
+
+//             <h2 className="text-xl font-semibold text-gray-800 mb-3">
+//               Cancel Booking?
+//             </h2>
+
+//             <p className="text-gray-600 mb-6">
+//               Are you sure you want to cancel this booking?
+//               Your refund will be processed automatically.
+//             </p>
+
+//             <div className="flex justify-end gap-3">
+//               <button
+//                 onClick={() => setShowCancelPopup(false)}
+//                 className="px-4 py-2 rounded-lg border text-gray-700 hover:bg-gray-100 transition"
+//               >
+//                 No, Keep it
+//               </button>
+
+//               <button
+//                type="button"
+//                 onClick={async () => {
+//                   setCancelLoading(true);
+//                   await cancelBooking();
+//                   setCancelLoading(false);
+//                   setShowCancelPopup(false);
+//                 }}
+//                 className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition flex items-center"
+//               >
+//                 {cancelLoading ? "Cancelling..." : "Yes, Cancel"}
+//               </button>
+//             </div>
+
+//           </div>
+
+//           <style>{`
+//       @keyframes fadeIn {
+//         from { opacity: 0; transform: scale(0.95); }
+//         to { opacity: 1; transform: scale(1); }
+//       }
+//     `}</style>
+//         </div>
+//       )}
+
+//     </>
+//   );
+// };
+
+// export default CustomerServiceDetails;
 // src/pages/customer/CustomerServiceDetails.jsx
 import React, { useEffect, useState, useContext } from "react";
 import axios from "axios";
@@ -9,12 +550,16 @@ import { AppContext } from "../context/AppContext";
 const backendUrl = "http://localhost:4000";
 
 const CustomerServiceDetails = () => {
+  const [showCancelPopup, setShowCancelPopup] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+
   const { id } = useParams(); // service id
   const navigate = useNavigate();
   const { isLoggedIn, userData, backendUrl, socket } = useContext(AppContext);
 
   const [service, setService] = useState(null);
   const [loading, setLoading] = useState(true);
+
   // Booking modal state
   const [showModal, setShowModal] = useState(false);
   const [address, setAddress] = useState(null);
@@ -53,30 +598,52 @@ const CustomerServiceDetails = () => {
     try {
       setCheckingAddress(true);
       const customerId = userData?._id || userData?.id;
-      if (!customerId) { setAddress(null); return; }
-      const { data } = await axios.get(`${backendUrl}/api/customer-profile/${customerId}`, { withCredentials: true });
-      const customer = data.data || data.customer || data.UserData || data.user;
-      const addr = customer?.Address && typeof customer.Address === 'object'
-        ? customer.Address
-        : (customer?.Address || customer?.address || null);
+      if (!customerId) {
+        setAddress(null);
+        return;
+      }
+      const { data } = await axios.get(
+        `${backendUrl}/api/customer-profile/${customerId}`,
+        { withCredentials: true }
+      );
+      const customer =
+        data.data || data.customer || data.UserData || data.user;
+      const addr =
+        customer?.Address && typeof customer.Address === "object"
+          ? customer.Address
+          : customer?.Address || customer?.address || null;
+
       setAddress(addr);
       if (addr) {
         setHouseNumber((addr.houseNumber || addr.house_no || "").toString());
         setStreet((addr.street || addr.road || "").toString());
-        setCity((addr.city || addr.town || addr.village || "").toString());
+        setCity(
+          (addr.city || addr.town || addr.village || "").toString()
+        );
         setPincode((addr.pincode || addr.postcode || "").toString());
       }
     } catch (e) {
-      console.warn('Address fetch failed', e);
+      console.warn("Address fetch failed", e);
       setAddress(null);
     } finally {
       setCheckingAddress(false);
     }
   };
 
-  // Address edits are handled in profile page per request
-
-  const TIME_SLOTS = ["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00"];
+  const TIME_SLOTS = [
+    "08:00",
+    "09:00",
+    "10:00",
+    "11:00",
+    "12:00",
+    "13:00",
+    "14:00",
+    "15:00",
+    "16:00",
+    "17:00",
+    "18:00",
+    "19:00",
+  ];
 
   const runPrecheck = async () => {
     try {
@@ -87,10 +654,23 @@ const CustomerServiceDetails = () => {
         toast.error("Please login to continue");
         return false;
       }
-      const payload = { CustomerID: customerId, SubCategoryID: id, Date: date, TimeSlot: timeSlot };
-      const { data } = await axios.post(`${backendUrl}/api/bookings/precheck`, payload, { withCredentials: true });
+      const payload = {
+        CustomerID: customerId,
+        SubCategoryID: id,
+        Date: date,
+        TimeSlot: timeSlot,
+      };
+      const { data } = await axios.post(
+        `${backendUrl}/api/bookings/precheck`,
+        payload,
+        { withCredentials: true }
+      );
       if (data.success) {
-        setPrecheck({ success: true, count: data.technicians.length, technicians: data.technicians });
+        setPrecheck({
+          success: true,
+          count: data.technicians.length,
+          technicians: data.technicians,
+        });
         return true;
       } else {
         setPrecheck({ success: false, message: data.message });
@@ -98,7 +678,8 @@ const CustomerServiceDetails = () => {
         return false;
       }
     } catch (e) {
-      const errorMsg = e.response?.data?.message || "Precheck failed. Please try again.";
+      const errorMsg =
+        e.response?.data?.message || "Precheck failed. Please try again.";
       setPrecheck({ success: false, message: errorMsg });
       toast.error(errorMsg);
       return false;
@@ -107,30 +688,44 @@ const CustomerServiceDetails = () => {
 
   const createBooking = async () => {
     try {
-      // Fix: Pass required customerId and technicianId from precheck
       const customerId = userData?._id || userData?.id;
-      // Find first available technician from precheck
+
+      // First available technician from precheck
       let technicianId = null;
-      if (precheck && precheck.success && precheck.technicians && precheck.technicians.length > 0) {
+      if (
+        precheck &&
+        precheck.success &&
+        precheck.technicians &&
+        precheck.technicians.length > 0
+      ) {
         technicianId = precheck.technicians[0]._id;
       }
+
       const payload = {
         CustomerID: customerId,
         TechnicianID: technicianId,
         SubCategoryID: id,
         Date: date,
-        TimeSlot: timeSlot
+        TimeSlot: timeSlot,
       };
-      const { data } = await axios.post(`${backendUrl}/api/bookings/create`, payload, { withCredentials: true });
+
+      const { data } = await axios.post(
+        `${backendUrl}/api/bookings/create`,
+        payload,
+        { withCredentials: true }
+      );
+
       if (data.success) {
         setBookingId(data.data._id);
-        return data.data._id; // return created booking id to avoid state race
+        return data.data._id;
       } else {
-        toast.error(data.message || 'Failed to create booking');
+        toast.error(data.message || "Failed to create booking");
         return null;
       }
     } catch (e) {
-      const errorMsg = e.response?.data?.message || 'Failed to create booking. Please try again.';
+      const errorMsg =
+        e.response?.data?.message ||
+        "Failed to create booking. Please try again.";
       toast.error(errorMsg);
       setShowModal(false);
       return false;
@@ -140,51 +735,69 @@ const CustomerServiceDetails = () => {
   const simulatePayment = async (id) => {
     const bId = id || bookingId;
     if (!bId) return;
-    try { await axios.post(`${backendUrl}/api/bookings/simulate-payment`, { bookingId: bId }, { withCredentials: true }); } catch (e) {}
+    try {
+      await axios.post(
+        `${backendUrl}/api/bookings/simulate-payment`,
+        { bookingId: bId },
+        { withCredentials: true }
+      );
+    } catch (e) {}
   };
 
   const startBroadcast = async (id) => {
     const bId = id || bookingId;
     if (!bId) return;
     try {
-      const { data } = await axios.post(`${backendUrl}/api/bookings/broadcast`, { bookingId: bId }, { withCredentials: true });
+      const { data } = await axios.post(
+        `${backendUrl}/api/bookings/broadcast`,
+        { bookingId: bId },
+        { withCredentials: true }
+      );
       if (data.success) {
         setStage("success");
-        toast.success('Booking request sent to nearby technicians!');
+        toast.success("Booking request sent to nearby technicians!");
       }
     } catch (e) {
-      toast.error('Failed to send booking request');
+      toast.error("Failed to send booking request");
     }
   };
 
   const cancelBooking = async () => {
     if (!bookingId) return;
     try {
-      const { data } = await axios.post(`${backendUrl}/api/bookings/cancel`, { bookingId }, { withCredentials: true });
+      const { data } = await axios.post(
+        `${backendUrl}/api/bookings/cancel`,
+        { bookingId },
+        { withCredentials: true }
+      );
       if (data.success) {
-        toast.success('Booking cancelled successfully. Refund will be processed.');
+        toast.success(
+          "Booking cancelled successfully. Refund will be processed."
+        );
         setStage("cancelled");
       } else {
-        toast.error(data.message || 'Failed to cancel booking');
+        toast.error(data.message || "Failed to cancel booking");
       }
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Failed to cancel booking');
+      toast.error(
+        e.response?.data?.message || "Failed to cancel booking"
+      );
     }
   };
 
   // Listen for booking acceptance via socket
   useEffect(() => {
     if (!socket || !bookingId) return;
-    
+
     const onAccepted = ({ bookingId: acceptedId }) => {
       if (acceptedId === bookingId) {
-        toast.success('A technician has accepted your booking!');
+        toast.success("A technician has accepted your booking!");
         setStage("accepted");
       }
     };
-    
-    socket.on('booking-accepted', onAccepted);
-    return () => socket.off('booking-accepted', onAccepted);
+
+    socket.on("booking-accepted", onAccepted);
+    return () => socket.off("booking-accepted", onAccepted);
   }, [socket, bookingId]);
 
   const openBooking = async () => {
@@ -213,275 +826,406 @@ const CustomerServiceDetails = () => {
 
   return (
     <>
-    <div className="min-h-screen bg-gray-50">
-      {/* Back button */}
-      <div className="p-4">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-gray-700 hover:text-black"
-        >
-          <ArrowLeft size={18} /> Back
-        </button>
-      </div>
-
-      {/* Banner */}
-      <div className="w-full h-64 md:h-80 bg-gray-200 relative">
-        <img
-          src={`${backendUrl}${service.image}`}
-          alt={service.name}
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-black/30" />
-        <h1 className="absolute bottom-4 left-4 text-white text-3xl font-bold drop-shadow">
-          {service.name}
-        </h1>
-      </div>
-
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Title + Price */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">{service.name}</h2>
-          <div className="text-2xl font-semibold text-sky-700">
-            ₹{service.price}
-          </div>
-        </div>
-
-        {/* Ratings */}
-        <div className="flex items-center gap-2 mb-6">
-          <Star className="text-yellow-500" size={20} />
-          <Star className="text-yellow-500" size={20} />
-          <Star className="text-yellow-500" size={20} />
-          <Star className="text-yellow-500" size={20} />
-          <Star className="text-gray-400" size={20} />
-          <span className="text-gray-600 ml-2 text-sm">(423 reviews)</span>
-        </div>
-
-        {/* Description */}
-        <div className="bg-white p-6 rounded-xl shadow mb-6">
-          <h3 className="text-lg font-semibold mb-2">Service Description</h3>
-          <p className="text-gray-600 leading-relaxed">
-            {service.description || "No description available."}
-          </p>
-        </div>
-
-        {/* What's Included */}
-        <div className="bg-white p-6 rounded-xl shadow mb-6">
-          <h3 className="text-lg font-semibold mb-2">What’s Included</h3>
-          <ul className="text-gray-600 list-disc pl-6 space-y-2">
-            <li>Professional technician visit</li>
-            <li>Required basic tools</li>
-            <li>Upfront pricing — no hidden charges</li>
-            <li>Service completion report</li>
-          </ul>
-        </div>
-
-        {/* What's Not Included */}
-        <div className="bg-white p-6 rounded-xl shadow mb-6">
-          <h3 className="text-lg font-semibold mb-2">What’s Not Included</h3>
-          <ul className="text-gray-600 list-disc pl-6 space-y-2">
-            <li>Material cost (if additional items are needed)</li>
-            <li>Major repairs beyond scope (charged separately)</li>
-            <li>Transportation cost (in rare cases)</li>
-          </ul>
-        </div>
-
-        {/* Book Now */}
-        <div className="text-center mt-8">
+      <div className="min-h-screen bg-gray-50">
+        {/* Back button */}
+        <div className="p-4">
           <button
-            onClick={openBooking}
-            className="bg-sky-600 text-white font-semibold px-8 py-3 rounded-full text-lg hover:bg-sky-700 transition"
+            type="button"
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-gray-700 hover:text-black select-none"
           >
-            Book Now
+            <ArrowLeft size={18} /> Back
           </button>
         </div>
-      </div>
-    </div>
 
-    {/* Booking Modal */}
-    {showModal && (
-      <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-        <div className="bg-white w-full max-w-2xl rounded-xl shadow-lg max-h-[90vh] overflow-y-auto">
-          <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
-            <h3 className="text-lg font-semibold">Book Service</h3>
-            <button className="text-gray-500 hover:text-gray-700" onClick={() => setShowModal(false)}>✕</button>
+        {/* Banner */}
+        <div className="w-full h-64 md:h-80 bg-gray-200 relative overflow-hidden">
+          <img
+            src={`${backendUrl}${service.image}`}
+            alt={service.name}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent" />
+          <h1 className="absolute bottom-4 left-6 text-white text-3xl md:text-4xl font-bold drop-shadow">
+            {service.name}
+          </h1>
+        </div>
+
+        {/* Content */}
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          {/* Title + Price */}
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-800">
+              {service.name}
+            </h2>
+            <div className="text-2xl font-semibold text-sky-700 bg-sky-50 px-4 py-2 rounded-full">
+              ₹{service.price}
+            </div>
           </div>
 
-          <div className="p-6 space-y-6">
-            {/* Service Info Card */}
-            <div className="bg-gray-50 rounded-lg p-4 flex gap-4">
-              <img 
-                src={`${backendUrl}${service.image}`} 
-                alt={service.name}
-                className="w-20 h-20 rounded-lg object-cover"
-              />
-              <div className="flex-1">
-                <h4 className="font-semibold text-lg">{service.name}</h4>
-                <p className="text-2xl font-bold text-sky-600 mt-1">₹{service.price}</p>
-              </div>
-            </div>
-            {/* Address Section - Always Visible */}
-            <div className="space-y-3">
-              <h4 className="font-semibold text-gray-900">Delivery Address</h4>
-              {checkingAddress ? (
-                <p className="text-gray-500">Loading address…</p>
-              ) : address ? (
-                <div className="bg-white border border-gray-200 rounded-lg p-3">
-                  <p className="text-gray-700">
-                    {houseNumber}, {street && `${street}, `}{city && `${city}, `}{pincode}
-                  </p>
-                  <button 
-                    className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium" 
-                    onClick={() => navigate('/customer/profile')}
-                  >
-                    Change Address
-                  </button>
-                </div>
-              ) : (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-red-700 mb-2 font-medium">⚠️ No address found</p>
-                  <p className="text-red-600 text-sm mb-3">Please add your address with location pin to find nearby technicians.</p>
-                  <button 
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium" 
-                    onClick={() => navigate('/customer/profile')}
-                  >
-                    Add Address & Location
-                  </button>
-                </div>
-              )}
-            </div>
+          {/* Ratings */}
+          <div className="flex items-center gap-2 mb-6">
+            <Star className="text-yellow-500" size={20} />
+            <Star className="text-yellow-500" size={20} />
+            <Star className="text-yellow-500" size={20} />
+            <Star className="text-yellow-500" size={20} />
+            <Star className="text-gray-300" size={20} />
+            <span className="text-gray-600 ml-2 text-sm">
+              (423 reviews)
+            </span>
+          </div>
 
-            {/* Date & Time Section - Always Visible */}
-            <div className="space-y-3">
-              <h4 className="font-semibold text-gray-900">Select Date & Time</h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-sm text-gray-600 mb-1 block">Date</label>
-                  <input 
-                    type="date" 
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                    value={date} 
-                    onChange={e=>setDate(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600 mb-1 block">Time Slot</label>
-                  <select 
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                    value={timeSlot} 
-                    onChange={e=>setTimeSlot(e.target.value)}
-                  >
-                    <option value="">Select time</option>
-                    {TIME_SLOTS.map(ts => <option key={ts} value={ts}>{ts}</option>)}
-                  </select>
-                </div>
-              </div>
-              {precheck && !precheck.success && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-red-700 text-sm">{precheck.message}</p>
-                </div>
-              )}
-            </div>
+          {/* Description */}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
+            <h3 className="text-lg font-semibold mb-2 text-gray-900">
+              Service Description
+            </h3>
+            <p className="text-gray-600 leading-relaxed">
+              {service.description || "No description available."}
+            </p>
+          </div>
 
-            {/* Payment Summary & Action Buttons */}
-            <div className="border-t pt-4 space-y-4">
-              {stage === "success" && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-green-900 mb-1">Booking Created Successfully!</h4>
-                  <p className="text-green-700 text-sm mb-3">Your booking request has been sent to nearby technicians. You will be notified once a technician accepts.</p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => navigate('/customer/bookings')}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700"
-                    >
-                      View My Bookings
-                    </button>
-                    <button
-                      onClick={cancelBooking}
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700"
-                    >
-                      Cancel Booking
-                    </button>
-                  </div>
-                </div>
-              )}
+          {/* What's Included */}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
+            <h3 className="text-lg font-semibold mb-2 text-gray-900">
+              What’s Included
+            </h3>
+            <ul className="text-gray-600 list-disc pl-6 space-y-2">
+              <li>Professional technician visit</li>
+              <li>Required basic tools</li>
+              <li>Upfront pricing — no hidden charges</li>
+              <li>Service completion report</li>
+            </ul>
+          </div>
 
-              {stage === "accepted" && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-blue-900 mb-1">Technician Assigned!</h4>
-                  <p className="text-blue-700 text-sm mb-3">A technician has accepted your booking request.</p>
-                  <button
-                    onClick={() => navigate('/customer/bookings')}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
-                  >
-                    View Booking Details
-                  </button>
-                </div>
-              )}
+          {/* What's Not Included */}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-6">
+            <h3 className="text-lg font-semibold mb-2 text-gray-900">
+              What’s Not Included
+            </h3>
+            <ul className="text-gray-600 list-disc pl-6 space-y-2">
+              <li>Material cost (if additional items are needed)</li>
+              <li>Major repairs beyond scope (charged separately)</li>
+              <li>Transportation cost (in rare cases)</li>
+            </ul>
+          </div>
 
-              {stage === "cancelled" && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-red-900 mb-1">Booking Cancelled</h4>
-                  <p className="text-red-700 text-sm mb-3">Your booking has been cancelled. Refund will be processed.</p>
-                  <button
-                    onClick={() => {
-                      setShowModal(false);
-                      setStage("select");
-                      setBookingId(null);
-                    }}
-                    className="px-4 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700"
-                  >
-                    Close
-                  </button>
-                </div>
-              )}
-
-              {stage !== "success" && stage !== "accepted" && stage !== "cancelled" && (
-                <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
-                  <div>
-                    <p className="text-sm text-gray-600">Total Amount</p>
-                    <p className="text-2xl font-bold text-gray-900">₹{service.price}</p>
-                  </div>
-                  <button
-                    disabled={!address || !date || !timeSlot}
-                    className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    onClick={async () => {
-                      if (!address) {
-                        toast.error('Please add your address first');
-                        return;
-                      }
-                      if (!date || !timeSlot) {
-                        toast.error('Please select date and time');
-                        return;
-                      }
-                      // Run precheck
-                      const precheckOk = await runPrecheck();
-                      if (!precheckOk) {
-                        return;
-                      }
-                      // Create booking
-                      const newId = await createBooking();
-                      if (!newId) {
-                        // createBooking already showed error toast and closed modal
-                        return;
-                      }
-                      
-                      // Only continue if booking was created successfully
-                      await simulatePayment(newId);
-                      toast.success('Payment simulated successfully');
-                      await startBroadcast(newId);
-                    }}
-                  >
-                    {stage === "waiting" ? "Processing..." : "Pay Now"}
-                  </button>
-                </div>
-              )}
-            </div>
+          {/* Book Now */}
+          <div className="text-center mt-10 mb-4">
+            <button
+              type="button"
+              onClick={openBooking}
+              className="bg-sky-600 text-white font-semibold px-10 py-3 rounded-full text-lg hover:bg-sky-700 transition shadow-md hover:shadow-lg select-none"
+            >
+              Book Now
+            </button>
           </div>
         </div>
       </div>
-    )}
+
+      {/* Booking Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto animate-[fadeIn_0.2s_ease]">
+            {/* Header */}
+            <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Book Service
+                </h3>
+                <p className="text-xs text-gray-500">
+                  Secure & instant booking via Technosys
+                </p>
+              </div>
+              <button
+                type="button"
+                className="text-gray-400 hover:text-gray-600 rounded-full w-8 h-8 flex items-center justify-center hover:bg-gray-100 select-none"
+                onClick={() => setShowModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6 bg-gray-50">
+              {/* Service Info Card */}
+              <div className="bg-white rounded-2xl p-4 flex gap-4 shadow-sm border border-gray-100">
+                <img
+                  src={`${backendUrl}${service.image}`}
+                  alt={service.name}
+                  className="w-20 h-20 rounded-xl object-cover"
+                />
+                <div className="flex-1 flex justify-between items-start">
+                  <div>
+                    <h4 className="font-semibold text-lg text-gray-900">
+                      {service.name}
+                    </h4>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Home service · Verified technicians
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500">Starting from</p>
+                    <p className="text-2xl font-bold text-sky-600">
+                      ₹{service.price}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Address Section */}
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                <h4 className="font-semibold text-gray-900 mb-2">
+                  Service Address
+                </h4>
+                {checkingAddress ? (
+                  <p className="text-gray-500 text-sm">
+                    Loading address…
+                  </p>
+                ) : address ? (
+                  <div>
+                    <p className="text-gray-700 text-sm">
+                      {houseNumber},{" "}
+                      {street && `${street}, `}
+                      {city && `${city}, `}
+                      {pincode}
+                    </p>
+                    <button
+                      type="button"
+                      className="mt-2 text-sky-600 hover:text-sky-700 text-sm font-medium select-none"
+                      onClick={() => navigate("/customer/profile")}
+                    >
+                      Change Address
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                    <p className="text-red-700 mb-1 font-medium text-sm">
+                      ⚠️ No address found
+                    </p>
+                    <p className="text-red-600 text-xs mb-3">
+                      Please add your address with location pin to find
+                      nearby technicians.
+                    </p>
+                    <button
+                      type="button"
+                      className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 text-sm font-medium select-none"
+                      onClick={() => navigate("/customer/profile")}
+                    >
+                      Add Address & Location
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Date & Time Section */}
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                <h4 className="font-semibold text-gray-900 mb-3">
+                  Select Date & Time
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">
+                      Date
+                    </label>
+                    <input
+                      type="date"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent text-sm bg-gray-50"
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                      min={new Date().toISOString().split("T")[0]}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">
+                      Time Slot
+                    </label>
+                    <select
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-transparent text-sm bg-gray-50"
+                      value={timeSlot}
+                      onChange={(e) => setTimeSlot(e.target.value)}
+                    >
+                      <option value="">Select time</option>
+                      {TIME_SLOTS.map((ts) => (
+                        <option key={ts} value={ts}>
+                          {ts}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                {precheck && !precheck.success && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 mt-3">
+                    <p className="text-red-700 text-xs">
+                      {precheck.message}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Payment Summary & Action Buttons */}
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                {stage === "success" && (
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                    <h4 className="font-semibold text-green-900 mb-1">
+                      Booking Created Successfully!
+                    </h4>
+                    <p className="text-green-700 text-sm mb-3">
+                      Your booking request has been sent to nearby
+                      technicians. You will be notified once a technician
+                      accepts.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => navigate("/customer/bookings")}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 text-sm select-none"
+                      >
+                        View My Bookings
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowCancelPopup(true)}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 text-sm select-none"
+                      >
+                        Cancel Booking
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {stage === "accepted" && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                    <h4 className="font-semibold text-blue-900 mb-1">
+                      Technician Assigned!
+                    </h4>
+                    <p className="text-blue-700 text-sm mb-3">
+                      A technician has accepted your booking request.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => navigate("/customer/bookings")}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 text-sm select-none"
+                    >
+                      View Booking Details
+                    </button>
+                  </div>
+                )}
+
+                {stage === "cancelled" && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                    <h4 className="font-semibold text-red-900 mb-1">
+                      Booking Cancelled
+                    </h4>
+                    <p className="text-red-700 text-sm mb-3">
+                      Your booking has been cancelled. Refund will be
+                      processed.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowModal(false);
+                        setStage("select");
+                        setBookingId(null);
+                      }}
+                      className="px-4 py-2 bg-gray-700 text-white rounded-lg font-medium hover:bg-gray-800 text-sm select-none"
+                    >
+                      Close
+                    </button>
+                  </div>
+                )}
+
+                {stage !== "success" &&
+                  stage !== "accepted" &&
+                  stage !== "cancelled" && (
+                    <div className="flex items-center justify-between bg-gray-50 rounded-xl p-4">
+                      <div>
+                        <p className="text-xs text-gray-500">
+                          Total Amount
+                        </p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          ₹{service.price}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={!address || !date || !timeSlot}
+                        className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        onClick={async () => {
+                          if (!address) {
+                            toast.error("Please add your address first");
+                            return;
+                          }
+                          if (!date || !timeSlot) {
+                            toast.error("Please select date and time");
+                            return;
+                          }
+                          const precheckOk = await runPrecheck();
+                          if (!precheckOk) return;
+
+                          const newId = await createBooking();
+                          if (!newId) return;
+
+                          await simulatePayment(newId);
+                          toast.success("Payment simulated successfully");
+                          await startBroadcast(newId);
+                        }}
+                      >
+                        {stage === "waiting"
+                          ? "Processing..."
+                          : "Pay Now"}
+                      </button>
+                    </div>
+                  )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Confirmation Popup */}
+      {showCancelPopup && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[9999] px-4">
+          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 animate-[fadeIn_0.2s_ease]">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              Cancel this booking?
+            </h2>
+            <p className="text-gray-600 text-sm mb-6">
+              Are you sure you want to cancel this booking? Your refund
+              will be processed automatically.
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowCancelPopup(false)}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 text-sm font-medium select-none"
+              >
+                No, keep booking
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  setCancelLoading(true);
+                  await cancelBooking();
+                  setCancelLoading(false);
+                  setShowCancelPopup(false);
+                }}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm font-semibold flex items-center justify-center min-w-[110px] select-none"
+              >
+                {cancelLoading ? "Cancelling..." : "Yes, cancel"}
+              </button>
+            </div>
+          </div>
+
+          <style>{`
+            @keyframes fadeIn {
+              from { opacity: 0; transform: scale(0.95); }
+              to { opacity: 1; transform: scale(1); }
+            }
+          `}</style>
+        </div>
+      )}
     </>
   );
 };
