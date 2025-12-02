@@ -382,6 +382,9 @@ const CustomerBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
   const { userData, backendUrl, socket } = useContext(AppContext);
   const navigate = useNavigate();
   const processedAutoCancels = useRef(new Set());
@@ -608,6 +611,38 @@ const CustomerBookings = () => {
     );
   };
 
+  const canCancel = (booking) => {
+    if (booking.Status !== "Pending") return false;
+    const bookingTime = new Date(booking.createdAt);
+    const diffMinutes = (currentTime - bookingTime) / (1000 * 60);
+    return diffMinutes <= 10;
+  };
+
+  const getTimeRemaining = (booking) => {
+    if (booking.Status !== "Pending") return null;
+
+    const bookingTime = new Date(booking.createdAt);
+    const diffMs = 10 * 60 * 1000 - (currentTime - bookingTime);
+    if (diffMs <= 0) return null;
+
+    const m = Math.floor(diffMs / 60000);
+    const s = Math.floor((diffMs % 60000) / 1000);
+
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+  const handleCancel = async (bookingId) => {
+    if (!window.confirm("Are you sure you want to cancel this booking?")) return;
+
+    try {
+      await axios.post(`${backendUrl}/api/bookings/cancel`, { bookingId }, { withCredentials: true });
+      toast.success("Booking cancelled successfully");
+      fetchBookings();
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to cancel booking");
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto bg-white p-6 rounded-lg shadow mt-6">
 
@@ -633,22 +668,51 @@ const CustomerBookings = () => {
                 {getStatusBadge(booking.Status)}
               </div>
 
-              <p className="text-sm mt-1 text-gray-600">
-                <strong>Date:</strong> {new Date(booking.Date).toLocaleDateString()}
-              </p>
-              <p className="text-sm text-gray-600">
-                <strong>Time:</strong> {booking.TimeSlot}
-              </p>
+              <div className="text-sm text-gray-600 space-y-1">
+                <p><strong>Date:</strong> {new Date(booking.Date).toLocaleDateString("en-IN", { weekday: "short", year: "numeric", month: "short", day: "numeric" })}</p>
+                <p><strong>Time:</strong> {booking.TimeSlot}</p>
 
-              {/* Cancel Button */}
-              {booking.Status === "Pending" && (
-                <button
-                  onClick={() => openCancelModal(booking._id)}
-                  className="mt-3 px-4 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition"
-                >
-                  Cancel Booking
-                </button>
-              )}
+                {booking.CustomerID?.Address && (
+                  <p>
+                    <strong>Address:</strong>{" "}
+                    {booking.CustomerID.Address.houseNumber || booking.CustomerID.Address.house_no},{" "}
+                    {booking.CustomerID.Address.street || booking.CustomerID.Address.road},{" "}
+                    {booking.CustomerID.Address.city || booking.CustomerID.Address.town},{" "}
+                    {booking.CustomerID.Address.pincode || booking.CustomerID.Address.postcode}
+                  </p>
+                )}
+
+                {booking.TechnicianID && (
+                  <p>
+                    <strong>Technician:</strong> {booking.TechnicianID.Name} ({booking.TechnicianID.MobileNumber})
+                  </p>
+                )}
+              </div>
+
+              <div className="mt-3 flex gap-2 items-center">
+                {canCancel(booking) && (
+                  <>
+                    <button
+                      onClick={() => handleCancel(booking._id)}
+                      className="px-4 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition"
+                    >
+                      Cancel Booking
+                    </button>
+
+                    {getTimeRemaining(booking) && (
+                      <span className="text-xs text-green-600 flex items-center gap-1">
+                        <Clock size={12} /> {getTimeRemaining(booking)} remaining
+                      </span>
+                    )}
+                  </>
+                )}
+
+                {booking.Status === "Pending" && !canCancel(booking) && (
+                  <span className="text-xs text-red-500 flex items-center gap-1">
+                    <AlertCircle size={12} /> Cancellation window expired
+                  </span>
+                )}
+              </div>
             </div>
 
           </div>
@@ -691,13 +755,6 @@ const CustomerBookings = () => {
           </div>
         </div>
       )}
-
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
-        }
-      `}</style>
 
     </div>
   );
