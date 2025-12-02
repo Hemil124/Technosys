@@ -433,6 +433,29 @@ export async function acceptBooking(req, res) {
     // Cancel the scheduled auto-cancellation since booking is now confirmed
     cancelScheduledAutoCancellation(booking._id);
 
+    // Update technician's availability slot to "booked"
+    try {
+      const dateStr = new Date(booking.Date).toISOString().split('T')[0];
+      const timeSlotStr = `${booking.TimeSlot}-${String(parseInt(booking.TimeSlot.split(':')[0]) + 1).padStart(2, '0')}:00`;
+      
+      const availability = await TechnicianAvailability.findOne({
+        technicianId: technicianId,
+        date: dateStr
+      });
+
+      if (availability) {
+        const slotIndex = availability.timeSlots.findIndex(slot => slot.slot === timeSlotStr);
+        if (slotIndex !== -1) {
+          availability.timeSlots[slotIndex].status = "booked";
+          await availability.save();
+          console.log(`✅ Marked time slot ${timeSlotStr} as booked for technician ${technicianId}`);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to update technician availability:', err);
+      // Don't fail the booking acceptance if availability update fails
+    }
+
     const io = getIo();
     
     // Notify the customer that their booking was accepted
