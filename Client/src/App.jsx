@@ -254,7 +254,7 @@ const App = () => {
         >
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<CustomerDashboard />} />
-           <Route path="service/:id" element={<CustomerServiceDetails />} />
+          <Route path="service/:id" element={<CustomerServiceDetails />} />
           <Route path="profile" element={<CustomerProfile />} />
           <Route path="bookings" element={<CustomerBookings />} />
           <Route path="settings" element={<CustomerSettings />} />

@@ -15,6 +15,7 @@ export const AppContextProvider = ({ children }) => {
   const [userData, setUserData] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const socketRef = useRef(null);
+  const [socketState, setSocketState] = useState(null);
   const subscribersRef = useRef({}); // { modelName: Set(callback) }
 
   const getAuthState = async () => {
@@ -48,11 +49,41 @@ export const AppContextProvider = ({ children }) => {
   useEffect(() => {
     // Initialize socket connection
     try {
-      const s = ioClient(backendUrl, { withCredentials: true });
+      const s = ioClient(backendUrl, { 
+        withCredentials: true,
+        transports: ['websocket'], // prefer WS to avoid polling CSP issues
+        autoConnect: true,
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        randomizationFactor: 0.5,
+        reconnectionAttempts: 50,
+        forceNew: true,
+      });
       socketRef.current = s;
+      setSocketState(s);
+
+      const registerIfKnown = () => {
+        // Re-register room on every connect/reconnect using stored identity
+        const uid = socketRef.current?.__userId;
+        const role = socketRef.current?.__userRole;
+        if (uid && role === 'technician') {
+          s.emit('register-technician', uid);
+        } else if (uid && role === 'customer') {
+          s.emit('register-customer', uid);
+        }
+      };
 
       s.on('connect', () => {
+        setSocketState(s); // Only set state once on initial connect
+        registerIfKnown();
         console.log('Realtime: connected', s.id);
+      });
+      
+      s.on('reconnect', registerIfKnown); // Don't set state again on reconnect
+      
+      s.on('connect_error', () => {
+        setSocketState(null);
       });
 
       s.on('db_change', (payload) => {
@@ -73,16 +104,35 @@ export const AppContextProvider = ({ children }) => {
         }
       });
 
-      s.on('disconnect', () => console.log('Realtime: disconnected'));
+      s.on('disconnect', () => {
+        setSocketState(null);
+        console.log('Realtime: disconnected')
+      });
 
       return () => {
         try { s.disconnect(); } catch (e) { }
         socketRef.current = null;
+        setSocketState(null);
       };
-    } catch (err) {
-      console.warn('Realtime init failed', err);
-    }
+    } catch (err) { /* silent */ }
   }, [backendUrl]);
+
+  // Register room once userData loads/changes
+  useEffect(() => {
+    const s = socketRef.current;
+    const uid = userData?._id || userData?.id;
+    if (!s || !uid) return;
+    
+    // Store user info on socket instance for reconnection
+    s.__userId = uid;
+    s.__userRole = userData.role;
+    
+    if (userData.role === 'technician') {
+      s.emit('register-technician', uid);
+    } else if (userData.role === 'customer') {
+      s.emit('register-customer', uid);
+    }
+  }, [userData]);
 
   // Subscribe to realtime DB changes for a model. Use modelName='*' for all events.
   const realtimeSubscribe = (modelName, cb) => {
@@ -136,18 +186,18 @@ export const AppContextProvider = ({ children }) => {
   };
 
   const value = {
-  backendUrl,
-  isLoggedIn,
-  setIsLoggedIn,
-  userData,
-  setUserData,
-  getUserData,
-  fetchUserData,       // ⭐ ADD THIS
-  loadingUser,
-  realtimeSubscribe,
-  realtimeUnsubscribe,
-  socket: socketRef.current,
-};
+    backendUrl,
+    isLoggedIn,
+    setIsLoggedIn,
+    userData,
+    setUserData,
+    getUserData,
+    fetchUserData,
+    loadingUser,
+    realtimeSubscribe,
+    realtimeUnsubscribe,
+    socket: socketState,
+  };
 
 
 

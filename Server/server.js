@@ -27,6 +27,7 @@ import "./config/passport.js";
 import subscriptionPackageRoutes from "./routes/subscriptionPackage.route.js";
 import customerProfileRoutes from "./routes/customerProfile.route.js";
 import adminCustomerListRoute from "./routes/AdminCustomerList.route.js";
+import bookingRoutes from "./routes/booking.route.js";
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -51,8 +52,15 @@ if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
 // Set Security Headers with configured CSP
-// Build connectSrc for CSP from allowedOrigins + backend
-const cspConnectSrc = ["'self'", `http://localhost:${port}`, ...allowedOrigins];
+// Build connectSrc for CSP from allowedOrigins + backend (HTTP + WS)
+const wsAllowed = allowedOrigins.map(o => o.replace('http://', 'ws://'));
+const cspConnectSrc = [
+  "'self'",
+  `http://localhost:${port}`,
+  `ws://localhost:${port}`,
+  ...allowedOrigins,
+  ...wsAllowed,
+];
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -138,6 +146,7 @@ app.use("/api/admin-setup", adminCreationRoute);
 app.use("/api/customer-profile", customerProfileRoutes);
 // Admin customers list
 app.use('/api/admin/customers', adminCustomerListRoute);
+app.use('/api/bookings', bookingRoutes);
 
 const server = app.listen(port, () => console.log(`Server started on PORT:${port}`));
 
