@@ -125,9 +125,16 @@ const CustomerServiceDetails = () => {
       if (data.success) {
         setBookingId(data.data._id);
         return data.data._id; // return created booking id to avoid state race
+      } else {
+        toast.error(data.message || 'Failed to create booking');
+        return null;
       }
-      return null;
-    } catch (e) { return false; }
+    } catch (e) {
+      const errorMsg = e.response?.data?.message || 'Failed to create booking. Please try again.';
+      toast.error(errorMsg);
+      setShowModal(false);
+      return false;
+    }
   };
 
   const simulatePayment = async (id) => {
@@ -455,11 +462,15 @@ const CustomerServiceDetails = () => {
                       }
                       // Create booking
                       const newId = await createBooking();
-                      if (newId) {
-                        await simulatePayment(newId);
-                        toast.success('Payment simulated successfully');
-                        await startBroadcast(newId);
+                      if (!newId) {
+                        // createBooking already showed error toast and closed modal
+                        return;
                       }
+                      
+                      // Only continue if booking was created successfully
+                      await simulatePayment(newId);
+                      toast.success('Payment simulated successfully');
+                      await startBroadcast(newId);
                     }}
                   >
                     {stage === "waiting" ? "Processing..." : "Pay Now"}

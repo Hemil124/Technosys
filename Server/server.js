@@ -28,6 +28,7 @@ import subscriptionPackageRoutes from "./routes/subscriptionPackage.route.js";
 import customerProfileRoutes from "./routes/customerProfile.route.js";
 import adminCustomerListRoute from "./routes/AdminCustomerList.route.js";
 import bookingRoutes from "./routes/booking.route.js";
+import { startAutoCancelScheduler } from "./controllers/booking.controller.js";
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -163,4 +164,11 @@ try {
   initChangeStream();
 } catch (err) {
   console.warn('ChangeStream initialization failed', err);
+}
+
+// Start the auto-cancel scheduler for bookings
+try {
+  startAutoCancelScheduler();
+} catch (err) {
+  console.error('Failed to start auto-cancel scheduler', err);
 }

@@ -10,6 +10,145 @@ import TechnicianWallet from "../models/TechnicianWallet.js";
 import mongoose from "mongoose";
 import { getIo } from "../config/realtime.js";
 
+// Background job: Auto-cancel expired bookings
+const scheduledCancellations = new Map(); // bookingId -> timeoutId
+
+async function executeCancellation(bookingId) {
+  try {
+    const booking = await Booking.findById(bookingId);
+    
+    if (!booking) {
+      console.log(`⚠️ Booking ${bookingId} not found for auto-cancel`);
+      scheduledCancellations.delete(String(bookingId));
+      return;
+    }
+
+    // Only cancel if still pending
+    if (booking.Status !== "Pending") {
+      console.log(`⚠️ Booking ${bookingId} is no longer pending (Status: ${booking.Status})`);
+      scheduledCancellations.delete(String(bookingId));
+      return;
+    }
+
+    // Update status to AutoCancelled
+    booking.Status = "AutoCancelled";
+    await booking.save();
+
+    console.log(`✅ Auto-cancelled booking ${bookingId} at ${new Date().toISOString()}`);
+
+    // Get socket.io instance
+    const io = getIo();
+    
+    // Find service request to get broadcast technicians
+    const serviceRequest = await ServiceRequest.findOne({ BookingID: booking._id }).lean();
+    
+    // Notify all technicians to remove the request
+    if (serviceRequest?.BroadcastTechnicians) {
+      serviceRequest.BroadcastTechnicians.forEach(tid => {
+        io.to(String(tid)).emit("booking-request-closed", { 
+          bookingId: String(booking._id) 
+        });
+      });
+    }
+    
+    // Notify customer about auto-cancellation
+    const customerId = String(booking.CustomerID);
+    io.to(customerId).emit("booking-auto-cancelled", { 
+      bookingId: String(booking._id),
+      message: "Your booking was automatically cancelled due to no technician acceptance within 10 minutes."
+    });
+
+    // Remove from scheduled map
+    scheduledCancellations.delete(String(bookingId));
+  } catch (err) {
+    console.error(`❌ Failed to auto-cancel booking ${bookingId}:`, err);
+    scheduledCancellations.delete(String(bookingId));
+  }
+}
+
+export function scheduleAutoCancellation(bookingId, autoCancelAt) {
+  const bookingIdStr = String(bookingId);
+  
+  // Clear existing timeout if any
+  if (scheduledCancellations.has(bookingIdStr)) {
+    clearTimeout(scheduledCancellations.get(bookingIdStr));
+  }
+
+  const delay = new Date(autoCancelAt).getTime() - Date.now();
+  
+  if (delay <= 0) {
+    // Already expired, cancel immediately
+    console.log(`⚡ Booking ${bookingIdStr} already expired, cancelling immediately`);
+    executeCancellation(bookingId);
+    return;
+  }
+
+  // Schedule the cancellation at exact time
+  console.log(`⏰ Scheduled auto-cancel for booking ${bookingIdStr} in ${Math.round(delay/1000)} seconds (at ${new Date(autoCancelAt).toISOString()})`);
+  
+  const timeoutId = setTimeout(() => {
+    executeCancellation(bookingId);
+  }, delay);
+
+  scheduledCancellations.set(bookingIdStr, timeoutId);
+}
+
+export function cancelScheduledAutoCancellation(bookingId) {
+  const bookingIdStr = String(bookingId);
+  
+  if (scheduledCancellations.has(bookingIdStr)) {
+    clearTimeout(scheduledCancellations.get(bookingIdStr));
+    scheduledCancellations.delete(bookingIdStr);
+    console.log(`🚫 Cancelled scheduled auto-cancel for booking ${bookingIdStr}`);
+  }
+}
+
+export async function startAutoCancelScheduler() {
+  try {
+    console.log('🔄 Initializing auto-cancel scheduler...');
+    
+    // Find all pending bookings with AutoCancelAt set
+    const pendingBookings = await Booking.find({
+      Status: "Pending",
+      AutoCancelAt: { $ne: null }
+    }).lean();
+
+    console.log(`📋 Found ${pendingBookings.length} pending booking(s) to schedule`);
+
+    const now = Date.now();
+    
+    // Schedule cancellation for each booking
+    for (const booking of pendingBookings) {
+      const autoCancelTime = new Date(booking.AutoCancelAt).getTime();
+      
+      if (autoCancelTime <= now) {
+        // Already expired, cancel immediately
+        console.log(`⚡ Booking ${booking._id} already expired, cancelling now`);
+        await executeCancellation(booking._id);
+      } else {
+        // Schedule future cancellation
+        scheduleAutoCancellation(booking._id, booking.AutoCancelAt);
+      }
+    }
+
+    console.log('✅ Auto-cancel scheduler initialized successfully');
+  } catch (err) {
+    console.error('❌ Failed to start auto-cancel scheduler:', err);
+  }
+}
+
+export function stopAutoCancelScheduler() {
+  console.log(`🛑 Stopping auto-cancel scheduler (${scheduledCancellations.size} scheduled cancellations)`);
+  
+  // Clear all scheduled timeouts
+  for (const [bookingId, timeoutId] of scheduledCancellations.entries()) {
+    clearTimeout(timeoutId);
+  }
+  
+  scheduledCancellations.clear();
+  console.log('✅ Auto-cancel scheduler stopped');
+}
+
 // Helper: radius technicians by category and timeslot
 async function findEligibleTechnicians({ coords, radiusKm = 5, serviceCategoryId, date, timeSlot }) {
   const [lng, lat] = coords;
@@ -88,6 +227,37 @@ export async function createBooking(req, res) {
     const customer = await Customer.findById(customerId).lean();
     if (!customer || !customer.Address || !customer.Address.houseNumber || !customer.Address.pincode) {
       return res.status(400).json({ success: false, message: "Please set your address before booking." });
+    }
+
+    // Check for duplicate booking: same customer, service, date, time with active status
+    // Normalize date to start of day for comparison
+    const bookingDateObj = new Date(bookingDate);
+    const startOfDay = new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate());
+    const endOfDay = new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate(), 23, 59, 59, 999);
+    
+    console.log('🔍 Duplicate check - CustomerID:', customerId, 'SubCategoryID:', SubCategoryID, 'Date:', startOfDay.toISOString(), 'TimeSlot:', TimeSlot);
+    
+    const now = new Date();
+    const existingBooking = await Booking.findOne({
+      CustomerID: customerId,
+      SubCategoryID: SubCategoryID,
+      Date: { $gte: startOfDay, $lte: endOfDay },
+      TimeSlot: TimeSlot,
+      Status: { $in: ["Pending", "Confirmed"] },
+      // Exclude bookings that have expired (past AutoCancelAt time)
+      $or: [
+        { AutoCancelAt: null },
+        { AutoCancelAt: { $gt: now } }
+      ]
+    }).lean();
+
+    console.log('🔍 Existing booking found:', existingBooking ? `Yes - ID: ${existingBooking._id}, Status: ${existingBooking.Status}, AutoCancelAt: ${existingBooking.AutoCancelAt}` : 'No');
+
+    if (existingBooking) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "You already have an active booking for this service at the same date and time. Please choose a different time slot or wait for your current booking to complete."
+      });
     }
 
     const booking = await Booking.create({
@@ -194,6 +364,9 @@ export async function broadcastBooking(req, res) {
     booking.AutoCancelAt = new Date(Date.now() + 10 * 60 * 1000);
     await booking.save();
 
+    // Schedule the exact auto-cancellation time
+    scheduleAutoCancellation(booking._id, booking.AutoCancelAt);
+
     // Emit socket event to all matched technicians
     const io = getIo();
     console.log('📡 Broadcasting to', eligible.length, 'technicians via socket...');
@@ -257,6 +430,9 @@ export async function acceptBooking(req, res) {
     booking.AcceptedAt = new Date();
     await booking.save();
 
+    // Cancel the scheduled auto-cancellation since booking is now confirmed
+    cancelScheduledAutoCancellation(booking._id);
+
     const io = getIo();
     
     // Notify the customer that their booking was accepted
@@ -290,12 +466,21 @@ export async function acceptBooking(req, res) {
 export async function autoCancelIfNoAcceptance(req, res) {
   try {
     const { bookingId } = req.body;
+    console.log('🕒 Auto-cancel check called for booking:', bookingId);
+    
     const booking = await Booking.findById(bookingId);
-    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+    if (!booking) {
+      console.log('❌ Booking not found:', bookingId);
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+
+    console.log('📋 Booking status:', booking.Status, '| AutoCancelAt:', booking.AutoCancelAt, '| Current time:', new Date(), '| Expired:', booking.AutoCancelAt ? Date.now() >= booking.AutoCancelAt.getTime() : 'No AutoCancelAt');
 
     if (booking.Status === "Pending" && booking.AutoCancelAt && Date.now() >= booking.AutoCancelAt.getTime()) {
+      console.log('🔄 Updating booking status to AutoCancelled...');
       booking.Status = "AutoCancelled";
       await booking.save();
+      console.log('✅ Database updated - Status is now:', booking.Status);
       
       const io = getIo();
       const serviceRequest = await ServiceRequest.findOne({ BookingID: booking._id }).lean();
@@ -315,6 +500,7 @@ export async function autoCancelIfNoAcceptance(req, res) {
       return res.json({ success: true, message: "Booking auto-cancelled. Refund will be processed." });
     }
 
+    console.log('⏳ Still waiting - not ready for auto-cancel yet');
     res.json({ success: true, message: "Still waiting" });
   } catch (err) {
     console.error("autoCancelIfNoAcceptance error", err);
@@ -367,6 +553,9 @@ export async function cancelBooking(req, res) {
     // Cancel booking
     booking.Status = "Cancelled";
     await booking.save();
+
+    // Cancel the scheduled auto-cancellation since customer manually cancelled
+    cancelScheduledAutoCancellation(booking._id);
 
     // Notify technicians to close the request
     const io = getIo();
@@ -475,4 +664,8 @@ export default {
   getCustomerBookings,
   getTechnicianPendingRequests,
   getTechnicianAcceptedBookings,
+  startAutoCancelScheduler,
+  stopAutoCancelScheduler,
+  scheduleAutoCancellation,
+  cancelScheduledAutoCancellation,
 };
