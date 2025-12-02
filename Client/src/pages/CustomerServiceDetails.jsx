@@ -785,7 +785,7 @@ const CustomerServiceDetails = () => {
     }
   };
 
-  // Listen for booking acceptance via socket
+  // Listen for booking acceptance and auto-cancellation via socket
   useEffect(() => {
     if (!socket || !bookingId) return;
 
@@ -796,8 +796,20 @@ const CustomerServiceDetails = () => {
       }
     };
 
-    socket.on("booking-accepted", onAccepted);
-    return () => socket.off("booking-accepted", onAccepted);
+    const onAutoCancelled = ({ bookingId: cancelledId, message }) => {
+      if (cancelledId === bookingId) {
+        toast.error(message || 'Your booking was automatically cancelled due to no technician acceptance within 10 minutes.');
+        setStage("cancelled");
+      }
+    };
+    
+    socket.on('booking-accepted', onAccepted);
+    socket.on('booking-auto-cancelled', onAutoCancelled);
+    
+    return () => {
+      socket.off('booking-accepted', onAccepted);
+      socket.off('booking-auto-cancelled', onAutoCancelled);
+    };
   }, [socket, bookingId]);
 
   const openBooking = async () => {
