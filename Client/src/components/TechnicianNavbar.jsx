@@ -129,7 +129,7 @@ const TechnicianSidebar = () => {
 
   // Technician nav items
   const navItems = [
-    { name: "Dashboard", path: "/technician/dashboard", icon: <Home size={20} /> },
+    // { name: "Dashboard", path: "/technician/dashboard", icon: <Home size={20} /> },
     { name: "Availability", path: "/technician/availability", icon: <Clock size={20} /> },
     { name: "Bookings", path: "/technician/bookings", icon: <CalendarCheck size={20} /> },
     { name: "Subscription", path: "/technician/subscription", icon: <CreditCard size={20} /> },
@@ -264,8 +264,8 @@ const TechnicianSidebar = () => {
                   </NavLink>
                 ))}
                 
-                {/* Mobile Coin Balance */}
-                <div className="px-4 py-3 border-t border-gray-200/50 mt-4">
+                {/* Mobile Coin Balance - show only on extra-small screens when the top navbar coin is hidden */}
+                <div className="px-4 py-3 border-t border-gray-200/50 mt-4 sm:hidden">
                   <div className="flex justify-center">
                     <CoinBadge coins={coinBalance ?? 0} />
                   </div>
