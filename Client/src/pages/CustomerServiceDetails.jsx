@@ -29,6 +29,8 @@ const CustomerServiceDetails = () => {
   const [bookingId, setBookingId] = useState(null);
   const [stage, setStage] = useState("address");
   const [countdown, setCountdown] = useState(0);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancellingBooking, setCancellingBooking] = useState(false);
 
   // Fetch service details
   useEffect(() => {
@@ -169,6 +171,16 @@ const CustomerServiceDetails = () => {
       }
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to cancel booking');
+    }
+  };
+
+  const confirmCancelFromModal = async () => {
+    setCancellingBooking(true);
+    try {
+      await cancelBooking();
+    } finally {
+      setCancellingBooking(false);
+      setShowCancelConfirm(false);
     }
   };
 
@@ -361,6 +373,23 @@ const CustomerServiceDetails = () => {
                   </button>
                 </div>
               )}
+  
+              {/* Cancel confirmation modal for booking created flow */}
+              {showCancelConfirm && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-60" onClick={() => setShowCancelConfirm(false)}>
+                  <div className="bg-white rounded-lg w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+                    <h3 className="text-lg font-semibold mb-2">Cancel Booking</h3>
+                    <p className="text-sm text-gray-600 mb-4">Are you sure you want to cancel this booking? A refund will be processed if applicable.</p>
+
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => setShowCancelConfirm(false)} className="px-4 py-2 rounded-md border bg-white text-gray-700">Keep Booking</button>
+                      <button onClick={confirmCancelFromModal} disabled={cancellingBooking} className={`px-4 py-2 rounded-md text-white ${cancellingBooking ? 'bg-red-400' : 'bg-red-600'}`}>
+                        {cancellingBooking ? 'Cancelling...' : 'Cancel Booking'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Date & Time Section - Always Visible */}
@@ -410,7 +439,7 @@ const CustomerServiceDetails = () => {
                       View My Bookings
                     </button>
                     <button
-                      onClick={cancelBooking}
+                      onClick={() => setShowCancelConfirm(true)}
                       className="px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700"
                     >
                       Cancel Booking

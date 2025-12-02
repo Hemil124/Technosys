@@ -9,6 +9,9 @@ const CustomerBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
   const { userData, backendUrl, socket } = useContext(AppContext);
   const navigate = useNavigate();
   const processedAutoCancels = useRef(new Set());
@@ -262,14 +265,37 @@ const CustomerBookings = () => {
   };
 
   const handleCancel = async (bookingId) => {
-    if (!window.confirm("Are you sure you want to cancel this booking?")) return;
+    // Deprecated: confirmation handled by modal. Keep for backward compatibility.
+    openCancelModalById(bookingId);
+  };
 
+  const openCancelModal = (booking) => {
+    setSelectedBooking(booking);
+    setShowCancelModal(true);
+  };
+
+  const openCancelModalById = (bookingId) => {
+    const booking = bookings.find(b => String(b._id) === String(bookingId));
+    if (booking) openCancelModal(booking);
+  };
+
+  const closeCancelModal = () => {
+    setShowCancelModal(false);
+    setSelectedBooking(null);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!selectedBooking) return;
+    setCancelling(true);
     try {
-      await axios.post(`${backendUrl}/api/bookings/cancel`, { bookingId }, { withCredentials: true });
+      await axios.post(`${backendUrl}/api/bookings/cancel`, { bookingId: selectedBooking._id }, { withCredentials: true });
       toast.success("Booking cancelled successfully");
+      closeCancelModal();
       fetchBookings();
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to cancel booking");
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -333,7 +359,7 @@ const CustomerBookings = () => {
                 {canCancel(booking) && (
                   <>
                     <button
-                      onClick={() => handleCancel(booking._id)}
+                      onClick={() => openCancelModal(booking)}
                       className="px-4 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition"
                     >
                       Cancel Booking
@@ -363,6 +389,41 @@ const CustomerBookings = () => {
       {bookings.length > pageSize && (
         <div className="px-6 py-4 border-t border-gray-200/50">
           <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+        </div>
+      )}
+
+      {/* Cancel Confirmation Modal */}
+      {showCancelModal && selectedBooking && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+          onClick={closeCancelModal}
+        >
+          <div
+            className="bg-white rounded-lg p-6 w-full max-w-md mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold mb-2">Confirm Cancellation</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Are you sure you want to cancel the booking for <strong>{selectedBooking.SubCategoryID?.name || 'this service'}</strong>?
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={closeCancelModal}
+                className="px-4 py-2 rounded-md border bg-white text-gray-700"
+              >
+                Keep Booking
+              </button>
+
+              <button
+                onClick={handleConfirmCancel}
+                disabled={cancelling}
+                className={`px-4 py-2 rounded-md text-white ${cancelling ? 'bg-red-400' : 'bg-red-600'}`}
+              >
+                {cancelling ? 'Cancelling...' : 'Cancel Booking'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
