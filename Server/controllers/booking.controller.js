@@ -436,20 +436,36 @@ export async function acceptBooking(req, res) {
     // Update technician's availability slot to "booked"
     try {
       const dateStr = new Date(booking.Date).toISOString().split('T')[0];
-      const timeSlotStr = `${booking.TimeSlot}-${String(parseInt(booking.TimeSlot.split(':')[0]) + 1).padStart(2, '0')}:00`;
-      
-      const availability = await TechnicianAvailability.findOne({
-        technicianId: technicianId,
-        date: dateStr
-      });
 
+      // Normalize slot string: booking.TimeSlot may be '08:00' or '08:00-09:00'
+      let timeSlotStr = booking.TimeSlot;
+      if (!String(timeSlotStr).includes('-')) {
+        const startHour = parseInt(String(timeSlotStr).split(':')[0], 10);
+        const nextHour = String(startHour + 1).padStart(2, '0');
+        timeSlotStr = `${timeSlotStr}-${nextHour}:00`;
+      }
+
+      let availability = await TechnicianAvailability.findOne({ technicianId: technicianId, date: dateStr });
       if (availability) {
         const slotIndex = availability.timeSlots.findIndex(slot => slot.slot === timeSlotStr);
         if (slotIndex !== -1) {
           availability.timeSlots[slotIndex].status = "booked";
-          await availability.save();
-          console.log(`✅ Marked time slot ${timeSlotStr} as booked for technician ${technicianId}`);
+        } else {
+          availability.timeSlots.push({ slot: timeSlotStr, status: "booked" });
         }
+        await availability.save();
+        console.log(`✅ Marked time slot ${timeSlotStr} as booked for technician ${technicianId}`);
+      } else {
+        await TechnicianAvailability.create({ technicianId: technicianId, date: dateStr, timeSlots: [{ slot: timeSlotStr, status: "booked" }] });
+        console.log(`✅ Created availability and marked ${timeSlotStr} as booked for technician ${technicianId}`);
+      }
+
+      // Emit availability update so front-end can refresh and lock UI
+      try {
+        const io = getIo();
+        io.to(String(technicianId)).emit('availability-updated', { date: dateStr, slot: timeSlotStr, status: 'booked' });
+      } catch (emitErr) {
+        console.error('Failed to emit availability update:', emitErr);
       }
     } catch (err) {
       console.error('Failed to update technician availability:', err);
