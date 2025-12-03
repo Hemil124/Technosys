@@ -12,6 +12,8 @@ const CustomerBookings = () => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [cancelling, setCancelling] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedBookingDetails, setSelectedBookingDetails] = useState(null);
   const { userData, backendUrl, socket } = useContext(AppContext);
   const navigate = useNavigate();
   const processedAutoCancels = useRef(new Set());
@@ -299,6 +301,16 @@ const CustomerBookings = () => {
     }
   };
 
+  const handleViewDetails = (booking) => {
+    setSelectedBookingDetails(booking);
+    setShowDetailsModal(true);
+  };
+
+  const closeDetailsModal = () => {
+    setShowDetailsModal(false);
+    setSelectedBookingDetails(null);
+  };
+
   return (
     <div className="max-w-5xl mx-auto bg-white p-6 rounded-lg shadow mt-6">
 
@@ -356,6 +368,13 @@ const CustomerBookings = () => {
               </div>
 
               <div className="mt-3 flex gap-2 items-center">
+                <button
+                  onClick={() => handleViewDetails(booking)}
+                  className="px-4 py-1.5 text-sm font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-md hover:bg-purple-100 transition"
+                >
+                  View Details
+                </button>
+
                 {canCancel(booking) && (
                   <>
                     <button
@@ -421,6 +440,213 @@ const CustomerBookings = () => {
                 className={`px-4 py-2 rounded-md text-white ${cancelling ? 'bg-red-400' : 'bg-red-600'}`}
               >
                 {cancelling ? 'Cancelling...' : 'Cancel Booking'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Booking Details Modal */}
+      {showDetailsModal && selectedBookingDetails && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={closeDetailsModal}
+        >
+          <div
+            className="bg-white rounded-lg w-full max-w-5xl mx-4 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button
+              onClick={closeDetailsModal}
+              className="absolute top-4 right-4 z-10 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-2 transition"
+            >
+              <XCircle size={24} />
+            </button>
+
+            {/* Modal Content */}
+            <div className="p-8 pt-12">
+              
+              {/* Top Row: Service Info and Booking Info */}
+              <div className="grid grid-cols-2 gap-6 mb-6">
+                {/* Service Details Section */}
+                <div className="bg-gradient-to-br from-purple-50 to-white border border-purple-100 rounded-lg p-5">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white text-sm">
+                      🛠️
+                    </div>
+                    Service Information
+                  </h4>
+                  <div className="flex gap-4">
+                    {selectedBookingDetails.SubCategoryID?.image && (
+                      <img
+                        src={`${backendUrl}${selectedBookingDetails.SubCategoryID.image}`}
+                        alt={selectedBookingDetails.SubCategoryID.name}
+                        className="w-24 h-24 object-cover rounded-lg shadow-md"
+                      />
+                    )}
+                    <div className="flex-1 space-y-2">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-semibold text-gray-800 text-lg">
+                            {selectedBookingDetails.SubCategoryID?.name || "Service"}
+                          </p>
+                          <p className="text-2xl font-bold text-purple-600">
+                            ₹{selectedBookingDetails.SubCategoryID?.price || selectedBookingDetails.TotalAmount}
+                          </p>
+                        </div>
+                        {getStatusBadge(selectedBookingDetails.Status)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Booking Details Section */}
+                <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-lg p-5">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm">
+                      📅
+                    </div>
+                    Booking Information
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-gray-500 font-medium">Booking Date</p>
+                      <p className="text-gray-800 font-semibold">
+                        {new Date(selectedBookingDetails.Date).toLocaleDateString("en-IN", {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 font-medium">Time Slot</p>
+                      <p className="text-gray-800 font-semibold">{selectedBookingDetails.TimeSlot}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Row: Customer and Technician Info */}
+              <div className="grid grid-cols-2 gap-6">
+                {/* Customer Details Section */}
+                <div className="bg-gradient-to-br from-green-50 to-white border border-green-100 rounded-lg p-5">
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white text-sm">
+                      👤
+                    </div>
+                    Customer Details
+                  </h4>
+                  <div className="space-y-3 text-sm">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-gray-500 font-medium">Customer Name</p>
+                        <p className="text-gray-800 font-semibold text-lg">
+                          {selectedBookingDetails.CustomerID?.FirstName || selectedBookingDetails.CustomerID?.Name || "N/A"}{" "}
+                          {selectedBookingDetails.CustomerID?.LastName || ""}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 font-medium">Mobile Number</p>
+                        <p className="text-gray-800 font-semibold">
+                          {selectedBookingDetails.CustomerID?.MobileNumber ||
+                           selectedBookingDetails.CustomerID?.Mobile ||
+                           selectedBookingDetails.CustomerID?.Phone ||
+                           "Not available"}
+                        </p>
+                      </div>
+                    </div>
+                    {selectedBookingDetails.CustomerID?.Address && (
+                      <>
+                        <div className="mt-2">
+                          <p className="text-gray-500 font-medium">Service Address</p>
+                          <p className="text-gray-800 font-semibold">
+                            {selectedBookingDetails.CustomerID.Address.houseNumber || selectedBookingDetails.CustomerID.Address.house_no},{" "}
+                            {selectedBookingDetails.CustomerID.Address.street || selectedBookingDetails.CustomerID.Address.road}
+                          </p>
+                          <p className="text-gray-800">
+                            {selectedBookingDetails.CustomerID.Address.city || selectedBookingDetails.CustomerID.Address.town},{" "}
+                            {selectedBookingDetails.CustomerID.Address.state || ""}{" "}
+                            {selectedBookingDetails.CustomerID.Address.pincode || selectedBookingDetails.CustomerID.Address.postcode}
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Technician Details Section */}
+                {selectedBookingDetails.TechnicianID ? (
+                  <div className="bg-gradient-to-br from-orange-50 to-white border border-orange-100 rounded-lg p-5">
+                    <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                      <div className="w-8 h-8 bg-orange-600 rounded-full flex items-center justify-center text-white text-sm">
+                        🔧
+                      </div>
+                      Technician Details
+                    </h4>
+                    <div className="flex gap-4 items-start">
+                      {/* Technician Profile Picture */}
+                      <div className="flex-shrink-0">
+                        {selectedBookingDetails.TechnicianID.Photo ? (
+                          <img
+                            src={`${backendUrl}${selectedBookingDetails.TechnicianID.Photo}`}
+                            alt={selectedBookingDetails.TechnicianID.Name}
+                            className="w-20 h-20 rounded-full object-cover border-2 border-orange-200 shadow-md"
+                          />
+                        ) : (
+                          <div className="w-20 h-20 rounded-full bg-orange-200 flex items-center justify-center text-orange-700 text-2xl font-bold">
+                            {selectedBookingDetails.TechnicianID.Name?.charAt(0)?.toUpperCase() || "T"}
+                          </div>
+                        )}
+                      </div>
+                      {/* Technician Info */}
+                      <div className="flex-1 space-y-3 text-sm">
+                        <div>
+                          <p className="text-gray-500 font-medium">Technician Name</p>
+                          <p className="text-gray-800 font-semibold text-lg">
+                            {selectedBookingDetails.TechnicianID.Name}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 font-medium">Contact Number</p>
+                          <p className="text-gray-800 font-semibold">
+                            {selectedBookingDetails.TechnicianID.MobileNumber || 
+                             selectedBookingDetails.TechnicianID.Mobile || 
+                             selectedBookingDetails.TechnicianID.Phone || 
+                             "Not available"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  selectedBookingDetails.Status === "Pending" && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-5 flex items-center justify-center">
+                      <div className="text-center">
+                        <AlertCircle size={32} className="text-yellow-600 mx-auto mb-2" />
+                        <p className="text-yellow-800 text-sm font-medium">
+                          No technician assigned yet
+                        </p>
+                        <p className="text-yellow-700 text-xs mt-1">
+                          We're finding the best technician for you
+                        </p>
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-gray-50 px-8 py-4 rounded-b-lg border-t border-gray-200">
+              <button
+                onClick={closeDetailsModal}
+                className="w-full px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition"
+              >
+                Close
               </button>
             </div>
           </div>

@@ -1422,8 +1422,8 @@ export async function getCustomerBookings(req, res) {
     
     const bookings = await Booking.find({ CustomerID: customerId })
       .populate('SubCategoryID', 'name price image')
-      .populate('TechnicianID', 'Name MobileNumber')
-      .populate('CustomerID', 'Address')
+      .populate('TechnicianID', 'Name MobileNumber Mobile Phone Photo')
+      .populate('CustomerID', 'FirstName LastName Name MobileNumber Mobile Phone Address')
       .sort({ createdAt: -1 })
       .lean();
 
