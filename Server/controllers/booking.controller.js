@@ -14,6 +14,7 @@ import transporter from "../config/nodemailer.js";
 
 // Background job: Auto-cancel expired bookings
 const scheduledCancellations = new Map(); // bookingId -> timeoutId
+const scheduledArrivalCancellations = new Map(); // bookingId -> timeoutId for arrival deadline
 
 async function executeCancellation(bookingId) {
   try {
@@ -105,6 +106,321 @@ export function cancelScheduledAutoCancellation(bookingId) {
   }
 }
 
+// Execute arrival deadline cancellation
+async function executeCancellationForNoArrival(bookingId) {
+  try {
+    const booking = await Booking.findById(bookingId)
+      .populate('SubCategoryID', 'name')
+      .populate('CustomerID', 'FirstName LastName Email')
+      .populate('TechnicianID', 'Name Email');
+    
+    if (!booking) {
+      console.log(`[ARRIVAL] Booking ${bookingId} not found for arrival cancellation`);
+      scheduledArrivalCancellations.delete(String(bookingId));
+      return;
+    }
+
+    // Only cancel if confirmed and arrival not verified
+    if (booking.Status !== "Confirmed" || booking.arrivalVerified) {
+      console.log(`[ARRIVAL] Booking ${bookingId} status: ${booking.Status}, arrivalVerified: ${booking.arrivalVerified}`);
+      scheduledArrivalCancellations.delete(String(bookingId));
+      return;
+    }
+
+    // Check if we're past the arrival deadline
+    if (!booking.ArrivalDeadline || Date.now() < booking.ArrivalDeadline.getTime()) {
+      console.log(`[ARRIVAL] Not yet past arrival deadline for booking ${bookingId}`);
+      scheduledArrivalCancellations.delete(String(bookingId));
+      return;
+    }
+
+    // Update status to AutoCancelled
+    booking.Status = "AutoCancelled";
+    await booking.save();
+
+    console.log(`[ARRIVAL] Auto-cancelled booking ${bookingId} - Technician did not arrive by deadline`);
+
+    // Send email to customer
+    try {
+      if (booking.CustomerID?.Email) {
+        const SENDER_NAME = process.env.SENDER_NAME || "Technosys";
+        const SENDER_EMAIL = process.env.SENDER_EMAIL || process.env.SMTP_USER || "no-reply@technosys.local";
+        const REPLY_TO = process.env.REPLY_TO || SENDER_EMAIL;
+
+        const customerName = `${booking.CustomerID.FirstName || ''} ${booking.CustomerID.LastName || ''}`.trim() || 'Valued Customer';
+        const serviceName = booking.SubCategoryID?.name || 'Service';
+        const timeSlot = booking.TimeSlot || 'scheduled time';
+        const bookingDate = booking.Date ? new Date(booking.Date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'scheduled date';
+
+        await transporter.sendMail({
+          from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+          replyTo: REPLY_TO,
+          to: booking.CustomerID.Email,
+          subject: "Booking Cancelled - Technician No Show - Technosys",
+          html: `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Booking Cancelled</title>
+            </head>
+            <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6;">              <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f3f4f6;">
+                <tr>
+                  <td align="center" style="padding: 40px 20px;">
+                    <table role="presentation" style="width: 100%; max-width: 600px; border-collapse: collapse; background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); border-radius: 16px 16px 0 0; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
+                      <tr>
+                        <td style="padding: 40px 30px; text-align: center;">
+                          <div style="display: inline-block; background-color: rgba(255,255,255,0.2); padding: 12px 24px; border-radius: 50px; margin-bottom: 15px;">
+                            <span style="color: #ffffff; font-size: 14px; font-weight: 600; letter-spacing: 1px;">BOOKING CANCELLED</span>
+                          </div>
+                          <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Service Cancelled</h1>
+                          <p style="margin: 10px 0 0; color: #fecaca; font-size: 16px;">Technician did not arrive on time</p>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <table role="presentation" style="width: 100%; max-width: 600px; border-collapse: collapse; background-color: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
+                      <tr>
+                        <td style="padding: 40px 30px;">
+                          <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">Dear ${customerName},</p>
+                          <p style="margin: 0 0 30px; color: #374151; font-size: 16px; line-height: 1.6;">We regret to inform you that your booking has been automatically cancelled because the assigned technician did not arrive within the scheduled time slot.</p>
+                          
+                          <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb; margin: 30px 0;">
+                            <tr>
+                              <td style="padding: 25px;">
+                                <p style="margin: 0 0 12px; color: #6b7280; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Booking Details</p>
+                                <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                                  <tr>
+                                    <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Service:</td>
+                                    <td style="padding: 8px 0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${serviceName}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Date:</td>
+                                    <td style="padding: 8px 0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${bookingDate}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Time Slot:</td>
+                                    <td style="padding: 8px 0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${timeSlot}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Status:</td>
+                                    <td style="padding: 8px 0; color: #dc2626; font-size: 14px; font-weight: 700; text-align: right;">CANCELLED</td>
+                                  </tr>
+                                </table>
+                              </td>
+                            </tr>
+                          </table>
+                          
+                          <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #dbeafe; border-left: 4px solid #3b82f6; border-radius: 8px; margin: 25px 0;">
+                            <tr>
+                              <td style="padding: 20px;">
+                                <p style="margin: 0 0 8px; color: #1e40af; font-size: 14px; font-weight: 700;"><span style="display: inline-block; width: 20px; height: 20px; line-height: 20px; text-align: center; background-color: #3b82f6; color: #ffffff; border-radius: 50%; font-size: 12px; font-weight: 900; margin-right: 8px;">i</span>Refund Information</p>
+                                <p style="margin: 0; color: #1e3a8a; font-size: 14px; line-height: 1.5;">Your payment will be refunded to your original payment method within 5-7 business days. You will receive a separate confirmation email once the refund is processed.</p>
+                              </td>
+                            </tr>
+                          </table>
+                          
+                          <p style="margin: 25px 0 0; color: #374151; font-size: 16px; line-height: 1.6;">We sincerely apologize for this inconvenience. We value your business and would love to serve you again. Please feel free to book another service at your convenience.</p>
+                          
+                          <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
+                            <tr>
+                              <td align="center">
+                                <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 6px rgba(102, 126, 234, 0.25);">Book Another Service</a>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <table role="presentation" style="width: 100%; max-width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 0 0 16px 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
+                      <tr>
+                        <td style="padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+                          <p style="margin: 0 0 10px; color: #9ca3af; font-size: 13px;">© ${new Date().getFullYear()} Technosys. All rights reserved.</p>
+                          <p style="margin: 0; color: #9ca3af; font-size: 12px;">Quality home services at your doorstep</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </body>
+            </html>
+          `,
+        });
+        console.log(`[ARRIVAL] Sent cancellation email to customer: ${booking.CustomerID.Email}`);
+      }
+    } catch (mailErr) {
+      console.error("[ARRIVAL] Failed to send customer cancellation email", mailErr);
+    }
+
+    // Send email to technician
+    try {
+      if (booking.TechnicianID?.Email) {
+        const SENDER_NAME = process.env.SENDER_NAME || "Technosys";
+        const SENDER_EMAIL = process.env.SENDER_EMAIL || process.env.SMTP_USER || "no-reply@technosys.local";
+        const REPLY_TO = process.env.REPLY_TO || SENDER_EMAIL;
+
+        const technicianName = booking.TechnicianID.Name || 'Technician';
+        const serviceName = booking.SubCategoryID?.name || 'Service';
+        const timeSlot = booking.TimeSlot || 'scheduled time';
+        const bookingDate = booking.Date ? new Date(booking.Date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'scheduled date';
+
+        await transporter.sendMail({
+          from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+          replyTo: REPLY_TO,
+          to: booking.TechnicianID.Email,
+          subject: "Booking Cancelled - Arrival Deadline Missed - Technosys",
+          html: `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Booking Cancelled</title>
+            </head>
+            <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6;">
+              <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f3f4f6;">
+                <tr>
+                  <td align="center" style="padding: 40px 20px;">
+                    <table role="presentation" style="width: 100%; max-width: 600px; border-collapse: collapse; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 16px 16px 0 0; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
+                      <tr>
+                        <td style="padding: 40px 30px; text-align: center;">
+                          <div style="display: inline-block; background-color: rgba(255,255,255,0.2); padding: 12px 24px; border-radius: 50px; margin-bottom: 15px;">
+                            <span style="color: #ffffff; font-size: 14px; font-weight: 600; letter-spacing: 1px;">BOOKING CANCELLED</span>
+                          </div>
+                          <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Arrival Deadline Missed</h1>
+                          <p style="margin: 10px 0 0; color: #fef3c7; font-size: 16px;">Booking has been cancelled</p>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <table role="presentation" style="width: 100%; max-width: 600px; border-collapse: collapse; background-color: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
+                      <tr>
+                        <td style="padding: 40px 30px;">
+                          <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.6;">Dear ${technicianName},</p>
+                          <p style="margin: 0 0 30px; color: #374151; font-size: 16px; line-height: 1.6;">Your booking has been automatically cancelled because you did not arrive and verify your arrival within the scheduled time slot.</p>
+                          
+                          <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb; margin: 30px 0;">
+                            <tr>
+                              <td style="padding: 25px;">
+                                <p style="margin: 0 0 12px; color: #6b7280; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Booking Details</p>
+                                <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                                  <tr>
+                                    <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Service:</td>
+                                    <td style="padding: 8px 0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${serviceName}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Date:</td>
+                                    <td style="padding: 8px 0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${bookingDate}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Required Arrival:</td>
+                                    <td style="padding: 8px 0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${timeSlot}</td>
+                                  </tr>
+                                  <tr>
+                                    <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Status:</td>
+                                    <td style="padding: 8px 0; color: #dc2626; font-size: 14px; font-weight: 700; text-align: right;">CANCELLED</td>
+                                  </tr>
+                                </table>
+                              </td>
+                            </tr>
+                          </table>
+                          
+                          <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fef2f2; border-left: 4px solid #dc2626; border-radius: 8px; margin: 25px 0;">
+                            <tr>
+                              <td style="padding: 20px;">
+                                <p style="margin: 0 0 8px; color: #dc2626; font-size: 14px; font-weight: 700;"><span style="display: inline-block; width: 20px; height: 20px; line-height: 20px; text-align: center; background-color: #dc2626; color: #ffffff; border-radius: 50%; font-size: 12px; font-weight: 900; margin-right: 8px;">!</span>Important Reminder</p>
+                                <p style="margin: 0; color: #991b1b; font-size: 14px; line-height: 1.5;">You must arrive at the customer's location and verify your arrival by entering the OTP within the scheduled time slot. Failure to do so may result in penalties and affect your service rating.</p>
+                              </td>
+                            </tr>
+                          </table>
+                          
+                          <p style="margin: 25px 0 0; color: #374151; font-size: 16px; line-height: 1.6;">Please ensure you arrive on time for future bookings to maintain your professional reputation and provide excellent service to our customers.</p>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <table role="presentation" style="width: 100%; max-width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 0 0 16px 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);">
+                      <tr>
+                        <td style="padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+                          <p style="margin: 0 0 10px; color: #9ca3af; font-size: 13px;">© ${new Date().getFullYear()} Technosys. All rights reserved.</p>
+                          <p style="margin: 0; color: #9ca3af; font-size: 12px;">Quality home services at your doorstep</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </body>
+            </html>
+          `,
+        });
+        console.log(`[ARRIVAL] Sent cancellation email to technician: ${booking.TechnicianID.Email}`);
+      }
+    } catch (mailErr) {
+      console.error("[ARRIVAL] Failed to send technician cancellation email", mailErr);
+    }
+
+    // Notify via socket
+    const io = getIo();
+    const customerId = String(booking.CustomerID._id);
+    const technicianId = String(booking.TechnicianID._id);
+    
+    io.to(customerId).emit("booking-auto-cancelled", { 
+      bookingId: String(booking._id),
+      reason: "arrival-timeout",
+      message: "Your booking was cancelled because the technician did not arrive on time. A refund will be processed."
+    });
+    
+    io.to(technicianId).emit("booking-cancelled-no-arrival", { 
+      bookingId: String(booking._id),
+      message: "Booking cancelled - You did not arrive within the scheduled time slot."
+    });
+
+    scheduledArrivalCancellations.delete(String(bookingId));
+  } catch (err) {
+    console.error(`[ARRIVAL] Failed to auto-cancel booking ${bookingId}:`, err);
+    scheduledArrivalCancellations.delete(String(bookingId));
+  }
+}
+
+export function scheduleArrivalDeadlineCancellation(bookingId, arrivalDeadline) {
+  const bookingIdStr = String(bookingId);
+  
+  // Clear existing timeout if any
+  if (scheduledArrivalCancellations.has(bookingIdStr)) {
+    clearTimeout(scheduledArrivalCancellations.get(bookingIdStr));
+  }
+
+  const delay = new Date(arrivalDeadline).getTime() - Date.now();
+  
+  if (delay <= 0) {
+    console.log(`[ARRIVAL] Booking ${bookingIdStr} arrival deadline already passed, cancelling immediately`);
+    executeCancellationForNoArrival(bookingId);
+    return;
+  }
+
+  console.log(`[ARRIVAL] Scheduled arrival deadline check for booking ${bookingIdStr} in ${Math.round(delay/1000)} seconds (at ${new Date(arrivalDeadline).toISOString()})`);
+  
+  const timeoutId = setTimeout(() => {
+    executeCancellationForNoArrival(bookingId);
+  }, delay);
+
+  scheduledArrivalCancellations.set(bookingIdStr, timeoutId);
+}
+
+export function cancelScheduledArrivalDeadline(bookingId) {
+  const bookingIdStr = String(bookingId);
+  
+  if (scheduledArrivalCancellations.has(bookingIdStr)) {
+    clearTimeout(scheduledArrivalCancellations.get(bookingIdStr));
+    scheduledArrivalCancellations.delete(bookingIdStr);
+    console.log(`[ARRIVAL] Cancelled scheduled arrival deadline for booking ${bookingIdStr}`);
+  }
+}
+
 export async function startAutoCancelScheduler() {
   try {
     console.log('🔄 Initializing auto-cancel scheduler...');
@@ -134,6 +450,30 @@ export async function startAutoCancelScheduler() {
     }
 
     console.log('✅ Auto-cancel scheduler initialized successfully');
+    
+    // Initialize arrival deadline scheduler for confirmed bookings
+    console.log('[ARRIVAL] Initializing arrival deadline scheduler...');
+    
+    const confirmedBookings = await Booking.find({
+      Status: "Confirmed",
+      ArrivalDeadline: { $ne: null },
+      arrivalVerified: false
+    }).lean();
+
+    console.log(`[ARRIVAL] Found ${confirmedBookings.length} confirmed booking(s) awaiting arrival`);
+
+    for (const booking of confirmedBookings) {
+      const arrivalDeadlineTime = new Date(booking.ArrivalDeadline).getTime();
+      
+      if (arrivalDeadlineTime <= now) {
+        console.log(`[ARRIVAL] Booking ${booking._id} arrival deadline passed, cancelling now`);
+        await executeCancellationForNoArrival(booking._id);
+      } else {
+        scheduleArrivalDeadlineCancellation(booking._id, booking.ArrivalDeadline);
+      }
+    }
+    
+    console.log('[ARRIVAL] Arrival deadline scheduler initialized successfully');
   } catch (err) {
     console.error('❌ Failed to start auto-cancel scheduler:', err);
   }
@@ -149,6 +489,16 @@ export function stopAutoCancelScheduler() {
   
   scheduledCancellations.clear();
   console.log('✅ Auto-cancel scheduler stopped');
+  
+  // Clear arrival deadline timeouts
+  console.log(`[ARRIVAL] Stopping arrival deadline scheduler (${scheduledArrivalCancellations.size} scheduled)`);
+  
+  for (const [bookingId, timeoutId] of scheduledArrivalCancellations.entries()) {
+    clearTimeout(timeoutId);
+  }
+  
+  scheduledArrivalCancellations.clear();
+  console.log('[ARRIVAL] Arrival deadline scheduler stopped');
 }
 
 // Helper: radius technicians by category and timeslot
@@ -430,10 +780,27 @@ export async function acceptBooking(req, res) {
     booking.Status = "Confirmed";
     booking.TechnicianID = technicianId;
     booking.AcceptedAt = new Date();
+    
+    // Set arrival deadline: technician must arrive within the time slot
+    // Parse the time slot and booking date to create the deadline
+    const bookingDate = new Date(booking.Date);
+    const [startHour] = booking.TimeSlot.split(':').map(Number);
+    const endHour = startHour + 1;
+    
+    // Set deadline to end of time slot (e.g., if slot is 18:00, deadline is 19:00)
+    const arrivalDeadline = new Date(bookingDate);
+    arrivalDeadline.setHours(endHour, 0, 0, 0);
+    
+    booking.ArrivalDeadline = arrivalDeadline;
     await booking.save();
+
+    console.log(`[ARRIVAL] Set arrival deadline for booking ${booking._id}: ${arrivalDeadline.toISOString()}`);
 
     // Cancel the scheduled auto-cancellation since booking is now confirmed
     cancelScheduledAutoCancellation(booking._id);
+    
+    // Schedule arrival deadline cancellation
+    scheduleArrivalDeadlineCancellation(booking._id, arrivalDeadline);
 
     // Update technician's availability slot to "booked"
     try {
@@ -687,6 +1054,9 @@ export async function verifyArrivalOTP(req, res) {
     booking.Status = "In-Progress";
     booking.arrivalVerified = true;
     await booking.save();
+
+    // Cancel the scheduled arrival deadline cancellation since technician arrived
+    cancelScheduledArrivalDeadline(booking._id);
 
     return res.json({ success: true, message: "Arrival verified. Job started.", booking });
   } catch (err) {
