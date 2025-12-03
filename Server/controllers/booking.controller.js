@@ -974,6 +974,27 @@ export async function getTechnicianAcceptedBookings(req, res) {
   }
 }
 
+export async function getTechnicianCompletedBookings(req, res) {
+  try {
+    const technicianId = req.userId || req.user?._id || req.params.technicianId;
+    if (!technicianId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+
+    const bookings = await Booking.find({
+      TechnicianID: technicianId,
+      Status: 'Completed',
+    })
+      .populate('SubCategoryID', 'name image price coinsRequired')
+      .populate('CustomerID', 'FirstName LastName Phone Address Email')
+      .sort({ CompletedAt: -1, createdAt: -1 })
+      .lean();
+
+    return res.json({ success: true, bookings });
+  } catch (err) {
+    console.error('getTechnicianCompletedBookings error', err);
+    res.status(500).json({ success: false, message: 'Internal error' });
+  }
+}
+
 // Cleanup expired and used OTPs
 export const cleanupBookingOtps = async () => {
   try {
@@ -1019,6 +1040,7 @@ export default {
   getCustomerBookings,
   getTechnicianPendingRequests,
   getTechnicianAcceptedBookings,
+  getTechnicianCompletedBookings,
   generateArrivalOTP,
   verifyArrivalOTP,
   completeService,

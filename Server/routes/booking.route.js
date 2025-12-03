@@ -10,6 +10,7 @@ import {
   getCustomerBookings,
   getTechnicianPendingRequests,
   getTechnicianAcceptedBookings,
+  getTechnicianCompletedBookings,
   getBookingById,
   generateArrivalOTP,
   verifyArrivalOTP,
@@ -31,6 +32,7 @@ router.post("/cancel", userAuth, cancelBooking);
 router.get("/customer/:customerId", userAuth, getCustomerBookings);
 router.get("/technician/pending", userAuth, getTechnicianPendingRequests);
 router.get("/technician/accepted", userAuth, getTechnicianAcceptedBookings);
+router.get("/technician/completed", userAuth, getTechnicianCompletedBookings);
 router.post("/generate-arrival-otp", userAuth, generateArrivalOTP);
 router.post("/verify-arrival-otp", userAuth, verifyArrivalOTP);
 router.post("/generate-completion-otp", userAuth, generateCompletionOTP);
