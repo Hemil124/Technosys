@@ -243,12 +243,44 @@ const CustomerBookings = () => {
       fetchBookings();
     };
 
+    const handleServiceStarted = ({ bookingId, status, message }) => {
+      toast.success(message || "Technician has arrived and service is in progress!");
+
+      setBookings(prev =>
+        prev.map(b =>
+          String(b._id) === String(bookingId)
+            ? { ...b, Status: status, arrivalVerified: true }
+            : b
+        )
+      );
+
+      fetchBookings();
+    };
+
+    const handleServiceCompleted = ({ bookingId, message }) => {
+      toast.success(message || "Your service has been completed successfully!");
+
+      setBookings(prev =>
+        prev.map(b =>
+          String(b._id) === String(bookingId)
+            ? { ...b, Status: "Completed" }
+            : b
+        )
+      );
+
+      fetchBookings();
+    };
+
     socket.on("booking-accepted", handleBookingAccepted);
     socket.on("booking-auto-cancelled", handleBookingAutoCancelled);
+    socket.on("service-started", handleServiceStarted);
+    socket.on("service-completed", handleServiceCompleted);
 
     return () => {
       socket.off("booking-accepted", handleBookingAccepted);
       socket.off("booking-auto-cancelled", handleBookingAutoCancelled);
+      socket.off("service-started", handleServiceStarted);
+      socket.off("service-completed", handleServiceCompleted);
     };
   }, [socket]);
 
@@ -291,6 +323,7 @@ const CustomerBookings = () => {
     const statusConfig = {
       Pending: { icon: Clock, color: "text-yellow-700 bg-yellow-50 border-yellow-200", text: "Pending" },
       Confirmed: { icon: CheckCircle, color: "text-green-700 bg-green-50 border-green-200", text: "Confirmed" },
+      "In-Progress": { icon: Clock, color: "text-purple-700 bg-purple-50 border-purple-200", text: "In Progress" },
       Cancelled: { icon: XCircle, color: "text-red-700 bg-red-50 border-red-200", text: "Cancelled" },
       AutoCancelled: { icon: XCircle, color: "text-orange-700 bg-orange-50 border-orange-200", text: "Auto-Cancelled" },
       Completed: { icon: CheckCircle, color: "text-blue-700 bg-blue-50 border-blue-200", text: "Completed" },

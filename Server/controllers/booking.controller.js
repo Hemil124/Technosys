@@ -1058,6 +1058,15 @@ export async function verifyArrivalOTP(req, res) {
     // Cancel the scheduled arrival deadline cancellation since technician arrived
     cancelScheduledArrivalDeadline(booking._id);
 
+    // Notify customer via socket
+    const io = getIo();
+    const customerId = String(booking.CustomerID);
+    io.to(customerId).emit("service-started", {
+      bookingId: String(booking._id),
+      status: "In-Progress",
+      message: "Technician has arrived and service is now in progress!"
+    });
+
     return res.json({ success: true, message: "Arrival verified. Job started.", booking });
   } catch (err) {
     console.error("verifyArrivalOTP error", err);

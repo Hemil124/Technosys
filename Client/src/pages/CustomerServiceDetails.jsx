@@ -223,13 +223,31 @@ const CustomerServiceDetails = () => {
         setStage("cancelled");
       }
     };
+
+    const onServiceStarted = ({ bookingId: startedId, message }) => {
+      if (startedId === bookingId) {
+        toast.success(message || 'Technician has arrived and service is in progress!');
+        setStage("in-progress");
+      }
+    };
+
+    const onServiceCompleted = ({ bookingId: completedId, message }) => {
+      if (completedId === bookingId) {
+        toast.success(message || 'Your service has been completed successfully!');
+        setStage("completed");
+      }
+    };
     
     socket.on('booking-accepted', onAccepted);
     socket.on('booking-auto-cancelled', onAutoCancelled);
+    socket.on('service-started', onServiceStarted);
+    socket.on('service-completed', onServiceCompleted);
     
     return () => {
       socket.off('booking-accepted', onAccepted);
       socket.off('booking-auto-cancelled', onAutoCancelled);
+      socket.off('service-started', onServiceStarted);
+      socket.off('service-completed', onServiceCompleted);
     };
   }, [socket, bookingId]);
 
@@ -525,6 +543,32 @@ const CustomerServiceDetails = () => {
                 </div>
               )}
 
+              {stage === "in-progress" && (
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-purple-900 mb-1">Service In Progress!</h4>
+                  <p className="text-purple-700 text-sm mb-3">The technician has arrived and your service is now in progress.</p>
+                  <button
+                    onClick={() => navigate('/customer/bookings')}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700"
+                  >
+                    View Service Details
+                  </button>
+                </div>
+              )}
+
+              {stage === "completed" && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-blue-900 mb-1">Service Completed!</h4>
+                  <p className="text-blue-700 text-sm mb-3">Your service has been completed successfully. You can now provide feedback.</p>
+                  <button
+                    onClick={() => navigate('/customer/bookings')}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+                  >
+                    Give Feedback
+                  </button>
+                </div>
+              )}
+
               {stage === "cancelled" && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                   <h4 className="font-semibold text-red-900 mb-1">Booking Cancelled</h4>
@@ -542,7 +586,7 @@ const CustomerServiceDetails = () => {
                 </div>
               )}
 
-              {stage !== "success" && stage !== "accepted" && stage !== "cancelled" && (
+              {stage !== "success" && stage !== "accepted" && stage !== "in-progress" && stage !== "completed" && stage !== "cancelled" && (
                 <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
                   <div>
                     <p className="text-sm text-gray-600">Total Amount</p>
