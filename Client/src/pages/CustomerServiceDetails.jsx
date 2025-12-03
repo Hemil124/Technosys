@@ -78,7 +78,40 @@ const CustomerServiceDetails = () => {
 
   // Address edits are handled in profile page per request
 
-  const TIME_SLOTS = ["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00"];
+  const TIME_SLOTS = [
+    { start: "08:00", end: "09:00", display: "08:00-09:00" },
+    { start: "09:00", end: "10:00", display: "09:00-10:00" },
+    { start: "10:00", end: "11:00", display: "10:00-11:00" },
+    { start: "11:00", end: "12:00", display: "11:00-12:00" },
+    { start: "12:00", end: "13:00", display: "12:00-13:00" },
+    { start: "13:00", end: "14:00", display: "13:00-14:00" },
+    { start: "14:00", end: "15:00", display: "14:00-15:00" },
+    { start: "15:00", end: "16:00", display: "15:00-16:00" },
+    { start: "16:00", end: "17:00", display: "16:00-17:00" },
+    { start: "17:00", end: "18:00", display: "17:00-18:00" },
+    { start: "18:00", end: "19:00", display: "18:00-19:00" },
+    { start: "19:00", end: "20:00", display: "19:00-20:00" }
+  ];
+
+  // Check if a time slot is in the past
+  const isSlotPast = (slotStart) => {
+    if (!date) return false;
+    
+    const now = new Date();
+    const selectedDate = new Date(date);
+    
+    // If selected date is in the future, no slots are past
+    if (selectedDate.toDateString() !== now.toDateString()) {
+      return false;
+    }
+    
+    // For current date, check if slot start time has passed
+    const [hours, minutes] = slotStart.split(':').map(Number);
+    const slotTime = new Date();
+    slotTime.setHours(hours, minutes, 0, 0);
+    
+    return slotTime <= now;
+  };
 
   const runPrecheck = async () => {
     try {
@@ -89,7 +122,7 @@ const CustomerServiceDetails = () => {
         toast.error("Please login to continue");
         return false;
       }
-      const payload = { CustomerID: customerId, SubCategoryID: id, Date: date, TimeSlot: timeSlot };
+      const payload = { CustomerID: customerId, SubCategoryID: id, Date: date, TimeSlot: timeSlot.display || timeSlot };
       const { data } = await axios.post(`${backendUrl}/api/bookings/precheck`, payload, { withCredentials: true });
       if (data.success) {
         setPrecheck({ success: true, count: data.technicians.length, technicians: data.technicians });
@@ -121,7 +154,7 @@ const CustomerServiceDetails = () => {
         TechnicianID: technicianId,
         SubCategoryID: id,
         Date: date,
-        TimeSlot: timeSlot
+        TimeSlot: timeSlot.display || timeSlot
       };
       const { data } = await axios.post(`${backendUrl}/api/bookings/create`, payload, { withCredentials: true });
       if (data.success) {
@@ -393,31 +426,73 @@ const CustomerServiceDetails = () => {
             </div>
 
             {/* Date & Time Section - Always Visible */}
-            <div className="space-y-3">
-              <h4 className="font-semibold text-gray-900">Select Date & Time</h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-sm text-gray-600 mb-1 block">Date</label>
-                  <input 
-                    type="date" 
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                    value={date} 
-                    onChange={e=>setDate(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm text-gray-600 mb-1 block">Time Slot</label>
-                  <select 
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                    value={timeSlot} 
-                    onChange={e=>setTimeSlot(e.target.value)}
-                  >
-                    <option value="">Select time</option>
-                    {TIME_SLOTS.map(ts => <option key={ts} value={ts}>{ts}</option>)}
-                  </select>
-                </div>
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-2">Select Date</h4>
+                <input 
+                  type="date" 
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
+                  value={date} 
+                  onChange={e=>setDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                />
               </div>
+
+              {date && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-gray-900">Available Time Slots ({date})</h4>
+                    <p className="text-sm text-gray-500">Click to select/deselect slots</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-3">
+                    {TIME_SLOTS.map((slot) => {
+                      const isPast = isSlotPast(slot.start);
+                      const isSelected = timeSlot?.display === slot.display;
+                      
+                      return (
+                        <button
+                          key={slot.display}
+                          type="button"
+                          disabled={isPast}
+                          onClick={() => {
+                            if (!isPast) {
+                              setTimeSlot(isSelected ? "" : slot);
+                            }
+                          }}
+                          className={`
+                            px-4 py-3 rounded-lg font-medium text-sm transition-all
+                            ${isPast 
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-50' 
+                              : isSelected
+                                ? 'bg-green-500 text-white shadow-md hover:bg-green-600'
+                                : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-blue-400 hover:bg-blue-50'
+                            }
+                          `}
+                        >
+                          {slot.display}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-3 flex items-center gap-4 text-xs text-gray-600">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-4 h-4 bg-green-500 rounded"></div>
+                      <span>Selected</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-4 h-4 bg-white border-2 border-gray-200 rounded"></div>
+                      <span>Available</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-4 h-4 bg-gray-100 rounded"></div>
+                      <span>Past/Unavailable</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {precheck && !precheck.success && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                   <p className="text-red-700 text-sm">{precheck.message}</p>
@@ -485,15 +560,15 @@ const CustomerServiceDetails = () => {
                     <p className="text-2xl font-bold text-gray-900">₹{service.price}</p>
                   </div>
                   <button
-                    disabled={!address || !date || !timeSlot}
+                    disabled={!address || !date || !timeSlot || (typeof timeSlot === 'object' && !timeSlot.display)}
                     className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     onClick={async () => {
                       if (!address) {
                         toast.error('Please add your address first');
                         return;
                       }
-                      if (!date || !timeSlot) {
-                        toast.error('Please select date and time');
+                      if (!date || !timeSlot || (typeof timeSlot === 'object' && !timeSlot.display)) {
+                        toast.error('Please select date and time slot');
                         return;
                       }
                       // Run precheck

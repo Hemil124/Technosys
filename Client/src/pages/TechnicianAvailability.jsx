@@ -115,11 +115,10 @@ export default function TechnicianAvailability() {
   };
   
   const handleTodayClick = () => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    setCalendarMonth(tomorrow);
-    const tomorrowStr = formatLocalDate(tomorrow);
-    setDate(tomorrowStr);
+    const today = new Date();
+    setCalendarMonth(today);
+    const todayStr = formatLocalDate(today);
+    setDate(todayStr);
   };
 
   const generateSlots = () => {
