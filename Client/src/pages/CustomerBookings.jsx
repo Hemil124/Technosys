@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useContext, useRef } from "react";
 import { AppContext } from "../context/AppContext";
 import axios from "axios";
-import { ArrowLeft, Clock, CheckCircle, XCircle, AlertCircle, HelpCircle } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle, XCircle, AlertCircle, HelpCircle, Star, MessageSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import FeedbackModal from "../components/FeedbackModal";
+import ComplaintModal from "../components/ComplaintModal";
 
 const CustomerBookings = () => {
   const [bookings, setBookings] = useState([]);
@@ -14,6 +16,11 @@ const CustomerBookings = () => {
   const [cancelling, setCancelling] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedBookingDetails, setSelectedBookingDetails] = useState(null);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showComplaintModal, setShowComplaintModal] = useState(false);
+  const [selectedBookingForFeedback, setSelectedBookingForFeedback] = useState(null);
+  const [feedbackData, setFeedbackData] = useState({});
+  const [complaintData, setComplaintData] = useState({});
   const { userData, backendUrl, socket } = useContext(AppContext);
   const navigate = useNavigate();
   const processedAutoCancels = useRef(new Set());
@@ -98,12 +105,65 @@ const CustomerBookings = () => {
         { withCredentials: true }
       );
       setBookings(data.bookings || []);
+      
+      // Fetch feedback and complaints for completed bookings
+      const completedBookings = data.bookings.filter(b => b.Status === 'Completed');
+      completedBookings.forEach(booking => {
+        fetchFeedbackForBooking(booking._id);
+        fetchComplaintForBooking(booking._id);
+      });
     } catch (error) {
       console.error("Error fetching bookings:", error);
       toast.error("Failed to load bookings");
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchFeedbackForBooking = async (bookingId) => {
+    try {
+      const { data } = await axios.get(
+        `${backendUrl}/api/feedback/${bookingId}`,
+        { withCredentials: true }
+      );
+      if (data.success && data.feedback) {
+        setFeedbackData(prev => ({ ...prev, [bookingId]: data.feedback }));
+      }
+    } catch (error) {
+      console.error('Error fetching feedback:', error);
+    }
+  };
+
+  const fetchComplaintForBooking = async (bookingId) => {
+    try {
+      const { data } = await axios.get(
+        `${backendUrl}/api/complaints/${bookingId}`,
+        { withCredentials: true }
+      );
+      if (data.success && data.complaint) {
+        setComplaintData(prev => ({ ...prev, [bookingId]: data.complaint }));
+      }
+    } catch (error) {
+      console.error('Error fetching complaint:', error);
+    }
+  };
+
+  const handleOpenFeedbackModal = (booking) => {
+    setSelectedBookingForFeedback(booking);
+    setShowFeedbackModal(true);
+  };
+
+  const handleOpenComplaintModal = (booking) => {
+    setSelectedBookingForFeedback(booking);
+    setShowComplaintModal(true);
+  };
+
+  const handleFeedbackSuccess = (feedback) => {
+    setFeedbackData(prev => ({ ...prev, [feedback.BookingID]: feedback }));
+  };
+
+  const handleComplaintSuccess = (complaint) => {
+    setComplaintData(prev => ({ ...prev, [complaint.BookingID]: complaint }));
   };
 
   useEffect(() => {
@@ -367,36 +427,104 @@ const CustomerBookings = () => {
                 )}
               </div>
 
-              <div className="mt-3 flex gap-2 items-center">
-                <button
-                  onClick={() => handleViewDetails(booking)}
-                  className="px-4 py-1.5 text-sm font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-md hover:bg-purple-100 transition"
-                >
-                  View Details
-                </button>
+              <div className="mt-3 flex justify-between items-center flex-wrap gap-2">
+                {/* Left side: Display feedback and complaint status */}
+                <div className="flex gap-3 items-center">
+                  {booking.Status === "Completed" && (
+                    <>
+                      {/* Feedback Display */}
+                      {feedbackData[booking._id] ? (
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-50 border border-yellow-200 rounded-md">
+                          <div className="flex items-center gap-1">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                size={12}
+                                className={i < feedbackData[booking._id].Rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-xs font-medium text-gray-700">
+                            ({feedbackData[booking._id].Rating}/5)
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 border border-gray-200 rounded-md">
+                          <Star size={12} className="text-gray-400" />
+                          <span className="text-xs text-gray-500">No feedback</span>
+                        </div>
+                      )}
 
-                {canCancel(booking) && (
-                  <>
+                      {/* Complaint Display */}
+                      {complaintData[booking._id] ? (
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 border border-orange-200 rounded-md">
+                          <MessageSquare size={12} className="text-orange-600" />
+                          <span className="text-xs font-medium text-gray-700">Complaint Filed</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 border border-gray-200 rounded-md">
+                          <MessageSquare size={12} className="text-gray-400" />
+                          <span className="text-xs text-gray-500">No complaint</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {booking.Status !== "Completed" && (
+                    <>
+                      {canCancel(booking) && getTimeRemaining(booking) && (
+                        <span className="text-xs text-green-600 flex items-center gap-1 px-3 py-1.5 bg-green-50 border border-green-200 rounded-md">
+                          <Clock size={12} /> {getTimeRemaining(booking)} remaining
+                        </span>
+                      )}
+
+                      {booking.Status === "Pending" && !canCancel(booking) && (
+                        <span className="text-xs text-red-500 flex items-center gap-1 px-3 py-1.5 bg-red-50 border border-red-200 rounded-md">
+                          <AlertCircle size={12} /> Cancellation window expired
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Right side: Action buttons */}
+                <div className="flex gap-2 items-center">
+                  <button
+                    onClick={() => handleViewDetails(booking)}
+                    className="px-4 py-1.5 text-sm font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-md hover:bg-purple-100 transition"
+                  >
+                    View Details
+                  </button>
+
+                  {canCancel(booking) && (
                     <button
                       onClick={() => openCancelModal(booking)}
                       className="px-4 py-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition"
                     >
                       Cancel Booking
                     </button>
+                  )}
 
-                    {getTimeRemaining(booking) && (
-                      <span className="text-xs text-green-600 flex items-center gap-1">
-                        <Clock size={12} /> {getTimeRemaining(booking)} remaining
-                      </span>
-                    )}
-                  </>
-                )}
+                  {booking.Status === "Completed" && (
+                    <>
+                      <button
+                        onClick={() => handleOpenFeedbackModal(booking)}
+                        className="px-4 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition flex items-center gap-1"
+                      >
+                        <Star size={14} />
+                        {feedbackData[booking._id] ? 'Edit Feedback' : 'Give Feedback'}
+                      </button>
 
-                {booking.Status === "Pending" && !canCancel(booking) && (
-                  <span className="text-xs text-red-500 flex items-center gap-1">
-                    <AlertCircle size={12} /> Cancellation window expired
-                  </span>
-                )}
+                      <button
+                        onClick={() => handleOpenComplaintModal(booking)}
+                        className="px-4 py-1.5 text-sm font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-md hover:bg-orange-100 transition flex items-center gap-1"
+                      >
+                        <MessageSquare size={14} />
+                        {complaintData[booking._id] ? 'Edit Complaint' : 'File Complaint'}
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -642,15 +770,110 @@ const CustomerBookings = () => {
 
             {/* Modal Footer */}
             <div className="bg-gray-50 px-8 py-4 rounded-b-lg border-t border-gray-200">
-              <button
-                onClick={closeDetailsModal}
-                className="w-full px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition"
-              >
-                Close
-              </button>
+              <div className="flex justify-between items-center">
+                {/* Left side: Display feedback rating and complaint status */}
+                <div className="flex gap-4 items-center">
+                  {selectedBookingDetails.Status === "Completed" && (
+                    <>
+                      {/* Feedback Display */}
+                      {feedbackData[selectedBookingDetails._id] ? (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <div className="flex items-center gap-1">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                size={16}
+                                className={i < feedbackData[selectedBookingDetails._id].Rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-sm font-medium text-gray-700">
+                            ({feedbackData[selectedBookingDetails._id].Rating}/5)
+                          </span>
+                          {feedbackData[selectedBookingDetails._id].FeedbackText && (
+                            <span className="text-xs text-gray-500 ml-2 max-w-xs truncate">
+                              "{feedbackData[selectedBookingDetails._id].FeedbackText}"
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg">
+                          <Star size={16} className="text-gray-400" />
+                          <span className="text-sm text-gray-500">No feedback given</span>
+                        </div>
+                      )}
+
+                      {/* Complaint Display */}
+                      {complaintData[selectedBookingDetails._id] ? (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-orange-50 border border-orange-200 rounded-lg">
+                          <MessageSquare size={16} className="text-orange-600" />
+                          <span className="text-sm font-medium text-gray-700">Complaint Filed</span>
+                          <span className="text-xs text-gray-500 ml-2 max-w-xs truncate">
+                            "{complaintData[selectedBookingDetails._id].ComplaintText}"
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 border border-gray-200 rounded-lg">
+                          <MessageSquare size={16} className="text-gray-400" />
+                          <span className="text-sm text-gray-500">No complaint filed</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Right side: Action buttons for completed bookings */}
+                {selectedBookingDetails.Status === "Completed" && (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => handleOpenFeedbackModal(selectedBookingDetails)}
+                      className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition flex items-center gap-2"
+                    >
+                      <Star size={16} />
+                      {feedbackData[selectedBookingDetails._id] ? 'Edit Feedback' : 'Give Feedback'}
+                    </button>
+
+                    <button
+                      onClick={() => handleOpenComplaintModal(selectedBookingDetails)}
+                      className="px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg transition flex items-center gap-2"
+                    >
+                      <MessageSquare size={16} />
+                      {complaintData[selectedBookingDetails._id] ? 'Edit Complaint' : 'File Complaint'}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Feedback Modal */}
+      {showFeedbackModal && selectedBookingForFeedback && (
+        <FeedbackModal
+          bookingId={selectedBookingForFeedback._id}
+          backendUrl={backendUrl}
+          onClose={() => {
+            setShowFeedbackModal(false);
+            setSelectedBookingForFeedback(null);
+          }}
+          onSuccess={handleFeedbackSuccess}
+          existingFeedback={feedbackData[selectedBookingForFeedback._id]}
+        />
+      )}
+
+      {/* Complaint Modal */}
+      {showComplaintModal && selectedBookingForFeedback && (
+        <ComplaintModal
+          bookingId={selectedBookingForFeedback._id}
+          backendUrl={backendUrl}
+          onClose={() => {
+            setShowComplaintModal(false);
+            setSelectedBookingForFeedback(null);
+          }}
+          onSuccess={handleComplaintSuccess}
+          existingComplaint={complaintData[selectedBookingForFeedback._id]}
+        />
       )}
 
     </div>
