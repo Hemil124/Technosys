@@ -7,8 +7,10 @@ import Customer from "../models/Customer.js";
 import ServiceRequest from "../models/ServiceRequest.js";
 import TechnicianServiceCategory from "../models/TechnicianServiceCategory.js";
 import TechnicianWallet from "../models/TechnicianWallet.js";
+import BookingArrivalOTP from "../models/BookingArrivalOTP.js";
 import mongoose from "mongoose";
 import { getIo } from "../config/realtime.js";
+import transporter from "../config/nodemailer.js";
 
 // Background job: Auto-cancel expired bookings
 const scheduledCancellations = new Map(); // bookingId -> timeoutId
@@ -436,20 +438,36 @@ export async function acceptBooking(req, res) {
     // Update technician's availability slot to "booked"
     try {
       const dateStr = new Date(booking.Date).toISOString().split('T')[0];
-      const timeSlotStr = `${booking.TimeSlot}-${String(parseInt(booking.TimeSlot.split(':')[0]) + 1).padStart(2, '0')}:00`;
-      
-      const availability = await TechnicianAvailability.findOne({
-        technicianId: technicianId,
-        date: dateStr
-      });
 
+      // Normalize slot string: booking.TimeSlot may be '08:00' or '08:00-09:00'
+      let timeSlotStr = booking.TimeSlot;
+      if (!String(timeSlotStr).includes('-')) {
+        const startHour = parseInt(String(timeSlotStr).split(':')[0], 10);
+        const nextHour = String(startHour + 1).padStart(2, '0');
+        timeSlotStr = `${timeSlotStr}-${nextHour}:00`;
+      }
+
+      let availability = await TechnicianAvailability.findOne({ technicianId: technicianId, date: dateStr });
       if (availability) {
         const slotIndex = availability.timeSlots.findIndex(slot => slot.slot === timeSlotStr);
         if (slotIndex !== -1) {
           availability.timeSlots[slotIndex].status = "booked";
-          await availability.save();
-          console.log(`✅ Marked time slot ${timeSlotStr} as booked for technician ${technicianId}`);
+        } else {
+          availability.timeSlots.push({ slot: timeSlotStr, status: "booked" });
         }
+        await availability.save();
+        console.log(`✅ Marked time slot ${timeSlotStr} as booked for technician ${technicianId}`);
+      } else {
+        await TechnicianAvailability.create({ technicianId: technicianId, date: dateStr, timeSlots: [{ slot: timeSlotStr, status: "booked" }] });
+        console.log(`✅ Created availability and marked ${timeSlotStr} as booked for technician ${technicianId}`);
+      }
+
+      // Emit availability update so front-end can refresh and lock UI
+      try {
+        const io = getIo();
+        io.to(String(technicianId)).emit('availability-updated', { date: dateStr, slot: timeSlotStr, status: 'booked' });
+      } catch (emitErr) {
+        console.error('Failed to emit availability update:', emitErr);
       }
     } catch (err) {
       console.error('Failed to update technician availability:', err);
@@ -482,6 +500,287 @@ export async function acceptBooking(req, res) {
     });
   } catch (err) {
     console.error("acceptBooking error", err);
+    res.status(500).json({ success: false, message: "Internal error" });
+  }
+}
+
+// Helper to generate 6-digit OTP
+function generateSixDigitOTP() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+export async function generateArrivalOTP(req, res) {
+  try {
+    const { bookingId } = req.body;
+    const technicianId = req.userId || req.user?._id;
+    const booking = await Booking.findById(bookingId).lean();
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+    if (String(booking.TechnicianID) !== String(technicianId)) {
+      return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
+    if (booking.Status !== "Confirmed") {
+      return res.status(400).json({ success: false, message: "Only confirmed bookings can start" });
+    }
+
+    const otp = generateSixDigitOTP();
+    const expiresAt = new Date(Date.now() + 2 * 60 * 1000);
+
+    // Check if OTP already exists for this booking and purpose
+    const existingOTP = await BookingArrivalOTP.findOne({
+      BookingID: booking._id,
+      purpose: "arrival",
+    }).sort({ createdAt: -1 });
+
+    if (existingOTP) {
+      // Update existing OTP record
+      existingOTP.otp = otp;
+      existingOTP.expiresAt = expiresAt;
+      existingOTP.isUsed = false;
+      await existingOTP.save();
+    } else {
+      // Create new OTP record
+      await BookingArrivalOTP.create({
+        BookingID: booking._id,
+        TechnicianID: booking.TechnicianID,
+        CustomerID: booking.CustomerID,
+        otp,
+        expiresAt,
+        purpose: "arrival",
+      });
+    }
+
+    // Send email to customer
+    try {
+      const customer = await Customer.findById(booking.CustomerID).lean();
+      const email = customer?.Email;
+      if (email) {
+        const SENDER_NAME = process.env.SENDER_NAME || "Technosys";
+        const SENDER_EMAIL = process.env.SENDER_EMAIL || process.env.SMTP_USER || "no-reply@technosys.local";
+        const REPLY_TO = process.env.REPLY_TO || SENDER_EMAIL;
+
+        await transporter.sendMail({
+          from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+          replyTo: REPLY_TO,
+          to: email,
+          subject: "Your Service Arrival OTP",
+          html: `<p>Your technician has arrived for your booking.</p>
+                 <p><strong>OTP: ${otp}</strong></p>
+                 <p style=\"color:#b91c1c\">Do NOT share this OTP unless the technician has reached your location. Sharing the OTP means your service has officially started.</p>
+                 <p>This OTP is valid for 2 minutes.</p>`,
+        });
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`📧 Sent arrival OTP to ${email}. OTP: ${otp}`);
+        }
+      }
+    } catch (mailErr) {
+      console.warn("Failed to send arrival OTP email", mailErr);
+    }
+
+    return res.json({ success: true, expiresAt, message: "OTP sent to customer email" });
+  } catch (err) {
+    console.error("generateArrivalOTP error", err);
+    res.status(500).json({ success: false, message: "Internal error" });
+  }
+}
+
+export async function verifyArrivalOTP(req, res) {
+  try {
+    const { bookingId, otp } = req.body;
+    const technicianId = req.userId || req.user?._id;
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+    if (String(booking.TechnicianID) !== String(technicianId)) {
+      return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
+
+    // Find latest valid OTP
+    const record = await BookingArrivalOTP.findOne({
+      BookingID: bookingId,
+      purpose: "arrival",
+      isUsed: false,
+    }).sort({ createdAt: -1 });
+
+    if (!record) {
+      return res.status(400).json({ success: false, message: "No active OTP found. Please resend." });
+    }
+    if (record.expiresAt.getTime() < Date.now()) {
+      return res.status(400).json({ success: false, message: "OTP expired. Please resend." });
+    }
+    if (String(record.otp) !== String(otp)) {
+      return res.status(400).json({ success: false, message: "Invalid OTP. Please try again." });
+    }
+
+    // Mark OTP used and update booking
+    record.isUsed = true;
+    await record.save();
+
+    booking.Status = "In-Progress";
+    booking.arrivalVerified = true;
+    await booking.save();
+
+    return res.json({ success: true, message: "Arrival verified. Job started.", booking });
+  } catch (err) {
+    console.error("verifyArrivalOTP error", err);
+    res.status(500).json({ success: false, message: "Internal error" });
+  }
+}
+
+export async function completeService(req, res) {
+  try {
+    const { bookingId } = req.body;
+    const technicianId = req.userId || req.user?._id;
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+    
+    if (String(booking.TechnicianID) !== String(technicianId)) {
+      return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
+
+    if (booking.Status !== "In-Progress") {
+      return res.status(400).json({ success: false, message: "Only in-progress bookings can be completed" });
+    }
+
+    // Update booking status to Completed
+    booking.Status = "Completed";
+    booking.CompletedAt = new Date();
+    await booking.save();
+
+    // Notify customer via socket
+    const io = getIo();
+    const customerId = String(booking.CustomerID);
+    io.to(customerId).emit("service-completed", {
+      bookingId: String(booking._id),
+      message: "Your service has been completed successfully!"
+    });
+
+    return res.json({ success: true, message: "Service completed successfully", booking });
+  } catch (err) {
+    console.error("completeService error", err);
+    res.status(500).json({ success: false, message: "Internal error" });
+  }
+}
+
+// Completion OTP flow: generate and verify
+export async function generateCompletionOTP(req, res) {
+  try {
+    const { bookingId } = req.body;
+    const technicianId = req.userId || req.user?._id;
+    const booking = await Booking.findById(bookingId).lean();
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+    if (String(booking.TechnicianID) !== String(technicianId)) {
+      return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
+    if (booking.Status !== "In-Progress") {
+      return res.status(400).json({ success: false, message: "Only in-progress bookings can be completed" });
+    }
+
+    const otp = generateSixDigitOTP();
+    const expiresAt = new Date(Date.now() + 2 * 60 * 1000);
+
+    const existingOTP = await BookingArrivalOTP.findOne({
+      BookingID: booking._id,
+      purpose: "completion",
+    }).sort({ createdAt: -1 });
+
+    if (existingOTP) {
+      existingOTP.otp = otp;
+      existingOTP.expiresAt = expiresAt;
+      existingOTP.isUsed = false;
+      await existingOTP.save();
+    } else {
+      await BookingArrivalOTP.create({
+        BookingID: booking._id,
+        TechnicianID: booking.TechnicianID,
+        CustomerID: booking.CustomerID,
+        otp,
+        expiresAt,
+        purpose: "completion",
+      });
+    }
+
+    // Send email to customer
+    try {
+      const customer = await Customer.findById(booking.CustomerID).lean();
+      const email = customer?.Email;
+      if (email) {
+        const SENDER_NAME = process.env.SENDER_NAME || "Technosys";
+        const SENDER_EMAIL = process.env.SENDER_EMAIL || process.env.SMTP_USER || "no-reply@technosys.local";
+        const REPLY_TO = process.env.REPLY_TO || SENDER_EMAIL;
+
+        await transporter.sendMail({
+          from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+          replyTo: REPLY_TO,
+          to: email,
+          subject: "Your Service Completion OTP",
+          html: `<p>Your technician requests confirmation to mark your service as completed.</p>
+                 <p><strong>OTP: ${otp}</strong></p>
+                 <p style=\"color:#b91c1c\">Share this OTP only if your work is complete. If not, do not share it. We are not responsible for incomplete work.</p>
+                 <p>This OTP is valid for 2 minutes.</p>`,
+        });
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`📧 Sent completion OTP to ${email}. OTP: ${otp}`);
+        }
+      }
+    } catch (mailErr) {
+      console.warn("Failed to send completion OTP email", mailErr);
+    }
+
+    return res.json({ success: true, expiresAt, message: "Completion OTP sent to customer email" });
+  } catch (err) {
+    console.error("generateCompletionOTP error", err);
+    res.status(500).json({ success: false, message: "Internal error" });
+  }
+}
+
+export async function verifyCompletionOTP(req, res) {
+  try {
+    const { bookingId, otp } = req.body;
+    const technicianId = req.userId || req.user?._id;
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+    if (String(booking.TechnicianID) !== String(technicianId)) {
+      return res.status(403).json({ success: false, message: "Unauthorized" });
+    }
+    if (booking.Status !== "In-Progress") {
+      return res.status(400).json({ success: false, message: "Only in-progress bookings can be completed" });
+    }
+
+    const record = await BookingArrivalOTP.findOne({
+      BookingID: bookingId,
+      purpose: "completion",
+      isUsed: false,
+    }).sort({ createdAt: -1 });
+
+    if (!record) {
+      return res.status(400).json({ success: false, message: "No active completion OTP found. Please resend." });
+    }
+    if (record.expiresAt.getTime() < Date.now()) {
+      return res.status(400).json({ success: false, message: "OTP expired. Please resend." });
+    }
+    if (String(record.otp) !== String(otp)) {
+      return res.status(400).json({ success: false, message: "Invalid OTP. Please try again." });
+    }
+
+    record.isUsed = true;
+    await record.save();
+
+    booking.Status = "Completed";
+    booking.CompletedAt = new Date();
+    await booking.save();
+
+    const io = getIo();
+    const customerId = String(booking.CustomerID);
+    io.to(customerId).emit("service-completed", {
+      bookingId: String(booking._id),
+      message: "Your service has been completed successfully!",
+    });
+
+    return res.json({ success: true, message: "Service completed via OTP", booking });
+  } catch (err) {
+    console.error("verifyCompletionOTP error", err);
     res.status(500).json({ success: false, message: "Internal error" });
   }
 }
@@ -661,7 +960,7 @@ export async function getTechnicianAcceptedBookings(req, res) {
 
     const bookings = await Booking.find({
       TechnicianID: technicianId,
-      Status: 'Confirmed',
+      Status: { $in: ['Confirmed', 'In-Progress'] },
     })
       .populate('SubCategoryID', 'name image price coinsRequired')
       .populate('CustomerID', 'FirstName LastName Phone Address')
@@ -675,6 +974,39 @@ export async function getTechnicianAcceptedBookings(req, res) {
   }
 }
 
+// Cleanup expired and used OTPs
+export const cleanupBookingOtps = async () => {
+  try {
+    const currentTime = new Date();
+    
+    // Delete expired OTPs
+    const expiredResult = await BookingArrivalOTP.deleteMany({
+      expiresAt: { $lt: currentTime },
+    });
+    
+    // Delete used OTPs older than 24 hours
+    const oneDayAgo = new Date(currentTime.getTime() - 24 * 60 * 60 * 1000);
+    const usedResult = await BookingArrivalOTP.deleteMany({
+      isUsed: true,
+      updatedAt: { $lt: oneDayAgo },
+    });
+    
+    const totalDeleted = (expiredResult.deletedCount || 0) + (usedResult.deletedCount || 0);
+    
+    if (totalDeleted > 0) {
+      console.log(`🧹 Cleaned up ${totalDeleted} booking OTP records (${expiredResult.deletedCount || 0} expired, ${usedResult.deletedCount || 0} used) at ${currentTime.toISOString()}`);
+    }
+  } catch (error) {
+    console.error("❌ Error cleaning up booking OTPs:", error);
+  }
+};
+
+// Run cleanup every 5 minutes
+setInterval(cleanupBookingOtps, 5 * 60 * 1000);
+
+// Run cleanup immediately when server starts
+cleanupBookingOtps();
+
 export default {
   createBooking,
   precheckAvailability,
@@ -687,6 +1019,9 @@ export default {
   getCustomerBookings,
   getTechnicianPendingRequests,
   getTechnicianAcceptedBookings,
+  generateArrivalOTP,
+  verifyArrivalOTP,
+  completeService,
   startAutoCancelScheduler,
   stopAutoCancelScheduler,
   scheduleAutoCancellation,

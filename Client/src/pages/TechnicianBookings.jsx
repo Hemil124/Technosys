@@ -87,11 +87,16 @@
 import React, { useContext, useEffect, useState } from 'react';
 import axios from 'axios';
 import { AppContext } from '../context/AppContext';
+import { toast } from 'react-toastify';
+import ArrivalOTPModal from '../components/ArrivalOTPModal';
 
 const TechnicianBookings = () => {
   const { backendUrl, userData } = useContext(AppContext);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [generatingOTP, setGeneratingOTP] = useState(null); // Track by booking ID instead of boolean
+  const [selectedBookingForOTP, setSelectedBookingForOTP] = useState(null);
+  const [completingService, setCompletingService] = useState(null); // Track completing by booking ID
 
   // ⭐ PAGINATION
   const [page, setPage] = useState(1);
@@ -166,25 +171,82 @@ const TechnicianBookings = () => {
   };
 
   // Fetch Technician Accepted Bookings
-  useEffect(() => {
-    const fetchAccepted = async () => {
-      try {
-        const { data } = await axios.get(
-          `${backendUrl}/api/bookings/technician/accepted`,
-          { withCredentials: true }
-        );
-        if (data.success && Array.isArray(data.bookings)) {
-          setBookings(data.bookings);
-        }
-      } catch (e) {
-        // silent
-      } finally {
-        setLoading(false);
+  const fetchAccepted = async () => {
+    try {
+      const { data } = await axios.get(
+        `${backendUrl}/api/bookings/technician/accepted`,
+        { withCredentials: true }
+      );
+      if (data.success && Array.isArray(data.bookings)) {
+        setBookings(data.bookings);
       }
-    };
+    } catch (e) {
+      // silent
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     if (userData?.role === 'technician') fetchAccepted();
   }, [backendUrl, userData?.role]);
+
+  // Handle "Arrived" button click
+  const handleArrived = async (bookingId) => {
+    setGeneratingOTP(bookingId);
+    try {
+      const { data } = await axios.post(
+        `${backendUrl}/api/bookings/generate-arrival-otp`,
+        { bookingId },
+        { withCredentials: true }
+      );
+
+      if (data.success) {
+        toast.success('OTP sent to customer email');
+        setSelectedBookingForOTP(bookingId);
+      } else {
+        toast.error(data.message || 'Failed to generate OTP');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to generate OTP');
+    } finally {
+      setGeneratingOTP(null);
+    }
+  };
+
+  // Handle OTP verification success
+  const handleOTPSuccess = () => {
+    setSelectedBookingForOTP(null);
+    fetchAccepted(); // Refresh bookings list
+  };
+
+  // Handle OTP modal close
+  const handleOTPClose = () => {
+    setSelectedBookingForOTP(null);
+  };
+
+  // Handle Service Done button click (generate completion OTP then open modal)
+  const handleServiceDone = async (bookingId) => {
+    setCompletingService(bookingId);
+    try {
+      const { data } = await axios.post(
+        `${backendUrl}/api/bookings/generate-completion-otp`,
+        { bookingId },
+        { withCredentials: true }
+      );
+
+      if (data.success) {
+        toast.success('Completion OTP sent to customer email');
+        setSelectedBookingForOTP(bookingId);
+      } else {
+        toast.error(data.message || 'Failed to generate completion OTP');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to generate completion OTP');
+    } finally {
+      setCompletingService(null);
+    }
+  };
 
   if (userData?.role !== 'technician') {
     return <div className='p-6 text-center text-red-600'>Technician access required.</div>;
@@ -246,9 +308,9 @@ const TechnicianBookings = () => {
                   </div>
 
                   {b.CustomerID && (
-                    <div className='bg-gray-50 rounded-lg p-3'>
+                    <div className='bg-gray-50 rounded-lg p-3 mb-3'>
                       <p className='text-sm font-medium text-gray-700'>
-                        Customer: {b.CustomerID.FirstName} {b.CustomerID.LastName}
+                        Customer: {b.CustomerID.Name || `${b.CustomerID.FirstName} ${b.CustomerID.LastName}`}
                       </p>
 
                       {b.CustomerID.Address && (
@@ -261,12 +323,33 @@ const TechnicianBookings = () => {
                         </p>
                       )}
 
-                      {b.CustomerID.Phone && (
+                      {(b.CustomerID.Mobile || b.CustomerID.Phone) && (
                         <p className='text-sm text-gray-600'>
-                          Phone: {b.CustomerID.Phone}
+                          Phone: {b.CustomerID.Mobile || b.CustomerID.Phone}
                         </p>
                       )}
                     </div>
+                  )}
+
+                  {/* Arrived Button */}
+                  {b.Status === 'Confirmed' && !b.arrivalVerified && (
+                    <button
+                      onClick={() => handleArrived(b._id)}
+                      disabled={generatingOTP === b._id}
+                      className='w-full py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition'
+                    >
+                      {generatingOTP === b._id ? 'Generating OTP...' : 'Arrived'}
+                    </button>
+                  )}
+
+                  {b.Status === 'In-Progress' && b.arrivalVerified && (
+                    <button
+                      onClick={() => handleServiceDone(b._id)}
+                      disabled={completingService === b._id}
+                      className='w-full py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition'
+                    >
+                      {completingService === b._id ? 'Sending OTP…' : 'Service Done'}
+                    </button>
                   )}
                 </li>
               ))}
@@ -281,6 +364,17 @@ const TechnicianBookings = () => {
           </>
         )}
       </div>
+
+      {/* OTP Modal */}
+      {selectedBookingForOTP && (
+        <ArrivalOTPModal
+          bookingId={selectedBookingForOTP}
+          backendUrl={backendUrl}
+          onClose={handleOTPClose}
+          onSuccess={handleOTPSuccess}
+          mode={bookings.find(b => b._id === selectedBookingForOTP)?.Status === 'In-Progress' ? 'completion' : 'arrival'}
+        />
+      )}
     </div>
   );
 };

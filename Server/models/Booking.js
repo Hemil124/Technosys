@@ -10,11 +10,14 @@ const bookingSchema = new mongoose.Schema(
     // ServiceCategory is inferred via SubCategory populate; do not duplicate here
     Status: {
       type: String,
-      enum: ["Pending","Rejected", "Confirmed", "InProgress", "Completed", "Cancelled", "AutoCancelled"],
+      enum: ["Pending","Rejected", "Confirmed", "In-Progress", "Completed", "Cancelled", "AutoCancelled"],
       default: "Pending",
     },
     AcceptedAt: { type: Date },
     AutoCancelAt: { type: Date },
+    arrivalVerified: { type: Boolean, default: false },
+    serviceStartedAt: { type: Date },
+    serviceCompletedAt: { type: Date },
   },
   { timestamps: true }
 );
