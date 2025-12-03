@@ -1116,7 +1116,7 @@ export async function getTechnicianAcceptedBookings(req, res) {
       Status: { $in: ['Confirmed', 'In-Progress'] },
     })
       .populate('SubCategoryID', 'name image price coinsRequired')
-      .populate('CustomerID', 'FirstName LastName Phone Address')
+      .populate('CustomerID', 'FirstName LastName Name Phone Mobile MobileNumber Address Email')
       .sort({ createdAt: -1 })
       .lean();
 
@@ -1137,7 +1137,7 @@ export async function getTechnicianCompletedBookings(req, res) {
       Status: 'Completed',
     })
       .populate('SubCategoryID', 'name image price coinsRequired')
-      .populate('CustomerID', 'FirstName LastName Phone Address Email')
+      .populate('CustomerID', 'FirstName LastName Name Phone Mobile MobileNumber Address Email')
       .sort({ CompletedAt: -1, createdAt: -1 })
       .lean();
 

@@ -425,7 +425,10 @@ const TechnicianBookings = () => {
                               <div className='flex items-center space-x-2 mb-2'>
                                 <User className='h-4 w-4 text-blue-600' />
                                 <span className='text-sm font-semibold text-gray-800'>
-                                  {b.CustomerID.Name || `${b.CustomerID.FirstName} ${b.CustomerID.LastName}`}
+                                  {b.CustomerID.Name || 
+                                   (b.CustomerID.FirstName && b.CustomerID.LastName 
+                                     ? `${b.CustomerID.FirstName} ${b.CustomerID.LastName}`.trim()
+                                     : b.CustomerID.FirstName || b.CustomerID.LastName || 'Customer')}
                                 </span>
                               </div>
 
@@ -441,11 +444,11 @@ const TechnicianBookings = () => {
                                 </div>
                               )}
 
-                              {(b.CustomerID.Mobile || b.CustomerID.Phone) && (
+                              {(b.CustomerID.Mobile || b.CustomerID.MobileNumber || b.CustomerID.Phone) && (
                                 <div className='flex items-center space-x-2'>
                                   <Phone className='h-4 w-4 text-gray-500' />
                                   <span className='text-sm text-gray-600'>
-                                    {b.CustomerID.Mobile || b.CustomerID.Phone}
+                                    {b.CustomerID.Mobile || b.CustomerID.MobileNumber || b.CustomerID.Phone}
                                   </span>
                                 </div>
                               )}
