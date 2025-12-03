@@ -220,8 +220,7 @@ const TechnicianBookings = () => {
     const customer = b.CustomerID?.Name?.toLowerCase() || 
                       `${b.CustomerID?.FirstName} ${b.CustomerID?.LastName}`.toLowerCase() || '';
     const status = b.Status?.toLowerCase() || '';
-    const bookingId = String(b._id).slice(-6).toLowerCase();
-    return service.includes(term) || customer.includes(term) || status.includes(term) || bookingId.includes(term);
+    return service.includes(term) || customer.includes(term) || status.includes(term);
   });
 
   const totalPages = Math.ceil(filteredList.length / pageSize) || 1;
@@ -287,7 +286,7 @@ const TechnicianBookings = () => {
 
         {/* Stats Cards */}
         {currentView === 'active' ? (
-          <div className='mb-8 grid grid-cols-1 sm:grid-cols-3 gap-6'>
+          <div className='mb-8 grid grid-cols-1 sm:grid-cols-2 gap-6'>
             <div className='bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-gray-200/50 text-left shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105'>
               <div className='flex items-center justify-between'>
                 <div>
@@ -308,18 +307,6 @@ const TechnicianBookings = () => {
                 </div>
                 <div className='p-3 bg-yellow-100 rounded-xl'>
                   <Clock className='h-6 w-6 text-yellow-600' />
-                </div>
-              </div>
-            </div>
-
-            <div className='bg-white/80 backdrop-blur-sm p-6 rounded-2xl border border-gray-200/50 text-left shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105'>
-              <div className='flex items-center justify-between'>
-                <div>
-                  <div className='text-3xl font-bold text-green-600'>{inProgressCount}</div>
-                  <div className='text-sm text-gray-600 mt-1'>In Progress</div>
-                </div>
-                <div className='p-3 bg-green-100 rounded-xl'>
-                  <Package className='h-6 w-6 text-green-600' />
                 </div>
               </div>
             </div>
@@ -346,7 +333,7 @@ const TechnicianBookings = () => {
             <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400' />
             <input
               type='text'
-              placeholder='Search by service, customer, status, or booking ID...'
+              placeholder='Search by service, customer, or status...'
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -421,9 +408,6 @@ const TechnicianBookings = () => {
                             <div className='flex items-center space-x-1'>
                               <Clock className='h-4 w-4' />
                               <span>{b.TimeSlot}</span>
-                            </div>
-                            <div className='text-gray-500'>
-                              ID: #{String(b._id).slice(-6)}
                             </div>
                           </div>
 
