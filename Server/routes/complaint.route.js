@@ -4,7 +4,6 @@ import {
   getComplaint,
   getCustomerComplaints,
   getAllComplaints,
-  updateComplaintStatus,
   getTechnicianComplaints,
 } from "../controllers/complaint.controller.js";
 import userAuth from "../middleware/userAuth.js";
@@ -13,9 +12,6 @@ const complaintRouter = express.Router();
 
 // Admin: Get all complaints
 complaintRouter.get("/admin/all", userAuth, getAllComplaints);
-
-// Admin: Update complaint status
-complaintRouter.put("/admin/status/:complaintId", userAuth, updateComplaintStatus);
 
 // Technician: Get all complaints for their bookings
 complaintRouter.get("/technician/all", userAuth, getTechnicianComplaints);

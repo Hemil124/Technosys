@@ -42,6 +42,11 @@ const technicianSchema = new mongoose.Schema({
     enum: ["Active", "Deactive"],
     default: "Active",
   },
+
+  // Complaint tracking and deactivation
+  ComplaintCount: { type: Number, default: 0 },
+  DeactivationReason: { type: String, default: "" },
+  TempDeactivationExpiry: { type: Date, default: null },
 }, { timestamps: true });
 
 technicianSchema.index({ location: "2dsphere" });
