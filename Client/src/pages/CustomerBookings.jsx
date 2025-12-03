@@ -830,7 +830,7 @@ const CustomerBookings = () => {
                       className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition flex items-center gap-2"
                     >
                       <Star size={16} />
-                      {feedbackData[selectedBookingDetails._id] ? 'Edit Feedback' : 'Give Feedback'}
+                      {feedbackData[selectedBookingDetails._id] ? 'Edit Feedbacks' : 'Give Feedback'}
                     </button>
 
                     <button
