@@ -207,3 +207,41 @@ export const updateComplaintStatus = async (req, res) => {
     });
   }
 };
+
+// Get All Complaints for Technician's Bookings
+export const getTechnicianComplaints = async (req, res) => {
+  try {
+    const technicianId = req.userId;
+
+    // Get all technician's completed bookings
+    const bookings = await Booking.find({
+      TechnicianID: technicianId,
+      Status: "Completed",
+    }).select("_id");
+
+    const bookingIds = bookings.map((b) => b._id);
+
+    // Get complaints for those bookings
+    const complaints = await Complaint.find({
+      BookingID: { $in: bookingIds },
+    }).populate({
+      path: "BookingID",
+      populate: [
+        { path: "CustomerID", select: "FirstName LastName Name MobileNumber" },
+        { path: "SubCategoryID", select: "name price" },
+      ],
+    }).sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      complaints,
+    });
+  } catch (error) {
+    console.error("Error fetching technician complaints:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch complaints",
+      error: error.message,
+    });
+  }
+};

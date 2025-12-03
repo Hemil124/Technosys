@@ -160,3 +160,41 @@ export const getAllFeedbacks = async (req, res) => {
     });
   }
 };
+
+// Get All Feedbacks for Technician's Bookings
+export const getTechnicianFeedbacks = async (req, res) => {
+  try {
+    const technicianId = req.userId;
+
+    // Get all technician's completed bookings
+    const bookings = await Booking.find({
+      TechnicianID: technicianId,
+      Status: "Completed",
+    }).select("_id");
+
+    const bookingIds = bookings.map((b) => b._id);
+
+    // Get feedbacks for those bookings
+    const feedbacks = await Feedback.find({
+      BookingID: { $in: bookingIds },
+    }).populate({
+      path: "BookingID",
+      populate: [
+        { path: "CustomerID", select: "FirstName LastName Name MobileNumber" },
+        { path: "SubCategoryID", select: "name price" },
+      ],
+    }).sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      feedbacks,
+    });
+  } catch (error) {
+    console.error("Error fetching technician feedbacks:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch feedbacks",
+      error: error.message,
+    });
+  }
+};

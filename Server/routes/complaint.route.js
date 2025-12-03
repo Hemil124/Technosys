@@ -5,6 +5,7 @@ import {
   getCustomerComplaints,
   getAllComplaints,
   updateComplaintStatus,
+  getTechnicianComplaints,
 } from "../controllers/complaint.controller.js";
 import userAuth from "../middleware/userAuth.js";
 
@@ -15,6 +16,9 @@ complaintRouter.get("/admin/all", userAuth, getAllComplaints);
 
 // Admin: Update complaint status
 complaintRouter.put("/admin/status/:complaintId", userAuth, updateComplaintStatus);
+
+// Technician: Get all complaints for their bookings
+complaintRouter.get("/technician/all", userAuth, getTechnicianComplaints);
 
 // Get all complaints for customer's bookings (must be before /:bookingId)
 complaintRouter.get("/customer/all", userAuth, getCustomerComplaints);
