@@ -30,6 +30,7 @@ import adminCustomerListRoute from "./routes/AdminCustomerList.route.js";
 import bookingRoutes from "./routes/booking.route.js";
 import feedbackRouter from "./routes/feedback.route.js";
 import complaintRouter from "./routes/complaint.route.js";
+import analyticsRoutes from "./routes/analytics.route.js";
 import { startAutoCancelScheduler } from "./controllers/booking.controller.js";
 
 const app = express();
@@ -152,6 +153,7 @@ app.use('/api/admin/customers', adminCustomerListRoute);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/feedback', feedbackRouter);
 app.use('/api/complaints', complaintRouter);
+app.use('/api/analytics', analyticsRoutes);
 
 const server = app.listen(port, () => console.log(`Server started on PORT:${port}`));
 
