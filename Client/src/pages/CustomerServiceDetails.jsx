@@ -79,18 +79,7 @@ const CustomerServiceDetails = () => {
   // Address edits are handled in profile page per request
 
   const TIME_SLOTS = [
-    { start: "08:00", end: "09:00", display: "08:00-09:00" },
-    { start: "09:00", end: "10:00", display: "09:00-10:00" },
-    { start: "10:00", end: "11:00", display: "10:00-11:00" },
-    { start: "11:00", end: "12:00", display: "11:00-12:00" },
-    { start: "12:00", end: "13:00", display: "12:00-13:00" },
-    { start: "13:00", end: "14:00", display: "13:00-14:00" },
-    { start: "14:00", end: "15:00", display: "14:00-15:00" },
-    { start: "15:00", end: "16:00", display: "15:00-16:00" },
-    { start: "16:00", end: "17:00", display: "16:00-17:00" },
-    { start: "17:00", end: "18:00", display: "17:00-18:00" },
-    { start: "18:00", end: "19:00", display: "18:00-19:00" },
-    { start: "19:00", end: "20:00", display: "19:00-20:00" }
+    "08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00"
   ];
 
   // Check if a time slot is in the past
@@ -122,7 +111,7 @@ const CustomerServiceDetails = () => {
         toast.error("Please login to continue");
         return false;
       }
-      const payload = { CustomerID: customerId, SubCategoryID: id, Date: date, TimeSlot: timeSlot.display || timeSlot };
+      const payload = { CustomerID: customerId, SubCategoryID: id, Date: date, TimeSlot: timeSlot };
       const { data } = await axios.post(`${backendUrl}/api/bookings/precheck`, payload, { withCredentials: true });
       if (data.success) {
         setPrecheck({ success: true, count: data.technicians.length, technicians: data.technicians });
@@ -154,7 +143,7 @@ const CustomerServiceDetails = () => {
         TechnicianID: technicianId,
         SubCategoryID: id,
         Date: date,
-        TimeSlot: timeSlot.display || timeSlot
+        TimeSlot: timeSlot
       };
       const { data } = await axios.post(`${backendUrl}/api/bookings/create`, payload, { withCredentials: true });
       if (data.success) {
@@ -447,12 +436,12 @@ const CustomerServiceDetails = () => {
                   
                   <div className="grid grid-cols-3 gap-3">
                     {TIME_SLOTS.map((slot) => {
-                      const isPast = isSlotPast(slot.start);
-                      const isSelected = timeSlot?.display === slot.display;
-                      
+                      const isPast = isSlotPast(slot);
+                      const isSelected = timeSlot === slot;
+
                       return (
                         <button
-                          key={slot.display}
+                          key={slot}
                           type="button"
                           disabled={isPast}
                           onClick={() => {
@@ -470,7 +459,7 @@ const CustomerServiceDetails = () => {
                             }
                           `}
                         >
-                          {slot.display}
+                          {slot}
                         </button>
                       );
                     })}
