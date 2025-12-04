@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import FeedbackModal from "../components/FeedbackModal";
 import ComplaintModal from "../components/ComplaintModal";
+import BookingTracker from "../components/BookingTracker";
 
 const CustomerBookings = () => {
   const [bookings, setBookings] = useState([]);
@@ -427,7 +428,7 @@ const CustomerBookings = () => {
             )}
 
             <div className="flex-1">
-              <div className="flex justify-between items-start mb-2">
+              <div className="flex justify-between items-start mb-3">
                 <div>
                   <h3 className="font-semibold text-lg text-gray-800">
                     {booking.SubCategoryID?.name || "Service"}
@@ -436,7 +437,11 @@ const CustomerBookings = () => {
                     ₹{booking.SubCategoryID?.price || booking.TotalAmount}
                   </p>
                 </div>
-                {getStatusBadge(booking.Status)}
+                
+                {/* Booking Tracker - Top Right */}
+                <div className="ml-4">
+                  <BookingTracker status={booking.Status} />
+                </div>
               </div>
 
               <div className="text-sm text-gray-600 space-y-1">
@@ -647,16 +652,13 @@ const CustomerBookings = () => {
                       />
                     )}
                     <div className="flex-1 space-y-2">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-semibold text-gray-800 text-lg">
-                            {selectedBookingDetails.SubCategoryID?.name || "Service"}
-                          </p>
-                          <p className="text-2xl font-bold text-purple-600">
-                            ₹{selectedBookingDetails.SubCategoryID?.price || selectedBookingDetails.TotalAmount}
-                          </p>
-                        </div>
-                        {getStatusBadge(selectedBookingDetails.Status)}
+                      <div>
+                        <p className="font-semibold text-gray-800 text-lg">
+                          {selectedBookingDetails.SubCategoryID?.name || "Service"}
+                        </p>
+                        <p className="text-2xl font-bold text-purple-600">
+                          ₹{selectedBookingDetails.SubCategoryID?.price || selectedBookingDetails.TotalAmount}
+                        </p>
                       </div>
                     </div>
                   </div>
