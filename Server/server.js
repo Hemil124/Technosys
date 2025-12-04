@@ -33,6 +33,7 @@ import complaintRouter from "./routes/complaint.route.js";
 import analyticsRoutes from "./routes/analytics.route.js";
 import thresholdsRouter from "./routes/thresholds.route.js";
 import { startAutoCancelScheduler } from "./controllers/booking.controller.js";
+import { initializeReactivationScheduler } from "./controllers/complaint.controller.js";
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -178,4 +179,11 @@ try {
   startAutoCancelScheduler();
 } catch (err) {
   console.error('Failed to start auto-cancel scheduler', err);
+}
+
+// Initialize reactivation scheduler for temporary deactivations
+try {
+  initializeReactivationScheduler();
+} catch (err) {
+  console.error('Failed to initialize reactivation scheduler', err);
 }

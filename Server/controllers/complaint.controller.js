@@ -1,11 +1,51 @@
 import Complaint from "../models/Complaint.js";
 import Booking from "../models/Booking.js";
 import Technician from "../models/Technician.js";
+import TechnicianComplaintStatus from "../models/TechnicianComplaintStatus.js";
 import ComplaintThresholds from "../models/ComplaintThresholds.js";
 import transporter from "../config/nodemailer.js";
 
+// Sender display name helpers
+const SENDER_NAME = process.env.SENDER_NAME || "Technosys";
+const SENDER_EMAIL = process.env.SENDER_EMAIL || process.env.SMTP_USER || "no-reply@technosys.com";
+const REPLY_TO = process.env.REPLY_TO || SENDER_EMAIL;
+
 // Map to track temporary reactivation timeouts
 const scheduledReactivations = new Map(); // technicianId -> timeoutId
+
+// Initialize reactivation scheduler on server start
+export async function initializeReactivationScheduler() {
+  try {
+    console.log("🔄 Initializing reactivation scheduler...");
+    
+    // Find all technicians with temporary deactivation
+    const complaintStatuses = await TechnicianComplaintStatus.find({
+      DeactivationReason: { $regex: /^Temporary/ },
+      TempDeactivationExpiry: { $ne: null }
+    });
+
+    console.log(`📊 Found ${complaintStatuses.length} technicians with temporary deactivation`);
+
+    for (const status of complaintStatuses) {
+      const now = new Date();
+      const expiryTime = new Date(status.TempDeactivationExpiry);
+
+      if (expiryTime <= now) {
+        // Already expired, reactivate immediately
+        console.log(`⚡ Reactivating expired technician ${status.TechnicianID}`);
+        await executeReactivation(status.TechnicianID);
+      } else {
+        // Schedule future reactivation
+        console.log(`⏰ Scheduling reactivation for technician ${status.TechnicianID}`);
+        scheduleReactivation(status.TechnicianID, expiryTime);
+      }
+    }
+
+    console.log("✅ Reactivation scheduler initialized");
+  } catch (error) {
+    console.error("❌ Failed to initialize reactivation scheduler:", error);
+  }
+}
 
 // Submit or Update Complaint
 export const submitComplaint = async (req, res) => {
@@ -54,13 +94,23 @@ export const submitComplaint = async (req, res) => {
         ComplaintText: complaintText,
       });
 
-      // Increment technician's complaint count
-      const technician = booking.TechnicianID;
-      technician.ComplaintCount = (technician.ComplaintCount || 0) + 1;
-      await technician.save();
+      // Get or create technician complaint status
+      const technicianId = booking.TechnicianID._id;
+      let complaintStatus = await TechnicianComplaintStatus.findOne({ TechnicianID: technicianId });
+      
+      if (!complaintStatus) {
+        complaintStatus = await TechnicianComplaintStatus.create({
+          TechnicianID: technicianId,
+          ComplaintCount: 0,
+        });
+      }
+
+      // Increment complaint count
+      complaintStatus.ComplaintCount += 1;
+      await complaintStatus.save();
 
       // Check thresholds and trigger actions
-      await checkAndTriggerThresholdActions(technician);
+      await checkAndTriggerThresholdActions(booking.TechnicianID, complaintStatus);
 
       return res.status(201).json({
         success: true,
@@ -79,7 +129,7 @@ export const submitComplaint = async (req, res) => {
 };
 
 // Check thresholds and trigger actions
-async function checkAndTriggerThresholdActions(technician) {
+async function checkAndTriggerThresholdActions(technician, complaintStatus) {
   try {
     // Get current thresholds
     let thresholds = await ComplaintThresholds.findOne();
@@ -93,7 +143,7 @@ async function checkAndTriggerThresholdActions(technician) {
       });
     }
 
-    const count = technician.ComplaintCount;
+    const count = complaintStatus.ComplaintCount;
     const { warningThreshold, tempDeactivationThreshold, permanentDeactivationThreshold } = thresholds;
 
     console.log(`🔍 Checking thresholds for technician ${technician.Name} (${technician.Email}) - Complaint Count: ${count}`);
@@ -103,11 +153,13 @@ async function checkAndTriggerThresholdActions(technician) {
       console.log(`🚫 Permanent deactivation triggered for ${technician.Name}`);
       
       technician.ActiveStatus = "Deactive";
-      technician.DeactivationReason = `Permanent - ${permanentDeactivationThreshold} complaints`;
       await technician.save();
 
+      complaintStatus.DeactivationReason = `Permanent - ${permanentDeactivationThreshold} complaints`;
+      await complaintStatus.save();
+
       // Send permanent deactivation email
-      await sendPermanentDeactivationEmail(technician);
+      await sendPermanentDeactivationEmail(technician, count);
       
       return;
     }
@@ -119,12 +171,14 @@ async function checkAndTriggerThresholdActions(technician) {
       const reactivationTime = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes
       
       technician.ActiveStatus = "Deactive";
-      technician.DeactivationReason = `Temporary - ${tempDeactivationThreshold} complaints`;
-      technician.TempDeactivationExpiry = reactivationTime;
       await technician.save();
 
+      complaintStatus.DeactivationReason = `Temporary - ${tempDeactivationThreshold} complaints`;
+      complaintStatus.TempDeactivationExpiry = reactivationTime;
+      await complaintStatus.save();
+
       // Send temporary deactivation email
-      await sendTempDeactivationEmail(technician);
+      await sendTempDeactivationEmail(technician, count);
 
       // Schedule reactivation after 2 minutes
       scheduleReactivation(technician._id, reactivationTime);
@@ -137,7 +191,7 @@ async function checkAndTriggerThresholdActions(technician) {
       console.log(`⚠️ Warning triggered for ${technician.Name}`);
       
       // Send warning email
-      await sendWarningEmail(technician);
+      await sendWarningEmail(technician, count);
       
       return;
     }
@@ -177,6 +231,7 @@ function scheduleReactivation(technicianId, reactivationTime) {
 async function executeReactivation(technicianId) {
   try {
     const technician = await Technician.findById(technicianId);
+    const complaintStatus = await TechnicianComplaintStatus.findOne({ TechnicianID: technicianId });
     
     if (!technician) {
       console.log(`⚠️ Technician ${technicianId} not found for reactivation`);
@@ -184,14 +239,22 @@ async function executeReactivation(technicianId) {
       return;
     }
 
+    if (!complaintStatus) {
+      console.log(`⚠️ Complaint status for technician ${technicianId} not found`);
+      scheduledReactivations.delete(String(technicianId));
+      return;
+    }
+
     // Only reactivate if still temporarily deactivated
-    if (technician.DeactivationReason.startsWith("Temporary")) {
+    if (complaintStatus.DeactivationReason.startsWith("Temporary")) {
       console.log(`✅ Reactivating technician ${technician.Name}`);
       
       technician.ActiveStatus = "Active";
-      technician.DeactivationReason = "";
-      technician.TempDeactivationExpiry = null;
       await technician.save();
+
+      complaintStatus.DeactivationReason = "";
+      complaintStatus.TempDeactivationExpiry = null;
+      await complaintStatus.save();
 
       // Send reactivation email
       await sendReactivationEmail(technician);
@@ -205,9 +268,9 @@ async function executeReactivation(technicianId) {
 }
 
 // Email functions
-async function sendWarningEmail(technician) {
+async function sendWarningEmail(technician, complaintCount) {
   const mailOptions = {
-    from: process.env.SMTP_USER,
+    from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
     to: technician.Email,
     subject: "⚠️ Official Warning - Complaint Threshold Reached",
     html: `
@@ -235,7 +298,7 @@ async function sendWarningEmail(technician) {
               <strong>You have crossed the warning complaint limit. This is an official warning.</strong>
             </div>
             
-            <p>Your account has received <strong>${technician.ComplaintCount} complaints</strong>. Please take immediate action to improve your service quality.</p>
+            <p>Your account has received <strong>${complaintCount} complaints</strong>. Please take immediate action to improve your service quality.</p>
             
             <p><strong>What happens next:</strong></p>
             <ul>
@@ -257,16 +320,19 @@ async function sendWarningEmail(technician) {
   };
 
   try {
-    await transporter.sendMail(mailOptions);
-    console.log(`✅ Warning email sent to ${technician.Email}`);
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Warning email sent to ${technician.Email}`, info.messageId);
   } catch (error) {
-    console.error(`❌ Failed to send warning email to ${technician.Email}:`, error);
+    console.error(`❌ Failed to send warning email to ${technician.Email}:`);
+    console.error(`   Error: ${error.message}`);
+    console.error(`   Code: ${error.code}`);
+    console.error(`   Response: ${error.response}`);
   }
 }
 
-async function sendTempDeactivationEmail(technician) {
+async function sendTempDeactivationEmail(technician, complaintCount) {
   const mailOptions = {
-    from: process.env.SMTP_USER,
+    from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
     to: technician.Email,
     subject: "🚫 Account Temporarily Deactivated",
     html: `
@@ -294,7 +360,7 @@ async function sendTempDeactivationEmail(technician) {
               <strong>Your account has been temporarily deactivated.</strong>
             </div>
             
-            <p>Due to reaching <strong>${technician.ComplaintCount} complaints</strong>, your account has been temporarily suspended for <strong>2 minutes</strong>.</p>
+            <p>Due to reaching <strong>${complaintCount} complaints</strong>, your account has been temporarily suspended for <strong>2 minutes</strong>.</p>
             
             <p><strong>Important Information:</strong></p>
             <ul>
@@ -317,16 +383,19 @@ async function sendTempDeactivationEmail(technician) {
   };
 
   try {
-    await transporter.sendMail(mailOptions);
-    console.log(`✅ Temporary deactivation email sent to ${technician.Email}`);
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Temporary deactivation email sent to ${technician.Email}`, info.messageId);
   } catch (error) {
-    console.error(`❌ Failed to send temp deactivation email to ${technician.Email}:`, error);
+    console.error(`❌ Failed to send temp deactivation email to ${technician.Email}:`);
+    console.error(`   Error: ${error.message}`);
+    console.error(`   Code: ${error.code}`);
+    console.error(`   Response: ${error.response}`);
   }
 }
 
 async function sendReactivationEmail(technician) {
   const mailOptions = {
-    from: process.env.SMTP_USER,
+    from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
     to: technician.Email,
     subject: "✅ Account Reactivated",
     html: `
@@ -377,16 +446,19 @@ async function sendReactivationEmail(technician) {
   };
 
   try {
-    await transporter.sendMail(mailOptions);
-    console.log(`✅ Reactivation email sent to ${technician.Email}`);
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Reactivation email sent to ${technician.Email}`, info.messageId);
   } catch (error) {
-    console.error(`❌ Failed to send reactivation email to ${technician.Email}:`, error);
+    console.error(`❌ Failed to send reactivation email to ${technician.Email}:`);
+    console.error(`   Error: ${error.message}`);
+    console.error(`   Code: ${error.code}`);
+    console.error(`   Response: ${error.response}`);
   }
 }
 
-async function sendPermanentDeactivationEmail(technician) {
+async function sendPermanentDeactivationEmail(technician, complaintCount) {
   const mailOptions = {
-    from: process.env.SMTP_USER,
+    from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
     to: technician.Email,
     subject: "🚫 Account Permanently Deactivated",
     html: `
@@ -414,7 +486,7 @@ async function sendPermanentDeactivationEmail(technician) {
               <strong>Your account has been permanently deactivated due to repeated complaints.</strong>
             </div>
             
-            <p>After reaching <strong>${technician.ComplaintCount} complaints</strong>, your account has been permanently suspended.</p>
+            <p>After reaching <strong>${complaintCount} complaints</strong>, your account has been permanently suspended.</p>
             
             <p><strong>What this means:</strong></p>
             <ul>
@@ -437,10 +509,13 @@ async function sendPermanentDeactivationEmail(technician) {
   };
 
   try {
-    await transporter.sendMail(mailOptions);
-    console.log(`✅ Permanent deactivation email sent to ${technician.Email}`);
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Permanent deactivation email sent to ${technician.Email}`, info.messageId);
   } catch (error) {
-    console.error(`❌ Failed to send permanent deactivation email to ${technician.Email}:`, error);
+    console.error(`❌ Failed to send permanent deactivation email to ${technician.Email}:`);
+    console.error(`   Error: ${error.message}`);
+    console.error(`   Code: ${error.code}`);
+    console.error(`   Response: ${error.response}`);
   }
 }
 
