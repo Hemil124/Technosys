@@ -15,6 +15,7 @@ const bookingSchema = new mongoose.Schema(
     },
     AcceptedAt: { type: Date },
     AutoCancelAt: { type: Date },
+    PaymentID: { type: mongoose.Schema.Types.ObjectId, ref: "CustomerPayment" },
     ArrivalDeadline: { type: Date },
     arrivalVerified: { type: Boolean, default: false },
     serviceStartedAt: { type: Date },

@@ -31,6 +31,7 @@ const CustomerServiceDetails = () => {
   const [countdown, setCountdown] = useState(0);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancellingBooking, setCancellingBooking] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Fetch service details
   useEffect(() => {
@@ -129,7 +130,7 @@ const CustomerServiceDetails = () => {
     }
   };
 
-  const createBooking = async () => {
+  const createBooking = async (paymentId = null) => {
     try {
       // Fix: Pass required customerId and technicianId from precheck
       const customerId = userData?._id || userData?.id;
@@ -143,7 +144,8 @@ const CustomerServiceDetails = () => {
         TechnicianID: technicianId,
         SubCategoryID: id,
         Date: date,
-        TimeSlot: timeSlot
+        TimeSlot: timeSlot,
+        PaymentID: paymentId // Add payment reference if provided
       };
       const { data } = await axios.post(`${backendUrl}/api/bookings/create`, payload, { withCredentials: true });
       if (data.success) {
@@ -161,10 +163,118 @@ const CustomerServiceDetails = () => {
     }
   };
 
-  const simulatePayment = async (id) => {
-    const bId = id || bookingId;
-    if (!bId) return;
-    try { await axios.post(`${backendUrl}/api/bookings/simulate-payment`, { bookingId: bId }, { withCredentials: true }); } catch (e) {}
+  // Load Razorpay script
+  const loadRazorpayScript = (src = 'https://checkout.razorpay.com/v1/checkout.js') =>
+    new Promise((resolve, reject) => {
+      if (typeof window === 'undefined') return resolve(false);
+      const existing = document.querySelector(`script[src="${src}"]`);
+      if (existing) return resolve(true);
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = () => resolve(true);
+      s.onerror = () => reject(new Error('Razorpay SDK failed to load'));
+      document.body.appendChild(s);
+    });
+
+  const customerPayment = async (bookingData) => {
+    if (!bookingData) return;
+    
+    setIsProcessing(true);
+    try {
+      // Step 1: Create payment order (without booking yet)
+      const { data } = await axios.post(
+        `${backendUrl}/api/bookings/payment/create-order`,
+        { 
+          SubCategoryID: bookingData.SubCategoryID,
+          Date: bookingData.Date,
+          TimeSlot: bookingData.TimeSlot
+        },
+        { withCredentials: true }
+      );
+
+      if (!data.success) {
+        toast.error(data.message || 'Failed to create payment order');
+        setIsProcessing(false);
+        return false;
+      }
+
+      // Step 2: Load Razorpay script
+      await loadRazorpayScript();
+
+      // Step 3: Show Razorpay payment modal
+      const options = {
+        key: data.data.keyId,
+        amount: data.data.amount * 100, // Razorpay expects amount in paise
+        currency: 'INR',
+        name: 'Technosys',
+        description: 'Service Booking Payment',
+        order_id: data.data.orderId,
+        handler: async (response) => {
+          try {
+            // Step 4: Verify payment authorization
+            const { data: verifyData } = await axios.post(
+              `${backendUrl}/api/bookings/payment/verify-authorization`,
+              {
+                paymentId: data.data.paymentId,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              },
+              { withCredentials: true }
+            );
+
+            if (verifyData.success) {
+              toast.success('Payment authorized successfully! Creating booking...');
+              
+              // Step 5: Create booking with payment reference
+              const newBookingId = await createBooking(data.data.paymentId);
+              if (!newBookingId) {
+                toast.error('Booking creation failed after payment');
+                setIsProcessing(false);
+                return false;
+              }
+              
+              // Step 6: Broadcast to technicians
+              await startBroadcast(newBookingId);
+              setIsProcessing(false);
+              return true;
+            } else {
+              toast.error('Payment verification failed');
+              setIsProcessing(false);
+              return false;
+            }
+          } catch (err) {
+            console.error('Payment verification error:', err);
+            toast.error(err.response?.data?.message || 'Payment verification failed');
+            setIsProcessing(false);
+            return false;
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            toast.info('Payment cancelled');
+            setIsProcessing(false);
+          },
+        },
+        prefill: {
+          email: userData?.Email || '',
+          contact: userData?.MobileNumber || '',
+        },
+        theme: {
+          color: '#4a56e2',
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+
+      return true;
+    } catch (err) {
+      console.error('Payment error:', err);
+      toast.error(err.response?.data?.message || 'Payment failed');
+      setIsProcessing(false);
+      return false;
+    }
   };
 
   const startBroadcast = async (id) => {
@@ -593,7 +703,7 @@ const CustomerServiceDetails = () => {
                     <p className="text-2xl font-bold text-gray-900">₹{service.price}</p>
                   </div>
                   <button
-                    disabled={!address || !date || !timeSlot || (typeof timeSlot === 'object' && !timeSlot.display)}
+                    disabled={!address || !date || !timeSlot || (typeof timeSlot === 'object' && !timeSlot.display) || isProcessing}
                     className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     onClick={async () => {
                       if (!address) {
@@ -609,20 +719,29 @@ const CustomerServiceDetails = () => {
                       if (!precheckOk) {
                         return;
                       }
-                      // Create booking
-                      const newId = await createBooking();
-                      if (!newId) {
-                        // createBooking already showed error toast and closed modal
-                        return;
-                      }
                       
-                      // Only continue if booking was created successfully
-                      await simulatePayment(newId);
-                      toast.success('Payment simulated successfully');
-                      await startBroadcast(newId);
+                      // Prepare booking data
+                      const bookingData = {
+                        SubCategoryID: id,
+                        Date: date,
+                        TimeSlot: timeSlot
+                      };
+                      
+                      // Start payment flow (creates payment → verifies → creates booking → broadcasts)
+                      await customerPayment(bookingData);
                     }}
                   >
-                    {stage === "waiting" ? "Processing..." : "Pay Now"}
+                    {isProcessing ? (
+                      <span className="flex items-center gap-2">
+                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Processing...
+                      </span>
+                    ) : (
+                      "Pay Now"
+                    )}
                   </button>
                 </div>
               )}

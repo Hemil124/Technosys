@@ -318,8 +318,9 @@ export async function generateInvoice({ refType = 'SubscriptionPayment', refId, 
       console.warn('Invoice service: realtime emit failed', emitErr?.message || emitErr);
     }
 
-    // Send email with attachment if recipient email present
-    if (recipient?.Email) {
+    // Send email with attachment if recipient email present AND refType is SubscriptionPayment
+    // For CustomerPayment, the booking controller handles email sending with custom content
+    if (recipient?.Email && refType === 'SubscriptionPayment') {
       const mailOptions = {
         from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
         to: recipient.Email,
