@@ -1195,6 +1195,22 @@ export async function acceptBooking(req, res) {
     wallet.LastUpdate = new Date();
     await wallet.save();
 
+    // Notify technician when balance is low (<= 10)
+    if (wallet.BalanceCoins <= 10) {
+      try {
+        const technician = await Technician.findById(technicianId).lean();
+        if (technician?.Email) {
+          await sendLowBalanceEmail({
+            email: technician.Email,
+            name: technician.Name || 'Technician',
+            balance: wallet.BalanceCoins,
+          });
+        }
+      } catch (lowBalErr) {
+        console.error('Low balance email failed:', lowBalErr.message);
+      }
+    }
+
     // Update booking status
     booking.Status = "Confirmed";
     booking.TechnicianID = technicianId;
@@ -1314,6 +1330,76 @@ export async function acceptBooking(req, res) {
 // Helper to generate 6-digit OTP
 function generateSixDigitOTP() {
   return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+// Helper: send low balance notification to technician
+async function sendLowBalanceEmail({ email, name, balance }) {
+  const SENDER_NAME = process.env.SENDER_NAME || 'Technosys';
+  const SENDER_EMAIL = process.env.SENDER_EMAIL || process.env.SMTP_USER || 'no-reply@technosys.local';
+  const REPLY_TO = process.env.REPLY_TO || SENDER_EMAIL;
+  const subscriptionUrl = process.env.SUBSCRIPTION_URL || 'http://localhost:5175/technician/subscription';
+
+  const safeName = name || 'Technician';
+  const balanceDisplay = `₹${(Number(balance) || 0).toFixed(2)}`;
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Low Balance Alert</title>
+</head>
+<body style="margin:0; padding:0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color:#f3f4f6;">
+  <table role="presentation" style="width:100%; border-collapse:collapse; background-color:#f3f4f6;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" style="width:100%; max-width:600px; border-collapse:collapse; background:linear-gradient(135deg,#0ea5e9 0%, #0284c7 100%); border-radius:14px 14px 0 0; overflow:hidden; box-shadow:0 8px 20px rgba(0,0,0,0.08);">
+          <tr>
+            <td style="padding:32px 28px; text-align:center; color:#fff;">
+              <div style="font-size:14px; letter-spacing:0.5px; opacity:0.9;">ACCOUNT NOTICE</div>
+              <h1 style="margin:10px 0 0; font-size:26px; font-weight:700;">Low Wallet Balance</h1>
+              <p style="margin:10px 0 0; font-size:16px; opacity:0.9;">Your coin balance is running low</p>
+            </td>
+          </tr>
+        </table>
+        <table role="presentation" style="width:100%; max-width:600px; border-collapse:collapse; background-color:#ffffff; box-shadow:0 8px 20px rgba(0,0,0,0.08);">
+          <tr>
+            <td style="padding:32px 28px; color:#111827;">
+              <p style="margin:0 0 16px; font-size:16px;">Hi ${safeName},</p>
+              <p style="margin:0 0 18px; font-size:15px; color:#374151;">Your wallet balance is low. Please purchase a subscription or top up coins to continue accepting bookings without interruption.</p>
+              <table role="presentation" style="width:100%; border-collapse:collapse; background-color:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; margin:18px 0;">
+                <tr>
+                  <td style="padding:18px;">
+                    <div style="font-size:13px; color:#6b7280; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Current Balance</div>
+                    <div style="margin-top:8px; font-size:20px; font-weight:700; color:#0ea5e9;">${balanceDisplay}</div>
+                  </td>
+                </tr>
+              </table>
+              <div style="text-align:center; margin:22px 0 10px;">
+                <a href="${subscriptionUrl}" style="display:inline-block; background-color:#0ea5e9; color:#fff; text-decoration:none; padding:12px 22px; border-radius:10px; font-weight:700; box-shadow:0 4px 12px rgba(14,165,233,0.35);">Purchase Subscription</a>
+              </div>
+              <p style="margin:20px 0 0; font-size:13px; color:#6b7280; text-align:center;">Keep your balance above 10 coins to avoid disruptions.</p>
+            </td>
+          </tr>
+        </table>
+        <table role="presentation" style="width:100%; max-width:600px; border-collapse:collapse; background-color:#ffffff; border-radius:0 0 14px 14px; box-shadow:0 8px 20px rgba(0,0,0,0.08);">
+          <tr>
+            <td style="padding:18px 24px; text-align:center; color:#9ca3af; font-size:12px; border-top:1px solid #e5e7eb;">© ${new Date().getFullYear()} Technosys. All rights reserved.</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  await transporter.sendMail({
+    from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+    replyTo: REPLY_TO,
+    to: email,
+    subject: 'Low Wallet Balance - Please purchase a subscription',
+    html,
+  });
 }
 
 export async function generateArrivalOTP(req, res) {
@@ -1674,6 +1760,80 @@ export async function completeService(req, res) {
         });
       } catch (mailErr) {
         console.error('Email failed:', mailErr.message);
+      }
+    }
+
+    // Send completion email to customer with feedback CTA
+    if (booking.CustomerID?.Email) {
+      try {
+        const SENDER_NAME = process.env.SENDER_NAME || 'Technosys';
+        const SENDER_EMAIL = process.env.SENDER_EMAIL || process.env.SMTP_USER || 'no-reply@technosys.local';
+        const REPLY_TO = process.env.REPLY_TO || SENDER_EMAIL;
+        const feedbackUrl = process.env.CUSTOMER_FEEDBACK_URL || 'http://localhost:5175/customer/bookings';
+
+        const serviceName = booking.SubCategoryID?.name || 'Service';
+        const technicianName = booking.TechnicianID?.Name || 'Technician';
+        const customerName = `${booking.CustomerID?.FirstName || ''} ${booking.CustomerID?.LastName || ''}`.trim() || 'Customer';
+
+        await transporter.sendMail({
+          from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+          replyTo: REPLY_TO,
+          to: booking.CustomerID.Email,
+          subject: 'Your service is completed - share feedback',
+          html: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Service Completed</title>
+</head>
+<body style="margin:0; padding:0; font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color:#f3f4f6;">
+  <table role="presentation" style="width:100%; border-collapse:collapse; background-color:#f3f4f6;">
+    <tr>
+      <td align="center" style="padding:36px 16px;">
+        <table role="presentation" style="width:100%; max-width:600px; border-collapse:collapse; background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%); border-radius:14px 14px 0 0; overflow:hidden; box-shadow:0 10px 24px rgba(0,0,0,0.12);">
+          <tr>
+            <td style="padding:36px 28px; text-align:center; color:#fff;">
+              <div style="font-size:13px; letter-spacing:0.5px; opacity:0.9; text-transform:uppercase;">Service Completed</div>
+              <h1 style="margin:10px 0 0; font-size:26px; font-weight:700;">Thanks for choosing Technosys</h1>
+              <p style="margin:8px 0 0; font-size:15px; opacity:0.9;">Tell us how the service went</p>
+            </td>
+          </tr>
+        </table>
+        <table role="presentation" style="width:100%; max-width:600px; border-collapse:collapse; background-color:#ffffff; box-shadow:0 10px 24px rgba(0,0,0,0.12);">
+          <tr>
+            <td style="padding:30px 26px; color:#111827;">
+              <p style="margin:0 0 14px; font-size:16px;">Hi ${customerName},</p>
+              <p style="margin:0 0 18px; font-size:15px; color:#374151; line-height:1.6;">Your service has been completed successfully. We hope ${technicianName} delivered a great experience for your ${serviceName.toLowerCase()} request. If anything feels off, you can share feedback or raise a complaint from the bookings page.</p>
+              <table role="presentation" style="width:100%; border-collapse:collapse; background-color:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; margin:18px 0;">
+                <tr>
+                  <td style="padding:16px;">
+                    <div style="font-size:12px; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; font-weight:700;">Summary</div>
+                    <div style="margin-top:8px; font-size:15px; color:#0f172a;">Service: <strong>${serviceName}</strong></div>
+                    <div style="margin-top:6px; font-size:15px; color:#0f172a;">Technician: <strong>${technicianName}</strong></div>
+                  </td>
+                </tr>
+              </table>
+              <div style="text-align:center; margin:20px 0 12px;">
+                <a href="${feedbackUrl}" style="display:inline-block; background-color:#2563eb; color:#fff; text-decoration:none; padding:12px 22px; border-radius:12px; font-weight:700; box-shadow:0 4px 14px rgba(37,99,235,0.35);">Leave Feedback</a>
+              </div>
+              <p style="margin:16px 0 0; font-size:13px; color:#6b7280; text-align:center;">Your feedback helps us improve future services.</p>
+            </td>
+          </tr>
+        </table>
+        <table role="presentation" style="width:100%; max-width:600px; border-collapse:collapse; background-color:#ffffff; border-radius:0 0 14px 14px; box-shadow:0 10px 24px rgba(0,0,0,0.12);">
+          <tr>
+            <td style="padding:18px 24px; text-align:center; color:#9ca3af; font-size:12px; border-top:1px solid #e5e7eb;">© ${new Date().getFullYear()} Technosys. All rights reserved.</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+        });
+      } catch (customerMailErr) {
+        console.error('Customer completion email failed:', customerMailErr.message);
       }
     }
 
