@@ -295,26 +295,28 @@ const CustomerBookings = () => {
 
   if (bookings.length === 0) {
     return (
-      <div className="flex flex-col justify-center items-center text-center min-h-[70vh] bg-white px-6">
+      <div className="max-w-5xl mx-auto bg-white p-6 rounded-lg shadow mt-6">
 
-        <div className="w-full max-w-2xl border-b border-gray-200 flex justify-between items-center pb-2 mb-6">
+        <div className="flex items-center justify-between mb-6">
           <button onClick={() => navigate(-1)} className="flex items-center text-gray-700 hover:text-gray-900">
-            <ArrowLeft className="mr-2" size={18} />
-            <span className="font-semibold">My Bookings</span>
+            <ArrowLeft className="mr-2" size={20} />
+            <h2 className="text-2xl font-bold text-gray-800">My Bookings</h2>
           </button>
 
-          <button onClick={() => navigate("/help")} className="flex items-center gap-1 px-3 py-1 text-sm text-purple-700 border border-purple-200 rounded-md hover:bg-purple-50">
-            <HelpCircle size={15} />
+          <button onClick={() => navigate("/help")} className="flex items-center gap-1 px-3 py-1.5 text-sm text-purple-700 border border-purple-200 rounded-md hover:bg-purple-50">
+            <HelpCircle size={16} />
             Help
           </button>
         </div>
 
-        <h2 className="text-lg font-semibold text-gray-800">No bookings yet.</h2>
-        <p className="text-gray-500 mt-2">Looks like you haven’t experienced quality services at home.</p>
+        <div className="flex flex-col justify-center items-center text-center py-20">
+          <h2 className="text-lg font-semibold text-gray-800">No bookings yet.</h2>
+          <p className="text-gray-500 mt-2">Looks like you haven't experienced quality services at home.</p>
 
-        <button onClick={() => navigate("/customer/services")} className="mt-4 text-purple-700 font-medium hover:underline flex items-center gap-1">
-          Explore our services →
-        </button>
+          <button onClick={() => navigate("/customer/services")} className="mt-4 text-purple-700 font-medium hover:underline flex items-center gap-1">
+            Explore our services →
+          </button>
+        </div>
 
       </div>
     );

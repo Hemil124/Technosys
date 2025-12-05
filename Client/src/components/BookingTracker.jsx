@@ -203,7 +203,7 @@ const BookingTracker = ({ status }) => {
         })}
       </div>
       
-      <style jsx>{`
+      <style>{`
         @keyframes slideIn {
           from {
             transform: translateX(-100%);
