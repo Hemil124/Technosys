@@ -695,7 +695,9 @@ export async function createBooking(req, res) {
     if (!customer || !customer.Address || !customer.Address.houseNumber || !customer.Address.pincode) {
       return res.status(400).json({ success: false, message: "Please set your address before booking." });
     }
-
+    if (!customer.Email) {
+      return res.status(400).json({ success: false, message: "Please set your email before booking." });
+    }
     // Check for duplicate booking: same customer, service, date, time with active status
     // Normalize date to start of day for comparison
     const bookingDateObj = new Date(bookingDate);
