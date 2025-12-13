@@ -257,8 +257,8 @@ const CustomerServiceDetails = () => {
           },
         },
         prefill: {
-          email: userData?.Email || '',
-          contact: userData?.MobileNumber || '',
+          email: userData?.email || '',
+          contact: userData?.mobile || "",
         },
         theme: {
           color: '#4a56e2',
