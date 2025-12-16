@@ -3,6 +3,7 @@ import {
   getTechnicianDashboard,
   getWeeklyEarnings,
   getMonthlyEarnings,
+  getMonthlyEarningsByMonth,
   getBookingStatus,
   getRevenueByService,
   getRecentFeedback,
@@ -21,6 +22,7 @@ const router = express.Router();
 router.get('/dashboard', userAuth, getTechnicianDashboard);
 router.get('/weekly-earnings', userAuth, getWeeklyEarnings);
 router.get('/monthly-earnings', userAuth, getMonthlyEarnings);
+router.get('/monthly-earnings-by-month', userAuth, getMonthlyEarningsByMonth);
 router.get('/booking-status', userAuth, getBookingStatus);
 router.get('/revenue-by-service', userAuth, getRevenueByService);
 router.get('/recent-feedback', userAuth, getRecentFeedback);

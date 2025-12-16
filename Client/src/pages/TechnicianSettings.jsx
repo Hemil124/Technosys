@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useMemo, useCallback } from 'react';
 import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -63,6 +63,8 @@ export default function TechnicianSettings() {
 
   const [weeklyEarnings, setWeeklyEarnings] = useState([]);
   const [monthlyEarnings, setMonthlyEarnings] = useState(0);
+  const [monthlyEarningsData, setMonthlyEarningsData] = useState([]);
+  const [earningsView, setEarningsView] = useState('weekly');
   const [bookingStatus, setBookingStatus] = useState([]);
   const [revenueByService, setRevenueByService] = useState([]);
   const [recentFeedback, setRecentFeedback] = useState([]);
@@ -72,11 +74,86 @@ export default function TechnicianSettings() {
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [peakHours, setPeakHours] = useState([]);
   const [topLocations, setTopLocations] = useState([]);
+  const [transactionPage, setTransactionPage] = useState(1);
+  const transactionPageSize = 5;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const API_URL = backendUrl || import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+
+  // Pagination for transactions
+  const transactionTotalPages = Math.ceil(recentTransactions.length / transactionPageSize) || 1;
+  const paginatedTransactions = recentTransactions.slice(
+    (transactionPage - 1) * transactionPageSize,
+    transactionPage * transactionPageSize
+  );
+
+  // Pagination Component
+  const Pagination = ({ page, totalPages, onChange }) => {
+    const getPages = () => {
+      let arr = [];
+      arr.push(1);
+
+      if (page > 3) arr.push("...");
+
+      for (let p = page - 1; p <= page + 1; p++) {
+        if (p > 1 && p < totalPages) arr.push(p);
+      }
+
+      if (page < totalPages - 2) arr.push("...");
+
+      if (totalPages > 1) arr.push(totalPages);
+
+      return arr;
+    };
+
+    return (
+      <div className="flex items-center justify-center gap-2 mt-6 select-none">
+        <button
+          onClick={() => onChange(Math.max(1, page - 1))}
+          disabled={page === 1}
+          className={`px-4 py-2 rounded-lg border text-sm transition-all duration-200 ${
+            page === 1
+              ? "opacity-40 cursor-not-allowed"
+              : "hover:bg-gray-100 shadow-sm"
+          }`}
+        >
+          Previous
+        </button>
+
+        {getPages().map((p, i) =>
+          p === "..." ? (
+            <span key={i} className="px-3 py-2 text-gray-500">…</span>
+          ) : (
+            <button
+              key={i}
+              onClick={() => onChange(p)}
+              className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm border transition-all ${
+                p === page
+                  ? "bg-gray-900 text-white shadow-md scale-110 border-gray-900"
+                  : "hover:bg-gray-100 text-gray-700 border-gray-300"
+              }`}
+            >
+              {p}
+            </button>
+          )
+        )}
+
+        <button
+          onClick={() => onChange(Math.min(totalPages, page + 1))}
+          disabled={page === totalPages}
+          className={`px-4 py-2 rounded-lg border text-sm transition-all duration-200 ${
+            page === totalPages
+              ? "opacity-40 cursor-not-allowed"
+              : "hover:bg-gray-100 shadow-sm"
+          }`}
+        >
+          Next
+        </button>
+      </div>
+    );
+  };
 
   // Fetch all analytics data
   const fetchAnalytics = async () => {
@@ -97,6 +174,7 @@ export default function TechnicianSettings() {
         dashboardRes,
         weeklyRes,
         monthlyRes,
+        monthlyByMonthRes,
         statusRes,
         revenueServiceRes,
         feedbackRes,
@@ -110,6 +188,7 @@ export default function TechnicianSettings() {
         fetch(`${API_URL}/api/technician-analytics/dashboard`, fetchOptions),
         fetch(`${API_URL}/api/technician-analytics/weekly-earnings`, fetchOptions),
         fetch(`${API_URL}/api/technician-analytics/monthly-earnings`, fetchOptions),
+        fetch(`${API_URL}/api/technician-analytics/monthly-earnings-by-month`, fetchOptions),
         fetch(`${API_URL}/api/technician-analytics/booking-status`, fetchOptions),
         fetch(`${API_URL}/api/technician-analytics/revenue-by-service`, fetchOptions),
         fetch(`${API_URL}/api/technician-analytics/recent-feedback`, fetchOptions),
@@ -136,6 +215,7 @@ export default function TechnicianSettings() {
       const dashboard = await dashboardRes.json();
       const weekly = await weeklyRes.json();
       const monthly = await monthlyRes.json();
+      const monthlyByMonth = await monthlyByMonthRes.json();
       const status = await statusRes.json();
       const revenueService = await revenueServiceRes.json();
       const feedback = await feedbackRes.json();
@@ -150,6 +230,7 @@ export default function TechnicianSettings() {
       if (dashboard.success) setDashboardData(dashboard.data);
       if (weekly.success) setWeeklyEarnings(weekly.data);
       if (monthly.success) setMonthlyEarnings(monthly.data);
+      if (monthlyByMonth.success) setMonthlyEarningsData(monthlyByMonth.data);
       if (status.success) setBookingStatus(status.data);
       if (revenueService.success) setRevenueByService(revenueService.data);
       if (feedback.success) setRecentFeedback(feedback.data);
@@ -228,6 +309,30 @@ export default function TechnicianSettings() {
     </button>
   );
 
+  // Memoized Earnings Chart Component
+  const EarningsChart = useMemo(() => {
+    const currentData = earningsView === 'weekly' ? weeklyEarnings : monthlyEarningsData;
+    const dataKey = earningsView === 'weekly' ? 'day' : 'month';
+    
+    return (
+      <ResponsiveContainer width="100%" height={300}>
+        <AreaChart data={currentData}>
+          <defs>
+            <linearGradient id="colorEarnings" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
+              <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey={dataKey} />
+          <YAxis />
+          <Tooltip />
+          <Area type="monotone" dataKey="earnings" stroke="#10B981" fillOpacity={1} fill="url(#colorEarnings)" />
+        </AreaChart>
+      </ResponsiveContainer>
+    );
+  }, [earningsView, weeklyEarnings, monthlyEarningsData]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -290,7 +395,7 @@ export default function TechnicianSettings() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <KPICard
                 title="Total Earnings"
-                value={`₹${(dashboardData.kpis.totalEarnings / 1000).toFixed(1)}K`}
+                value={`₹${dashboardData.kpis.totalEarnings.toLocaleString()}`}
                 subtitle="All-time revenue"
                 icon={DollarSign}
                 color="bg-green-500"
@@ -363,16 +468,7 @@ export default function TechnicianSettings() {
               <DollarSign className="text-green-600" size={20} />
               Financial Overview
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-orange-100 rounded-lg">
-                    <Clock className="text-orange-600" size={20} />
-                  </div>
-                  <h3 className="text-sm font-medium text-gray-600">Pending Payouts</h3>
-                </div>
-                <p className="text-2xl font-bold text-gray-900">₹{dashboardData.financial.pendingPayouts.toFixed(0)}</p>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 bg-green-100 rounded-lg">
@@ -382,15 +478,7 @@ export default function TechnicianSettings() {
                 </div>
                 <p className="text-2xl font-bold text-gray-900">₹{monthlyEarnings.toLocaleString()}</p>
               </div>
-              <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Wallet className="text-blue-600" size={20} />
-                  </div>
-                  <h3 className="text-sm font-medium text-gray-600">Current Balance</h3>
-                </div>
-                <p className="text-2xl font-bold text-gray-900">₹{dashboardData.financial.walletBalance.toFixed(0)}</p>
-              </div>
+           
             </div>
           </div>
 
@@ -483,24 +571,34 @@ export default function TechnicianSettings() {
                 </div>
               </div>
 
-              {/* Weekly Earnings */}
+              {/* Earnings Chart with Toggle */}
               <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Weekly Earnings Trend</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={weeklyEarnings}>
-                    <defs>
-                      <linearGradient id="colorEarnings" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="day" />
-                    <YAxis />
-                    <Tooltip />
-                    <Area type="monotone" dataKey="earnings" stroke="#10B981" fillOpacity={1} fill="url(#colorEarnings)" />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-gray-900">Earnings Trend</h3>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setEarningsView('weekly')}
+                      className={`px-4 py-2 rounded-lg font-medium transition ${
+                        earningsView === 'weekly'
+                          ? 'bg-green-500 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Weekly
+                    </button>
+                    <button
+                      onClick={() => setEarningsView('monthly')}
+                      className={`px-4 py-2 rounded-lg font-medium transition ${
+                        earningsView === 'monthly'
+                          ? 'bg-green-500 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Monthly
+                    </button>
+                  </div>
+                </div>
+                {EarningsChart}
               </div>
             </div>
           </div>
@@ -624,7 +722,7 @@ export default function TechnicianSettings() {
                 <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                   📍 Top Service Locations
                 </h3>
-                <div className="space-y-3 max-h-64 overflow-y-auto">
+                <div className="space-y-3 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                   {topLocations.length > 0 ? topLocations.map((location, index) => (
                     <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
                       <div className="flex items-center gap-3">
@@ -724,7 +822,7 @@ export default function TechnicianSettings() {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentTransactions.length > 0 ? recentTransactions.map((txn, index) => (
+                  {paginatedTransactions.length > 0 ? paginatedTransactions.map((txn, index) => (
                     <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-3 px-4 text-sm font-medium text-gray-900">
                         {txn.serviceName}
@@ -761,6 +859,13 @@ export default function TechnicianSettings() {
                 </tbody>
               </table>
             </div>
+            {recentTransactions.length > transactionPageSize && (
+              <Pagination
+                page={transactionPage}
+                totalPages={transactionTotalPages}
+                onChange={(p) => setTransactionPage(p)}
+              />
+            )}
           </div>
 
 

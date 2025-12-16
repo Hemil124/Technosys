@@ -19,27 +19,42 @@ export const getTechnicianDashboard = async (req, res) => {
     const walletBalance = wallet ? wallet.BalanceCoins : 0;
 
     // Get total earnings (all completed bookings)
-    const totalEarningsResult = await CustomerPayment.aggregate([
-      {
-        $lookup: {
-          from: 'bookings',
-          localField: 'BookingID',
-          foreignField: '_id',
-          as: 'booking'
-        }
-      },
-      { $unwind: '$booking' },
+    const totalEarningsResult = await Booking.aggregate([
       {
         $match: {
-          'booking.TechnicianID': technicianId,
-          'booking.Status': 'Completed',
-          Status: 'Success'
+          TechnicianID: technicianId,
+          Status: 'Completed'
         }
       },
+      {
+        $lookup: {
+          from: 'subservicecategories',
+          localField: 'SubCategoryID',
+          foreignField: '_id',
+          as: 'subService'
+        }
+      },
+      { $unwind: { path: '$subService', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'customerpayments',
+          localField: '_id',
+          foreignField: 'BookingID',
+          as: 'payment'
+        }
+      },
+      { $unwind: { path: '$payment', preserveNullAndEmptyArrays: true } },
       {
         $group: {
           _id: null,
-          totalEarnings: { $sum: '$Amount' }
+          totalEarnings: { 
+            $sum: { 
+              $ifNull: [
+                '$payment.Amount',
+                { $ifNull: ['$subService.price', 0] }
+              ]
+            }
+          }
         }
       }
     ]);
@@ -90,31 +105,54 @@ export const getTechnicianDashboard = async (req, res) => {
       createdAt: { $gte: today, $lt: tomorrow }
     });
 
-    const todayEarningsResult = await CustomerPayment.aggregate([
-      {
-        $lookup: {
-          from: 'bookings',
-          localField: 'BookingID',
-          foreignField: '_id',
-          as: 'booking'
-        }
-      },
-      { $unwind: '$booking' },
+    const todayEarningsResult = await Booking.aggregate([
       {
         $match: {
-          'booking.TechnicianID': technicianId,
-          'booking.Status': 'Completed',
-          Status: 'Success',
-          createdAt: { $gte: today, $lt: tomorrow }
+          TechnicianID: technicianId,
+          Status: 'Completed',
+          updatedAt: { $gte: today, $lt: tomorrow }
+        }
+      },
+      {
+        $lookup: {
+          from: 'subservicecategories',
+          localField: 'SubCategoryID',
+          foreignField: '_id',
+          as: 'subService'
+        }
+      },
+      { $unwind: { path: '$subService', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'customerpayments',
+          localField: '_id',
+          foreignField: 'BookingID',
+          as: 'payment'
         }
       },
       {
         $group: {
           _id: null,
-          todayEarnings: { $sum: '$Amount' }
+          todayEarnings: {
+            $sum: {
+              $cond: [
+                { $gt: [{ $size: '$payment' }, 0] },
+                {
+                  $cond: [
+                    { $eq: [{ $arrayElemAt: ['$payment.Status', 0] }, 'Success'] },
+                    { $arrayElemAt: ['$payment.Amount', 0] },
+                    { $ifNull: ['$subService.price', 0] }
+                  ]
+                },
+                { $ifNull: ['$subService.price', 0] }
+              ]
+            }
+          }
         }
       }
     ]);
+
+    console.log('Today Earnings Result:', JSON.stringify(todayEarningsResult, null, 2));
     const todayEarnings = todayEarningsResult[0]?.todayEarnings || 0;
 
     // Active bookings
@@ -137,9 +175,10 @@ export const getTechnicianDashboard = async (req, res) => {
       : 0;
 
     // Cancellation count and rate
+    // Only count auto-cancelled bookings for cancellation rate
     const cancelledBookings = await Booking.countDocuments({
       TechnicianID: technicianId,
-      Status: 'Cancelled'
+      Status: 'AutoCancelled'
     });
     const cancellationRate = totalBookings > 0 
       ? ((cancelledBookings / totalBookings) * 100).toFixed(1) 
@@ -199,11 +238,17 @@ export const getTechnicianDashboard = async (req, res) => {
     }
 
     // Get today's availability
+    // TechnicianAvailability stores date as YYYY-MM-DD string and per-slot statuses
+    const todayDateString = new Date().toLocaleDateString('en-CA');
     const todayAvailability = await TechnicianAvailability.findOne({
-      TechnicianID: technicianId,
-      Date: { $gte: today, $lt: tomorrow }
-    });
-    const availabilityStatus = todayAvailability?.IsAvailable ? 'Available' : 'Not Available';
+      technicianId,
+      date: todayDateString
+    }).lean();
+
+    const hasAvailableSlot = todayAvailability?.timeSlots?.some(
+      slot => slot.status === 'available'
+    );
+    const availabilityStatus = hasAvailableSlot ? 'Available' : 'Not Available';
 
     // Platform commission paid (sum of all subscription payments)
     const commissionPaid = await SubscriptionPayment.aggregate([
@@ -281,42 +326,88 @@ export const getWeeklyEarnings = async (req, res) => {
   try {
     const technicianId = new mongoose.Types.ObjectId(req.userId);
 
+    // Use updatedAt (completion time) and include today + previous 6 days
     const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6); // inclusive of today
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
 
-    const weeklyData = await CustomerPayment.aggregate([
-      {
-        $lookup: {
-          from: 'bookings',
-          localField: 'BookingID',
-          foreignField: '_id',
-          as: 'booking'
-        }
-      },
-      { $unwind: '$booking' },
+    const weeklyData = await Booking.aggregate([
       {
         $match: {
-          'booking.TechnicianID': technicianId,
-          'booking.Status': 'Completed',
-          Status: 'Success',
-          createdAt: { $gte: sevenDaysAgo }
+          TechnicianID: technicianId,
+          Status: 'Completed',
+          updatedAt: { $gte: sevenDaysAgo, $lt: tomorrow }
+        }
+      },
+      {
+        $lookup: {
+          from: 'subservicecategories',
+          localField: 'SubCategoryID',
+          foreignField: '_id',
+          as: 'subService'
+        }
+      },
+      { $unwind: { path: '$subService', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'customerpayments',
+          localField: '_id',
+          foreignField: 'BookingID',
+          as: 'payment'
+        }
+      },
+      {
+        // Compute revenue per booking with payment fallback, just like daily/monthly earnings
+        $project: {
+          updatedAt: 1,
+          revenue: {
+            $cond: [
+              { $gt: [{ $size: '$payment' }, 0] },
+              {
+                $cond: [
+                  { $eq: [{ $arrayElemAt: ['$payment.Status', 0] }, 'Success'] },
+                  { $arrayElemAt: ['$payment.Amount', 0] },
+                  { $ifNull: ['$subService.price', 0] }
+                ]
+              },
+              { $ifNull: ['$subService.price', 0] }
+            ]
+          }
         }
       },
       {
         $group: {
           _id: {
-            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
+            $dateToString: { format: '%Y-%m-%d', date: '$updatedAt', timezone: '+05:30' }
           },
-          earnings: { $sum: '$Amount' }
+          earnings: { $sum: '$revenue' }
         }
       },
       { $sort: { _id: 1 } }
     ]);
 
-    const formattedData = weeklyData.map(item => ({
-      day: new Date(item._id).toLocaleDateString('en-US', { weekday: 'short' }),
-      earnings: item.earnings
-    }));
+    // Build a 7-day window (today and previous 6 days) with zeros for missing days
+    const tzOffsetMs = 5.5 * 60 * 60 * 1000; // IST offset to align with aggregation timezone
+    const formattedData = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      const istDate = new Date(date.getTime() + tzOffsetMs);
+      const dateStr = istDate.toISOString().split('T')[0];
+      const dayName = istDate.toLocaleDateString('en-IN', { weekday: 'short' });
+
+      const dayData = weeklyData.find(item => item._id === dateStr);
+      formattedData.push({
+        day: dayName,
+        earnings: dayData?.earnings || 0
+      });
+    }
+
+    console.log('Weekly Earnings Data:', JSON.stringify(formattedData, null, 2));
 
     res.status(200).json({
       success: true,
@@ -341,31 +432,54 @@ export const getMonthlyEarnings = async (req, res) => {
     thisMonth.setDate(1);
     thisMonth.setHours(0, 0, 0, 0);
 
-    const monthlyResult = await CustomerPayment.aggregate([
-      {
-        $lookup: {
-          from: 'bookings',
-          localField: 'BookingID',
-          foreignField: '_id',
-          as: 'booking'
-        }
-      },
-      { $unwind: '$booking' },
+    const monthlyResult = await Booking.aggregate([
       {
         $match: {
-          'booking.TechnicianID': technicianId,
-          'booking.Status': 'Completed',
-          Status: 'Success',
-          createdAt: { $gte: thisMonth }
+          TechnicianID: technicianId,
+          Status: 'Completed',
+          updatedAt: { $gte: thisMonth }
+        }
+      },
+      {
+        $lookup: {
+          from: 'subservicecategories',
+          localField: 'SubCategoryID',
+          foreignField: '_id',
+          as: 'subService'
+        }
+      },
+      { $unwind: { path: '$subService', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'customerpayments',
+          localField: '_id',
+          foreignField: 'BookingID',
+          as: 'payment'
         }
       },
       {
         $group: {
           _id: null,
-          monthlyEarnings: { $sum: '$Amount' }
+          monthlyEarnings: {
+            $sum: {
+              $cond: [
+                { $gt: [{ $size: '$payment' }, 0] },
+                {
+                  $cond: [
+                    { $eq: [{ $arrayElemAt: ['$payment.Status', 0] }, 'Success'] },
+                    { $arrayElemAt: ['$payment.Amount', 0] },
+                    { $ifNull: ['$subService.price', 0] }
+                  ]
+                },
+                { $ifNull: ['$subService.price', 0] }
+              ]
+            }
+          }
         }
       }
     ]);
+
+    console.log('Monthly Earnings Result:', JSON.stringify(monthlyResult, null, 2));
 
     res.status(200).json({
       success: true,
@@ -376,6 +490,90 @@ export const getMonthlyEarnings = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch monthly earnings',
+      error: error.message
+    });
+  }
+};
+
+// Get Monthly Earnings by Month (current year)
+export const getMonthlyEarningsByMonth = async (req, res) => {
+  try {
+    const technicianId = new mongoose.Types.ObjectId(req.userId);
+
+    const currentYear = new Date().getFullYear();
+    const yearStart = new Date(currentYear, 0, 1);
+    const yearEnd = new Date(currentYear + 1, 0, 1);
+
+    const monthlyData = await Booking.aggregate([
+      {
+        $match: {
+          TechnicianID: technicianId,
+          Status: 'Completed',
+          updatedAt: { $gte: yearStart, $lt: yearEnd }
+        }
+      },
+      {
+        $lookup: {
+          from: 'subservicecategories',
+          localField: 'SubCategoryID',
+          foreignField: '_id',
+          as: 'subService'
+        }
+      },
+      { $unwind: { path: '$subService', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'customerpayments',
+          localField: '_id',
+          foreignField: 'BookingID',
+          as: 'payment'
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $month: '$updatedAt'
+          },
+          earnings: {
+            $sum: {
+              $cond: [
+                { $gt: [{ $size: '$payment' }, 0] },
+                {
+                  $cond: [
+                    { $eq: [{ $arrayElemAt: ['$payment.Status', 0] }, 'Success'] },
+                    { $arrayElemAt: ['$payment.Amount', 0] },
+                    { $ifNull: ['$subService.price', 0] }
+                  ]
+                },
+                { $ifNull: ['$subService.price', 0] }
+              ]
+            }
+          }
+        }
+      },
+      { $sort: { _id: 1 } }
+    ]);
+
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    // Create array with all months, filling in earnings where available
+    const formattedData = monthNames.map((month, index) => {
+      const monthData = monthlyData.find(item => item._id === index + 1);
+      return {
+        month: month,
+        earnings: monthData?.earnings || 0
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      data: formattedData
+    });
+  } catch (error) {
+    console.error('Error in getMonthlyEarningsByMonth:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch monthly earnings by month',
       error: error.message
     });
   }
@@ -533,7 +731,7 @@ export const getRecentFeedback = async (req, res) => {
       },
       { $unwind: { path: '$customer', preserveNullAndEmptyArrays: true } },
       { $sort: { createdAt: -1 } },
-      { $limit: 5 },
+      { $limit: 3 },
       {
         $project: {
           customerName: { $ifNull: ['$customer.Name', 'Anonymous'] },
@@ -568,7 +766,7 @@ export const getUpcomingBookings = async (req, res) => {
       Status: { $in: ['Pending', 'Confirmed', 'In-Progress'] },
       Date: { $gte: new Date() }
     })
-      .populate('CustomerID', 'Name MobileNumber')
+      .populate('CustomerID', 'Name Mobile')
       .populate('SubCategoryID', 'name')
       .sort({ Date: 1, TimeSlot: 1 })
       .limit(5)
@@ -577,7 +775,7 @@ export const getUpcomingBookings = async (req, res) => {
     const formattedData = upcomingBookings.map(booking => ({
       id: booking._id,
       customerName: booking.CustomerID?.Name || 'N/A',
-      customerPhone: booking.CustomerID?.MobileNumber || 'N/A',
+      customerPhone: booking.CustomerID?.Mobile || 'N/A',
       serviceName: booking.SubCategoryID?.name || 'N/A',
       scheduledDate: booking.Date,
       timeSlot: booking.TimeSlot,
