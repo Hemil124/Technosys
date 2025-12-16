@@ -11,6 +11,7 @@ import BookingArrivalOTP from "../models/BookingArrivalOTP.js";
 import FailedPaymentOperation from "../models/FailedPaymentOperation.js";
 import Refund from "../models/Refund.js";
 import AdminPayout from "../models/AdminPayout.js";
+import Chat from "../models/Chat.js";
 import mongoose from "mongoose";
 import { getIo } from "../config/realtime.js";
 import transporter from "../config/nodemailer.js";
@@ -1317,6 +1318,32 @@ export async function acceptBooking(req, res) {
     
     console.log('✅ Broadcast complete\n');
 
+    // Auto-create chat for this booking  7-day grace period)
+    try {
+      const existingChat = await Chat.findOne({ BookingID: booking._id });
+      if (!existingChat) {
+        const newChat = await Chat.create({
+          BookingID: booking._id,
+          CustomerID: booking.CustomerID,
+          TechnicianID: technicianId,
+        });
+        console.log(`💬 Created chat for booking ${booking._id}: Chat ID ${newChat._id}`);
+        
+        // Notify both parties that chat is available
+        io.to(customerId).emit("chat-available", { 
+          bookingId: String(booking._id),
+          chatId: String(newChat._id) 
+        });
+        io.to(String(technicianId)).emit("chat-available", { 
+          bookingId: String(booking._id),
+          chatId: String(newChat._id) 
+        });
+      }
+    } catch (chatErr) {
+      console.error('Failed to create chat for booking:', chatErr);
+      // Don't fail the booking acceptance if chat creation fails
+    }
+
     res.json({ 
       success: true, 
       data: booking,
@@ -1849,6 +1876,15 @@ export async function completeService(req, res) {
       });
     } catch (socketErr) {
       console.error('Socket notification failed:', socketErr.message);
+    }
+
+    // Set chat to read-only immediately after service completion
+    try {
+      await Chat.setExpiryForBooking(booking._id);
+      console.log(`💬 Chat set to read-only for completed booking ${booking._id}`);
+    } catch (chatErr) {
+      console.error('Failed to set chat expiry:', chatErr.message);
+      // Non-critical, don't fail the completion
     }
 
     return res.json({ success: true, message: "Service completed successfully", booking });
