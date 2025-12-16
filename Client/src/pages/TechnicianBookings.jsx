@@ -144,15 +144,28 @@ const TechnicianBookings = () => {
 
   const fetchUnreadCount = async (bookingId) => {
     try {
+      // First check if chat exists by calling the chat endpoint
       const { data } = await axios.get(
-        `${backendUrl}/api/chat/${bookingId}/messages?page=1&limit=1`,
+        `${backendUrl}/api/chat/${bookingId}`,
         { withCredentials: true }
       );
-      if (data.success && data.unreadCount > 0) {
-        setUnreadCounts(prev => ({ ...prev, [bookingId]: data.unreadCount }));
+      
+      if (data.success && data.chat) {
+        // Now fetch messages to get unread count
+        const messagesData = await axios.get(
+          `${backendUrl}/api/chat/${bookingId}/messages?page=1&limit=1`,
+          { withCredentials: true }
+        );
+        
+        if (messagesData.data.success && messagesData.data.unreadCount > 0) {
+          setUnreadCounts(prev => ({ ...prev, [bookingId]: messagesData.data.unreadCount }));
+        }
       }
     } catch (error) {
-      // Silently fail - chat might not exist yet
+      // Silently fail - chat might not exist yet or user doesn't have access
+      if (error.response?.status !== 404 && error.response?.status !== 403) {
+        console.error('Error fetching unread count:', error);
+      }
     }
   };
 

@@ -134,15 +134,28 @@ const CustomerBookings = () => {
 
   const fetchUnreadCount = async (bookingId) => {
     try {
+      // First check if chat exists by calling the chat endpoint
       const { data } = await axios.get(
-        `${backendUrl}/api/chat/${bookingId}/messages?page=1&limit=1`,
+        `${backendUrl}/api/chat/${bookingId}`,
         { withCredentials: true }
       );
-      if (data.success && data.unreadCount > 0) {
-        setUnreadCounts(prev => ({ ...prev, [bookingId]: data.unreadCount }));
+      
+      if (data.success && data.chat) {
+        // Now fetch messages to get unread count
+        const messagesData = await axios.get(
+          `${backendUrl}/api/chat/${bookingId}/messages?page=1&limit=1`,
+          { withCredentials: true }
+        );
+        
+        if (messagesData.data.success && messagesData.data.unreadCount > 0) {
+          setUnreadCounts(prev => ({ ...prev, [bookingId]: messagesData.data.unreadCount }));
+        }
       }
     } catch (error) {
-      // Silently fail - chat might not exist yet
+      // Silently fail - chat might not exist yet or user doesn't have access
+      if (error.response?.status !== 404 && error.response?.status !== 403) {
+        console.error('Error fetching unread count:', error);
+      }
     }
   };
 
@@ -238,11 +251,35 @@ const CustomerBookings = () => {
     });
   }, [currentTime, bookings, backendUrl]);
 
+  // Request notification permission on mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then(permission => {
+        console.log('Notification permission:', permission);
+      });
+    }
+  }, []);
+
   useEffect(() => {
     if (!socket) return;
 
     const handleBookingAccepted = ({ bookingId, technicianId, status }) => {
       toast.success("A technician has accepted your booking!");
+
+      // Show browser notification
+      if (Notification.permission === 'granted') {
+        const notification = new Notification('Booking Confirmed!', {
+          body: 'A technician has accepted your booking. Service will begin soon.',
+          icon: '/favicon.ico',
+          tag: `booking-${bookingId}`,
+          requireInteraction: true,
+        });
+
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+        };
+      }
 
       setBookings(prev =>
         prev.map(b =>
@@ -257,6 +294,21 @@ const CustomerBookings = () => {
 
     const handleBookingAutoCancelled = ({ bookingId, message }) => {
       toast.error(message || "Your booking was automatically cancelled.");
+
+      // Show browser notification
+      if (Notification.permission === 'granted') {
+        const notification = new Notification('Booking Cancelled', {
+          body: message || 'Your booking was automatically cancelled due to no technician acceptance.',
+          icon: '/favicon.ico',
+          tag: `booking-cancel-${bookingId}`,
+          requireInteraction: true,
+        });
+
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+        };
+      }
 
       setBookings(prev =>
         prev.map(b =>
