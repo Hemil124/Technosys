@@ -914,9 +914,20 @@ export const getMostBookedServices = async (req, res) => {
       },
       { $unwind: { path: "$subCategory", preserveNullAndEmptyArrays: true } },
       {
+        $lookup: {
+          from: "servicecategories",
+          localField: "subCategory.serviceCategoryId",
+          foreignField: "_id",
+          as: "category"
+        }
+      },
+      { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
+      {
         $group: {
           _id: "$SubCategoryID",
           name: { $first: "$subCategory.name" },
+          categoryId: { $first: "$category._id" },
+          categoryName: { $first: "$category.name" },
           bookings: { $count: {} },
           price: { $first: "$subCategory.price" }
         }
@@ -928,8 +939,12 @@ export const getMostBookedServices = async (req, res) => {
     const formattedData = mostBooked.map(item => ({
       name: item.name || "Uncategorized",
       bookings: item.bookings,
-      value: item.bookings // for pie chart
+      value: item.bookings,
+      categoryId: item.categoryId ? item.categoryId.toString() : null,
+      categoryName: item.categoryName || "Uncategorized"
     }));
+
+    console.log('Most Booked Services Data:', JSON.stringify(formattedData, null, 2));
 
     res.json({
       success: true,

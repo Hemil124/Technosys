@@ -630,7 +630,8 @@ export const getRevenueByService = async (req, res) => {
     const revenueData = await Booking.aggregate([
       {
         $match: {
-          TechnicianID: technicianId
+          TechnicianID: technicianId,
+          Status: 'Completed'
         }
       },
       {
@@ -666,9 +667,12 @@ export const getRevenueByService = async (req, res) => {
           revenue: { 
             $sum: { 
               $cond: [
-                { $eq: ['$payment.Status', 'Success'] },
+                { $and: [
+                  { $ne: ['$payment', null] },
+                  { $eq: ['$payment.Status', 'Success'] }
+                ]},
                 { $ifNull: ['$payment.Amount', 0] },
-                0
+                { $ifNull: ['$subService.price', 0] }
               ]
             }
           },

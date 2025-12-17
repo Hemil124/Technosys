@@ -254,6 +254,15 @@ export default function TechnicianSettings() {
     fetchAnalytics();
   }, []);
 
+  // Helper: Smart currency formatter (shows actual number if small, K/M/B if large)
+  const formatCurrency = (amount) => {
+    if (amount === 0) return '₹0';
+    if (amount < 1000) return `₹${Math.round(amount).toLocaleString()}`;
+    if (amount < 1000000) return `₹${(amount / 1000).toFixed(1)}K`;
+    if (amount < 1000000000) return `₹${(amount / 1000000).toFixed(1)}M`;
+    return `₹${(amount / 1000000000).toFixed(1)}B`;
+  };
+
   // Helper: lighten/darken hex color for gradient shading
   const lightenDarkenColor = (hex, amt) => {
     if (!hex) return '#999999';
@@ -326,7 +335,10 @@ export default function TechnicianSettings() {
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey={dataKey} />
           <YAxis />
-          <Tooltip />
+          <Tooltip 
+            formatter={(value) => formatCurrency(value)}
+            contentStyle={{ backgroundColor: '#fff', border: '1px solid #E5E7EB', borderRadius: '8px' }}
+          />
           <Area type="monotone" dataKey="earnings" stroke="#10B981" fillOpacity={1} fill="url(#colorEarnings)" />
         </AreaChart>
       </ResponsiveContainer>
@@ -395,14 +407,14 @@ export default function TechnicianSettings() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <KPICard
                 title="Total Earnings"
-                value={`₹${dashboardData.kpis.totalEarnings.toLocaleString()}`}
+                value={formatCurrency(dashboardData.kpis.totalEarnings)}
                 subtitle="All-time revenue"
                 icon={DollarSign}
                 color="bg-green-500"
               />
               <KPICard
                 title="Wallet Balance"
-                value={`₹${dashboardData.kpis.walletBalance.toFixed(0)}`}
+                value={formatCurrency(dashboardData.kpis.walletBalance)}
                 subtitle="Available balance"
                 icon={Wallet}
                 color="bg-blue-500"
@@ -444,7 +456,7 @@ export default function TechnicianSettings() {
                 </div>
                 <div className="text-center">
                   <p className="text-white/80 text-sm mb-1">Earnings Today</p>
-                  <p className="text-3xl font-bold">₹{dashboardData.todayStats.todayEarnings.toLocaleString()}</p>
+                  <p className="text-3xl font-bold">{formatCurrency(dashboardData.todayStats.todayEarnings)}</p>
                 </div>
                 <div className="text-center">
                   <p className="text-white/80 text-sm mb-1">Active Bookings</p>
@@ -476,7 +488,7 @@ export default function TechnicianSettings() {
                   </div>
                   <h3 className="text-sm font-medium text-gray-600">This Month's Earnings</h3>
                 </div>
-                <p className="text-2xl font-bold text-gray-900">₹{monthlyEarnings.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(monthlyEarnings)}</p>
               </div>
            
             </div>
@@ -619,7 +631,15 @@ export default function TechnicianSettings() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="category" />
                       <YAxis />
-                      <Tooltip />
+                      <Tooltip 
+                        formatter={(value, name) => {
+                          if (name === 'Revenue (₹)' || name === 'revenue') {
+                            return [formatCurrency(value), 'Revenue'];
+                          }
+                          return [value, name];
+                        }}
+                        contentStyle={{ backgroundColor: '#fff', border: '1px solid #E5E7EB', borderRadius: '8px' }}
+                      />
                       <Legend />
                       <Bar dataKey="revenue" fill="#3B82F6" name="Revenue (₹)" />
                       <Bar dataKey="bookings" fill="#10B981" name="Bookings" />

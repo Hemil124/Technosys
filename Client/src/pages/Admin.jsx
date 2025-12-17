@@ -374,14 +374,7 @@ export const Admin = () => {
             accentClass="text-orange-700"
             onClick={() => navigate('/admin/technician-requests')}
           />
-          <AlertCard
-            title="Unresolved Complaints"
-            count={dashboardData.pendingActions.pendingComplaints}
-            icon={MessageSquare}
-            bgClass="bg-red-50"
-            accentClass="text-red-700"
-            onClick={() => navigate('/admin/feedbacks')}
-          />
+         
         </div>
 
         {/* 3. Booking Status & 4. Revenue Analytics */}
@@ -489,7 +482,7 @@ export const Admin = () => {
             )}
             {revenueView === 'monthly' && (
               <ResponsiveContainer width="100%" height={320}>
-                <BarChart data={monthlyRevenueData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <AreaChart data={monthlyRevenueData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorMonthly" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
@@ -509,8 +502,8 @@ export const Admin = () => {
                     }}
                     labelFormatter={(label) => `${label}`}
                   />
-                  <Bar dataKey="revenue" fill="#10B981" radius={[8, 8, 0, 0]} isAnimationActive={true} />
-                </BarChart>
+                  <Area type="monotone" dataKey="revenue" stroke="#10B981" strokeWidth={2} fillOpacity={1} fill="url(#colorMonthly)" isAnimationActive={true} />
+                </AreaChart>
               </ResponsiveContainer>
             )}
           </div>
@@ -567,11 +560,7 @@ export const Admin = () => {
             <p className="text-3xl font-bold text-gray-900">{performanceMetrics.completionRate}%</p>
             <p className="text-sm text-gray-600">Completion Rate</p>
           </div>
-          <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 text-center">
-            <Clock className="text-blue-500 mx-auto mb-2" size={32} />
-            <p className="text-3xl font-bold text-gray-900">{performanceMetrics.avgResponseTime}m</p>
-            <p className="text-sm text-gray-600">Avg Response Time</p>
-          </div>
+          
           <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 text-center">
             <Star className="text-yellow-500 mx-auto mb-2" size={32} />
             <p className="text-3xl font-bold text-gray-900">{performanceMetrics.customerSatisfaction}/5</p>
@@ -592,7 +581,7 @@ export const Admin = () => {
               🏆 Top Technicians
             </h3>
             <div className="space-y-3">
-              {topTechnicians.map((tech, index) => (
+              {topTechnicians.slice(0, 5).map((tech, index) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
                   <div className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white ${
@@ -623,7 +612,7 @@ export const Admin = () => {
               ⭐ Top Services
             </h3>
             <div className="space-y-3">
-              {topServices.map((service, index) => (
+              {topServices.slice(0, 5).map((service, index) => (
                 <div key={index} className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
                   <div className="flex items-center justify-between mb-1">
                     <p className="font-semibold text-gray-900 text-sm">{service.name}</p>
@@ -648,7 +637,7 @@ export const Admin = () => {
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
               📍 Top Locations
             </h3>
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
               {topLocations.map((location, index) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
                   <div className="flex items-center gap-3">
@@ -664,35 +653,7 @@ export const Admin = () => {
           </div>
         </div>
 
-        {/* 12. Financial Summary */}
-        <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Financial Summary</h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <p className="text-sm text-gray-600 mb-1">Platform Earnings</p>
-              <p className="text-2xl font-bold text-green-600">{formatCurrency(financialSummary.platformEarnings)}</p>
-            </div>
-            <div className="text-center p-4 bg-orange-50 rounded-lg">
-              <p className="text-sm text-gray-600 mb-1">Pending Payouts</p>
-              <p className="text-2xl font-bold text-orange-600">{formatCurrency(financialSummary.pendingPayouts)}</p>
-            </div>
-            <div className="text-center p-4 bg-red-50 rounded-lg">
-              <p className="text-sm text-gray-600 mb-1">Refunds Processed</p>
-              <p className="text-2xl font-bold text-red-600">{formatCurrency(financialSummary.refundsProcessed)}</p>
-            </div>
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <p className="text-sm text-gray-600 mb-2">Payment Methods</p>
-              <div className="space-y-1">
-                {financialSummary.paymentMethods.map((method, index) => (
-                  <div key={index} className="flex items-center justify-between text-xs">
-                    <span className="text-gray-600">{method.method}</span>
-                    <span className="font-bold text-gray-900">{method.percentage}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+
 
         {/* Footer */}
         <div className="text-center text-gray-500 text-sm py-4">
