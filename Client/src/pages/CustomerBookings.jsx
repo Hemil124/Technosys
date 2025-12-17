@@ -486,32 +486,71 @@ const CustomerBookings = () => {
 
   // Mobile-only simplified vertical tracker to prevent horizontal overflow
   const MobileBookingTracker = ({ status }) => {
+    // Handle cancelled statuses
+    if (status === 'Cancelled' || status === 'AutoCancelled') {
+      return (
+        <div className="flex items-center gap-2 py-2 px-3 bg-red-50 border border-red-200 rounded-md">
+          <XCircle className="text-red-600" size={16} />
+          <p className="text-sm font-semibold text-red-700">
+            {status === 'AutoCancelled' ? 'Auto-Cancelled' : 'Cancelled'}
+          </p>
+        </div>
+      );
+    }
+
+    if (status === 'Rejected') {
+      return (
+        <div className="flex items-center gap-2 py-2 px-3 bg-orange-50 border border-orange-200 rounded-md">
+          <AlertCircle className="text-orange-600" size={16} />
+          <p className="text-sm font-semibold text-orange-700">Rejected</p>
+        </div>
+      );
+    }
+
     const steps = ["Placed", "Confirmed", "Working", "Completed"];
     const currentIndex =
       status === "Completed" ? 3 :
       status === "In-Progress" ? 2 :
       status === "Confirmed" ? 1 : 0;
 
+    const getStepColor = (stepIndex, isCurrent, isDone) => {
+      if (status === "Completed") {
+        return "bg-green-500 ring-green-200 text-green-700";
+      }
+      
+      if (isCurrent) {
+        if (stepIndex === 0) return "bg-purple-600 ring-purple-200 text-purple-700"; // Placed
+        if (stepIndex === 1) return "bg-blue-500 ring-blue-200 text-blue-700"; // Confirmed
+        if (stepIndex === 2) return "bg-blue-500 ring-blue-200 text-blue-700"; // Working
+        if (stepIndex === 3) return "bg-green-500 ring-green-200 text-green-700"; // Completed
+      }
+      
+      if (isDone) {
+        if (stepIndex === 0) return "bg-purple-600 ring-purple-200 text-purple-700"; // Placed
+        if (stepIndex === 1) return "bg-blue-500 ring-blue-200 text-blue-700"; // Confirmed
+        return "bg-purple-600 ring-purple-200 text-purple-700";
+      }
+      
+      return "bg-gray-200 ring-gray-200 text-gray-600";
+    };
+
     return (
       <div className="w-full">
-        <ol className="relative ml-4 border-s border-green-200">
+        <ol className="relative ml-4 border-s border-gray-200">
           {steps.map((label, i) => {
             const isDone = i < currentIndex;
             const isCurrent = i === currentIndex;
+            const colorClass = getStepColor(i, isCurrent, isDone);
+            const [bgColor, ringColor, textColor] = colorClass.split(' ');
+            
             return (
               <li key={label} className="mb-3 ms-6 last:mb-0">
                 <span
-                  className={`absolute -start-3.5 flex h-6 w-6 items-center justify-center rounded-full ring-2 ${
-                    isCurrent
-                      ? "bg-green-500 ring-green-200"
-                      : isDone
-                        ? "bg-green-500 ring-green-200"
-                        : "bg-gray-200 ring-gray-200"
-                  }`}
+                  className={`absolute -start-3.5 flex h-6 w-6 items-center justify-center rounded-full ring-2 ${bgColor} ${ringColor}`}
                 >
                   <span className="h-2.5 w-2.5 rounded-full bg-white/90"></span>
                 </span>
-                <p className={`text-sm font-medium ${isDone || isCurrent ? "text-green-700" : "text-gray-600"}`}>
+                <p className={`text-sm font-medium ${textColor}`}>
                   {label}
                 </p>
               </li>
@@ -536,7 +575,7 @@ const CustomerBookings = () => {
         {currentBookings.map((booking) => (
           <div
             key={booking._id}
-            className="p-4 sm:p-5 border border-gray-200 rounded-lg hover:shadow-md transition flex flex-col sm:flex-row gap-4 sm:gap-5"
+            className="p-4 sm:p-5 border border-gray-200 rounded-lg hover:shadow-md transition flex flex-col sm:flex-row gap-4 sm:gap-5 overflow-hidden"
           >
 
             {booking.SubCategoryID?.image && (
@@ -548,7 +587,7 @@ const CustomerBookings = () => {
             )}
 
             <div className="flex-1">
-              <div className="flex flex-col sm:flex-row justify-between items-start gap-3 mb-3">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-3">
                 <div>
                   <h3 className="font-semibold text-lg text-gray-800">
                     {booking.SubCategoryID?.name || "Service"}
@@ -558,12 +597,12 @@ const CustomerBookings = () => {
                   </p>
                 </div>
                 
-                {/* Progress Tracking: vertical on mobile, horizontal on desktop */}
-                <div className="w-full mt-1 sm:mt-0 sm:ml-4">
+                {/* Progress Tracking: vertical on mobile; horizontal at top-right on desktop */}
+                <div className="w-full sm:w-auto mt-1 sm:mt-0">
                   <div className="sm:hidden">
                     <MobileBookingTracker status={booking.Status} />
                   </div>
-                  <div className="hidden sm:flex justify-end overflow-x-auto scrollbar-hide py-1">
+                  <div className="hidden sm:block">
                     <BookingTracker status={booking.Status} />
                   </div>
                 </div>
@@ -590,7 +629,7 @@ const CustomerBookings = () => {
                 )}
               </div>
 
-              <div className="mt-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div className="mt-3 flex flex-col sm:flex-row sm:justify-between flex-wrap items-start sm:items-center gap-3">
                 {/* Left side: Display feedback and complaint status */}
                 <div className="flex flex-wrap gap-3 items-center">
                   {booking.Status === "Completed" && (
@@ -651,10 +690,10 @@ const CustomerBookings = () => {
                 </div>
 
                 {/* Right side: Action buttons */}
-                <div className="flex flex-wrap gap-2 items-center">
+                <div className="flex flex-wrap gap-2 items-center sm:ml-auto shrink-0">
                   <button
                     onClick={() => handleViewDetails(booking)}
-                    className="px-4 py-1.5 text-sm font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-md hover:bg-purple-100 transition"
+                    className="px-4 py-1.5 text-sm font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-md hover:bg-purple-100 transition whitespace-nowrap"
                   >
                     View Details
                   </button>
@@ -665,7 +704,7 @@ const CustomerBookings = () => {
                         setChatBookingId(booking._id);
                         setUnreadCounts(prev => ({ ...prev, [booking._id]: 0 }));
                       }}
-                      className="relative px-4 py-1.5 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 transition flex items-center gap-1"
+                      className="relative px-4 py-1.5 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 transition flex items-center gap-1 whitespace-nowrap"
                     >
                       <MessageSquare size={14} /> Chat
                       {unreadCounts[booking._id] > 0 && (

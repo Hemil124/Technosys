@@ -101,8 +101,12 @@ const CustomerServiceDetails = () => {
 
   const handleDaySelect = (day) => {
     const selected = new Date(currentYear, currentMonth, day);
-    const iso = selected.toISOString().split("T")[0];
-    setDate(iso);
+    // Use local date (avoid UTC shift which selected previous day)
+    const y = selected.getFullYear();
+    const m = String(selected.getMonth() + 1).padStart(2, "0");
+    const d = String(selected.getDate()).padStart(2, "0");
+    const localIso = `${y}-${m}-${d}`;
+    setDate(localIso);
     setIsDatePickerOpen(false);
   };
 
@@ -669,8 +673,8 @@ const CustomerServiceDetails = () => {
                               className={`h-10 w-10 mx-auto rounded-lg flex items-center justify-center transition-all
                                 ${isSelected ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow" : ""}
                                 ${!isSelected && isToday ? "border border-sky-400 text-sky-700" : ""}
-                                ${!isSelected && !isToday ? "text-gray-700 hover:bg-sky-50" : ""}
-                                ${isPast ? "text-gray-300 cursor-not-allowed hover:bg-white" : ""}
+                                ${!isSelected && !isToday && !isPast ? "text-gray-700 hover:bg-sky-50" : ""}
+                                ${isPast ? "text-gray-400 cursor-not-allowed hover:bg-gray-50" : ""}
                               `}
                             >
                               {day}
@@ -688,7 +692,10 @@ const CustomerServiceDetails = () => {
                             const today = new Date();
                             setCurrentMonth(today.getMonth());
                             setCurrentYear(today.getFullYear());
-                            setDate(today.toISOString().split("T")[0]);
+                            const y = today.getFullYear();
+                            const m = String(today.getMonth() + 1).padStart(2, "0");
+                            const d = String(today.getDate()).padStart(2, "0");
+                            setDate(`${y}-${m}-${d}`);
                             setIsDatePickerOpen(false);
                           }}
                         >
