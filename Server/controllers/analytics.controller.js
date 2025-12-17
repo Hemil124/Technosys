@@ -959,3 +959,73 @@ export const getMostBookedServices = async (req, res) => {
     });
   }
 };
+
+// Get monthly bookings by category for current year
+export const getMonthlyBookingsByCategory = async (req, res) => {
+  try {
+    const currentYear = new Date().getUTCFullYear();
+    const { month } = req.query; // Accept month parameter (0-11)
+    
+    // If month not provided, use current month
+    let selectedMonth = month ? parseInt(month) : new Date().getUTCMonth();
+    
+    // Validate month is between 0-11
+    if (selectedMonth < 0 || selectedMonth > 11) {
+      selectedMonth = new Date().getUTCMonth();
+    }
+
+    const startOfMonth = new Date(Date.UTC(currentYear, selectedMonth, 1, 0, 0, 0, 0));
+    const endOfMonth = new Date(Date.UTC(currentYear, selectedMonth + 1, 0, 23, 59, 59, 999));
+
+    const monthlyBookings = await Booking.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: startOfMonth, $lte: endOfMonth }
+        }
+      },
+      {
+        $lookup: {
+          from: "subservicecategories",
+          localField: "SubCategoryID",
+          foreignField: "_id",
+          as: "subCategory"
+        }
+      },
+      { $unwind: { path: "$subCategory", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "servicecategories",
+          localField: "subCategory.serviceCategoryId",
+          foreignField: "_id",
+          as: "category"
+        }
+      },
+      { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
+      {
+        $group: {
+          _id: "$category._id",
+          category: { $first: "$category.name" },
+          bookings: { $count: {} }
+        }
+      },
+      { $sort: { bookings: -1 } }
+    ]);
+
+    const formattedData = monthlyBookings.map(item => ({
+      name: item.category || "Uncategorized",
+      bookings: item.bookings
+    }));
+
+    res.json({
+      success: true,
+      data: formattedData
+    });
+  } catch (error) {
+    console.error("Error fetching monthly bookings by category:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch monthly bookings by category",
+      error: error.message
+    });
+  }
+};
