@@ -819,7 +819,6 @@ export default function AdminSubscriptions() {
           </div>
         )}
       </div>
-
       {/* Add custom animations */}
       <style>{`
         @keyframes fadeIn {
