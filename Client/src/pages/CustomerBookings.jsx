@@ -35,7 +35,7 @@ const CustomerBookings = () => {
   const totalPages = Math.ceil(bookings.length / pageSize) || 1;
   const currentBookings = bookings.slice((page - 1) * pageSize, page * pageSize);
 
-  // ⭐ SAME Pagination Component from Admin side
+  // ⭐ SAME Pagination Component from Admin side (responsive tweaks)
   const Pagination = ({ page, totalPages, onChange }) => {
     const getPages = () => {
       let arr = [];
@@ -55,14 +55,14 @@ const CustomerBookings = () => {
     };
 
     return (
-      <div className="flex items-center justify-center gap-2 mt-6 select-none">
+      <div className="flex items-center justify-center gap-1 sm:gap-2 mt-6 select-none overflow-x-auto scrollbar-hide w-full py-1 px-1">
 
         {/* Prev Button */}
         <button
           onClick={() => onChange(Math.max(1, page - 1))}
           disabled={page === 1}
-          className={`px-4 py-2 rounded-lg border text-sm transition-all duration-200 ${
-            page === 1 ? "opacity-40 cursor-not-allowed" : "hover:bg-gray-100 shadow-sm"
+          className={`h-10 min-w-[72px] px-3 rounded-lg border text-sm transition-all duration-200 whitespace-nowrap ${
+            page === 1 ? "opacity-60 cursor-not-allowed bg-white text-gray-400 border-gray-200" : "bg-white text-gray-700 hover:bg-gray-50 shadow-sm border-gray-300"
           }`}
         >
           Previous
@@ -71,15 +71,15 @@ const CustomerBookings = () => {
         {/* Dynamic Buttons */}
         {getPages().map((p, i) =>
           p === "..." ? (
-            <span key={i} className="px-3 py-2 text-gray-500">…</span>
+            <span key={i} className="w-10 h-10 inline-flex items-center justify-center text-gray-400">…</span>
           ) : (
             <button
               key={i}
               onClick={() => onChange(p)}
               className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm border transition-all ${
                 p === page
-                  ? "bg-gray-900 text-white shadow-md scale-110 border-gray-900"
-                  : "hover:bg-gray-100 text-gray-700 border-gray-300"
+                  ? "bg-slate-900 text-white shadow-md border-slate-900"
+                  : "bg-white hover:bg-gray-50 text-gray-700 border-gray-200"
               }`}
             >
               {p}
@@ -91,8 +91,8 @@ const CustomerBookings = () => {
         <button
           onClick={() => onChange(Math.min(totalPages, page + 1))}
           disabled={page === totalPages}
-          className={`px-4 py-2 rounded-lg border text-sm transition-all duration-200 ${
-            page === totalPages ? "opacity-40 cursor-not-allowed" : "hover:bg-gray-100 shadow-sm"
+          className={`h-10 min-w-[72px] px-3 rounded-lg border text-sm transition-all duration-200 whitespace-nowrap ${
+            page === totalPages ? "opacity-60 cursor-not-allowed bg-white text-gray-400 border-gray-200" : "bg-white text-gray-900 hover:bg-gray-50 shadow-sm border-gray-900"
           }`}
         >
           Next
@@ -484,6 +484,44 @@ const CustomerBookings = () => {
     setSelectedBookingDetails(null);
   };
 
+  // Mobile-only simplified vertical tracker to prevent horizontal overflow
+  const MobileBookingTracker = ({ status }) => {
+    const steps = ["Placed", "Confirmed", "Working", "Completed"];
+    const currentIndex =
+      status === "Completed" ? 3 :
+      status === "In-Progress" ? 2 :
+      status === "Confirmed" ? 1 : 0;
+
+    return (
+      <div className="w-full">
+        <ol className="relative ml-4 border-s border-green-200">
+          {steps.map((label, i) => {
+            const isDone = i < currentIndex;
+            const isCurrent = i === currentIndex;
+            return (
+              <li key={label} className="mb-3 ms-6 last:mb-0">
+                <span
+                  className={`absolute -start-3.5 flex h-6 w-6 items-center justify-center rounded-full ring-2 ${
+                    isCurrent
+                      ? "bg-green-500 ring-green-200"
+                      : isDone
+                        ? "bg-green-500 ring-green-200"
+                        : "bg-gray-200 ring-gray-200"
+                  }`}
+                >
+                  <span className="h-2.5 w-2.5 rounded-full bg-white/90"></span>
+                </span>
+                <p className={`text-sm font-medium ${isDone || isCurrent ? "text-green-700" : "text-gray-600"}`}>
+                  {label}
+                </p>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+    );
+  };
+
   return (
     <div className="max-w-5xl mx-auto bg-white p-4 sm:p-6 rounded-lg shadow mt-4 sm:mt-6">
 
@@ -520,9 +558,14 @@ const CustomerBookings = () => {
                   </p>
                 </div>
                 
-                {/* Booking Tracker - Top Right */}
-                <div className="ml-0 sm:ml-4 mt-1 sm:mt-0 self-start sm:self-start scale-90 sm:scale-100 origin-top-right">
-                  <BookingTracker status={booking.Status} />
+                {/* Progress Tracking: vertical on mobile, horizontal on desktop */}
+                <div className="w-full mt-1 sm:mt-0 sm:ml-4">
+                  <div className="sm:hidden">
+                    <MobileBookingTracker status={booking.Status} />
+                  </div>
+                  <div className="hidden sm:flex justify-end overflow-x-auto scrollbar-hide py-1">
+                    <BookingTracker status={booking.Status} />
+                  </div>
                 </div>
               </div>
 
@@ -671,7 +714,7 @@ const CustomerBookings = () => {
 
       {/* ⭐ Admin-style Pagination */}
       {bookings.length > pageSize && (
-        <div className="px-6 py-4 border-t border-gray-200/50">
+        <div className="px-3 sm:px-6 py-4 border-t border-gray-200/50">
           <Pagination page={page} totalPages={totalPages} onChange={setPage} />
         </div>
       )}
@@ -718,7 +761,7 @@ const CustomerBookings = () => {
           onClick={closeDetailsModal}
         >
           <div
-            className="bg-white rounded-lg w-full max-w-5xl mx-4 relative"
+            className="bg-white rounded-lg w-full max-w-5xl mx-4 relative max-h-[90vh] overflow-y-auto scrollbar-hide"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Close Button */}
@@ -730,10 +773,10 @@ const CustomerBookings = () => {
             </button>
 
             {/* Modal Content */}
-            <div className="p-8 pt-12">
+            <div className="p-4 sm:p-8 pt-12 sm:pt-14 space-y-6">
               
               {/* Top Row: Service Info and Booking Info */}
-              <div className="grid grid-cols-2 gap-6 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 {/* Service Details Section */}
                 <div className="bg-gradient-to-br from-purple-50 to-white border border-purple-100 rounded-lg p-5">
                   <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
@@ -792,7 +835,7 @@ const CustomerBookings = () => {
               </div>
 
               {/* Bottom Row: Customer and Technician Info */}
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 {/* Customer Details Section */}
                 <div className="bg-gradient-to-br from-green-50 to-white border border-green-100 rounded-lg p-5">
                   <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
@@ -802,7 +845,7 @@ const CustomerBookings = () => {
                     Customer Details
                   </h4>
                   <div className="space-y-3 text-sm">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <p className="text-gray-500 font-medium">Customer Name</p>
                         <p className="text-gray-800 font-semibold text-lg">
@@ -848,7 +891,7 @@ const CustomerBookings = () => {
                       </div>
                       Technician Details
                     </h4>
-                    <div className="flex gap-4 items-start">
+                    <div className="flex gap-4 items-start flex-col sm:flex-row">
                       {/* Technician Profile Picture */}
                       <div className="flex-shrink-0">
                         {selectedBookingDetails.TechnicianID.Photo ? (
@@ -864,7 +907,7 @@ const CustomerBookings = () => {
                         )}
                       </div>
                       {/* Technician Info */}
-                      <div className="flex-1 space-y-3 text-sm">
+                      <div className="flex-1 space-y-3 text-sm w-full">
                         <div>
                           <p className="text-gray-500 font-medium">Technician Name</p>
                           <p className="text-gray-800 font-semibold text-lg">
@@ -904,9 +947,9 @@ const CustomerBookings = () => {
 
             {/* Modal Footer */}
             <div className="bg-gray-50 px-8 py-4 rounded-b-lg border-t border-gray-200">
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                 {/* Left side: Display feedback rating and complaint status */}
-                <div className="flex gap-4 items-center">
+                <div className="flex flex-wrap gap-3 items-center">
                   {selectedBookingDetails.Status === "Completed" && (
                     <>
                       {/* Feedback Display */}
@@ -958,7 +1001,7 @@ const CustomerBookings = () => {
 
                 {/* Right side: Action buttons for completed bookings */}
                 {selectedBookingDetails.Status === "Completed" && (
-                  <div className="flex gap-3">
+                  <div className="flex flex-wrap gap-3">
                     <button
                       onClick={() => {
                         setChatBookingId(selectedBookingDetails._id);

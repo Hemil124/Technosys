@@ -1,8 +1,8 @@
 // src/pages/customer/CustomerServiceDetails.jsx
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useRef } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
-import { Star, ArrowLeft } from "lucide-react";
+import { Star, ArrowLeft, Calendar, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import { toast } from "react-toastify";
 import { AppContext } from "../context/AppContext";
 
@@ -32,6 +32,10 @@ const CustomerServiceDetails = () => {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancellingBooking, setCancellingBooking] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
+  const datePickerRef = useRef(null);
 
   // Fetch service details
   useEffect(() => {
@@ -82,6 +86,43 @@ const CustomerServiceDetails = () => {
   const TIME_SLOTS = [
     "08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00"
   ];
+
+  const formatDisplayDate = (value) => {
+    if (!value) return "Choose date";
+    const d = new Date(value);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
+
+  const syncMonthYear = (value) => {
+    const base = value ? new Date(value) : new Date();
+    setCurrentMonth(base.getMonth());
+    setCurrentYear(base.getFullYear());
+  };
+
+  const handleDaySelect = (day) => {
+    const selected = new Date(currentYear, currentMonth, day);
+    const iso = selected.toISOString().split("T")[0];
+    setDate(iso);
+    setIsDatePickerOpen(false);
+  };
+
+  useEffect(() => {
+    if (isDatePickerOpen) {
+      syncMonthYear(date);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDatePickerOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!isDatePickerOpen) return;
+      if (datePickerRef.current && !datePickerRef.current.contains(e.target)) {
+        setIsDatePickerOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isDatePickerOpen]);
 
   // Check if a time slot is in the past
   const isSlotPast = (slotStart) => {
@@ -546,13 +587,117 @@ const CustomerServiceDetails = () => {
             <div className="space-y-4">
               <div>
                 <h4 className="font-semibold text-gray-900 mb-2">Select Date</h4>
-                <input 
-                  type="date" 
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-                  value={date} 
-                  onChange={e=>setDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                />
+                <div className="relative" ref={datePickerRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsDatePickerOpen((prev) => !prev)}
+                    className="w-full border border-sky-200 rounded-lg px-4 py-3 flex items-center justify-between shadow-sm hover:border-sky-400 focus:ring-2 focus:ring-sky-300 focus:border-transparent transition"
+                  >
+                    <div className="flex items-center gap-3 text-left">
+                      <div className="w-10 h-10 rounded-md border border-sky-200 flex items-center justify-center bg-sky-50 text-sky-600">
+                        <Calendar size={20} />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Select Date</p>
+                        <p className="text-sm font-semibold text-gray-900">{formatDisplayDate(date)}</p>
+                      </div>
+                    </div>
+                    <ChevronDown size={18} className={`text-gray-500 transition ${isDatePickerOpen ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {isDatePickerOpen && (
+                    <div className="absolute z-20 mt-2 w-full sm:w-[340px] bg-white rounded-xl shadow-xl border border-gray-200 p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (currentMonth === 0) {
+                              setCurrentYear((y) => y - 1);
+                              setCurrentMonth(11);
+                            } else {
+                              setCurrentMonth((m) => m - 1);
+                            }
+                          }}
+                          className="p-2 rounded-md hover:bg-gray-100 text-gray-600"
+                        >
+                          <ChevronLeft size={18} />
+                        </button>
+                        <div className="text-sm font-semibold text-gray-900">
+                          {new Date(currentYear, currentMonth).toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (currentMonth === 11) {
+                              setCurrentYear((y) => y + 1);
+                              setCurrentMonth(0);
+                            } else {
+                              setCurrentMonth((m) => m + 1);
+                            }
+                          }}
+                          className="p-2 rounded-md hover:bg-gray-100 text-gray-600"
+                        >
+                          <ChevronRight size={18} />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-7 text-center text-xs font-semibold text-gray-500 mb-2">
+                        {["Su","Mo","Tu","We","Th","Fr","Sa"].map((d) => (
+                          <span key={d} className="py-1">{d}</span>
+                        ))}
+                      </div>
+
+                      <div className="grid grid-cols-7 gap-1 text-sm">
+                        {Array.from({ length: new Date(currentYear, currentMonth, 1).getDay() }).map((_, idx) => (
+                          <span key={`blank-${idx}`} />
+                        ))}
+                        {Array.from({ length: new Date(currentYear, currentMonth + 1, 0).getDate() }).map((_, idx) => {
+                          const day = idx + 1;
+                          const candidate = new Date(currentYear, currentMonth, day);
+                          const today = new Date();
+                          today.setHours(0,0,0,0);
+                          const isPast = candidate < today;
+                          const isSelected = date && new Date(date).toDateString() === candidate.toDateString();
+                          const isToday = candidate.toDateString() === new Date().toDateString();
+
+                          return (
+                            <button
+                              key={day}
+                              type="button"
+                              disabled={isPast}
+                              onClick={() => handleDaySelect(day)}
+                              className={`h-10 w-10 mx-auto rounded-lg flex items-center justify-center transition-all
+                                ${isSelected ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow" : ""}
+                                ${!isSelected && isToday ? "border border-sky-400 text-sky-700" : ""}
+                                ${!isSelected && !isToday ? "text-gray-700 hover:bg-sky-50" : ""}
+                                ${isPast ? "text-gray-300 cursor-not-allowed hover:bg-white" : ""}
+                              `}
+                            >
+                              {day}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="flex items-center justify-between mt-3 text-sm text-sky-600">
+                        <button type="button" className="px-3 py-1.5 rounded-md text-gray-600 hover:bg-gray-100" onClick={() => setIsDatePickerOpen(false)}>Close</button>
+                        <button
+                          type="button"
+                          className="px-3 py-1.5 rounded-md bg-sky-50 text-sky-700 hover:bg-sky-100"
+                          onClick={() => {
+                            const today = new Date();
+                            setCurrentMonth(today.getMonth());
+                            setCurrentYear(today.getFullYear());
+                            setDate(today.toISOString().split("T")[0]);
+                            setIsDatePickerOpen(false);
+                          }}
+                        >
+                          Today
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {date && (
