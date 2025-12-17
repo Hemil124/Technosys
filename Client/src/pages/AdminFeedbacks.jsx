@@ -695,14 +695,14 @@ export const AdminFeedbacks = () => {
         {/* Threshold Settings Modal */}
         {showThresholdModal && (
           <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 z-50"
             onClick={() => setShowThresholdModal(false)}
           >
             <div
-              className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full"
+              className="bg-white rounded-2xl shadow-2xl max-w-xl w-full max-h-[85vh] overflow-y-auto scrollbar-hide"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -722,7 +722,7 @@ export const AdminFeedbacks = () => {
 
                 <div className="space-y-6">
                   {/* Warning Threshold */}
-                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-6 rounded-xl border-2 border-yellow-200">
+                  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-4 sm:p-5 rounded-xl border-2 border-yellow-200">
                     <div className="flex items-start space-x-4">
                       <div className="p-3 bg-yellow-500 rounded-lg">
                         <AlertCircle className="h-6 w-6 text-white" />
@@ -746,7 +746,7 @@ export const AdminFeedbacks = () => {
                   </div>
 
                   {/* Temporary Deactivation Threshold */}
-                  <div className="bg-gradient-to-r from-red-50 to-pink-50 p-6 rounded-xl border-2 border-red-200">
+                  <div className="bg-gradient-to-r from-red-50 to-pink-50 p-4 sm:p-5 rounded-xl border-2 border-red-200">
                     <div className="flex items-start space-x-4">
                       <div className="p-3 bg-red-500 rounded-lg">
                         <Clock className="h-6 w-6 text-white" />
@@ -763,14 +763,14 @@ export const AdminFeedbacks = () => {
                           className="w-full px-4 py-3 border-2 border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-lg font-semibold"
                         />
                         <p className="text-sm text-gray-700 mt-2">
-                          🚫 Deactivate for 2 minutes • Auto-reactivate • Send emails
+                          🚫 Deactivate for 1 month • Auto-reactivate • Send emails
                         </p>
                       </div>
                     </div>
                   </div>
 
                   {/* Permanent Deactivation Threshold */}
-                  <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-6 rounded-xl border-2 border-purple-200">
+                  <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-4 sm:p-5 rounded-xl border-2 border-purple-200">
                     <div className="flex items-start space-x-4">
                       <div className="p-3 bg-purple-500 rounded-lg">
                         <X className="h-6 w-6 text-white" />
@@ -794,7 +794,7 @@ export const AdminFeedbacks = () => {
                   </div>
 
                   {/* Deactivation Duration Info */}
-                  <div className="bg-blue-50 p-6 rounded-xl border-2 border-blue-200">
+                  <div className="bg-blue-50 p-4 sm:p-5 rounded-xl border-2 border-blue-200">
                     <div className="flex items-start space-x-4">
                       <div className="p-3 bg-blue-500 rounded-lg">
                         <Settings className="h-6 w-6 text-white" />
@@ -803,11 +803,11 @@ export const AdminFeedbacks = () => {
                         <label className="block text-sm font-bold text-gray-900 mb-2">
                           Temporary Deactivation Duration
                         </label>
-                        <div className="text-3xl font-bold text-blue-600 mb-2">
-                          2 Minutes
+                        <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-2">
+                          1 Month
                         </div>
                         <p className="text-sm text-gray-700">
-                          ℹ️ This duration is fixed and cannot be changed (testing mode)
+                          ℹ️ This duration is fixed and cannot be changed 
                         </p>
                       </div>
                     </div>
@@ -815,7 +815,7 @@ export const AdminFeedbacks = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex justify-end space-x-4 mt-8 pt-6 border-t">
+                <div className="flex justify-end space-x-4 mt-6 pt-4 border-t">
                   <button
                     onClick={() => setShowThresholdModal(false)}
                     className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-300 font-medium"
