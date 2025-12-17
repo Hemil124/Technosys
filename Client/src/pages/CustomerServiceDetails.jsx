@@ -474,24 +474,24 @@ const CustomerServiceDetails = () => {
 
     {/* Booking Modal */}
     {showModal && (
-      <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-        <div className="bg-white w-full max-w-2xl rounded-xl shadow-lg max-h-[90vh] overflow-y-auto">
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50" onClick={() => setShowModal(false)}>
+        <div className="bg-white w-full max-w-4xl rounded-xl shadow-lg max-h-[90vh] overflow-y-auto scrollbar-hide" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}} onClick={(e) => e.stopPropagation()}>
           <div className="p-4 border-b flex justify-between items-center sticky top-0 bg-white z-10">
             <h3 className="text-lg font-semibold">Book Service</h3>
             <button className="text-gray-500 hover:text-gray-700" onClick={() => setShowModal(false)}>✕</button>
           </div>
 
-          <div className="p-6 space-y-6">
+          <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
             {/* Service Info Card */}
-            <div className="bg-gray-50 rounded-lg p-4 flex gap-4">
+            <div className="bg-gray-50 rounded-lg p-3 sm:p-4 flex gap-3 sm:gap-4">
               <img 
                 src={`${backendUrl}${service.image}`} 
                 alt={service.name}
-                className="w-20 h-20 rounded-lg object-cover"
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover"
               />
               <div className="flex-1">
-                <h4 className="font-semibold text-lg">{service.name}</h4>
-                <p className="text-2xl font-bold text-sky-600 mt-1">₹{service.price}</p>
+                <h4 className="font-semibold text-base sm:text-lg">{service.name}</h4>
+                <p className="text-xl sm:text-2xl font-bold text-sky-600 mt-1">₹{service.price}</p>
               </div>
             </div>
             {/* Address Section - Always Visible */}
@@ -556,13 +556,18 @@ const CustomerServiceDetails = () => {
               </div>
 
               {date && (
-                <div>
+                <div onClick={(e) => {
+                  // Clear selection if clicking outside the grid
+                  if (e.target === e.currentTarget) {
+                    setTimeSlot("");
+                  }
+                }}>
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="font-semibold text-gray-900">Available Time Slots ({date})</h4>
                     <p className="text-sm text-gray-500">Click to select/deselect slots</p>
                   </div>
                   
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3" onClick={(e) => e.stopPropagation()}>
                     {TIME_SLOTS.map((slot) => {
                       const isPast = isSlotPast(slot);
                       const isSelected = timeSlot === slot;
@@ -713,14 +718,14 @@ const CustomerServiceDetails = () => {
                   )}
 
                   {/* Payment Summary & Action */}
-                  <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-gray-50 rounded-lg p-4 gap-4">
                     <div>
                       <p className="text-sm text-gray-600">Total Amount</p>
-                      <p className="text-2xl font-bold text-gray-900">₹{service.price}</p>
+                      <p className="text-xl sm:text-2xl font-bold text-gray-900">₹{service.price}</p>
                     </div>
                     <button
                       disabled={!address || !date || !timeSlot || (typeof timeSlot === 'object' && !timeSlot.display) || isProcessing || !userData?.email}
-                      className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="w-full sm:w-auto px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       title={!userData?.email ? "Please add email in profile to proceed" : ""}
                       onClick={async () => {
                         if (!address) {

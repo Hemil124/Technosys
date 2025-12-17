@@ -485,7 +485,7 @@ const CustomerBookings = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto bg-white p-6 rounded-lg shadow mt-6">
+    <div className="max-w-5xl mx-auto bg-white p-4 sm:p-6 rounded-lg shadow mt-4 sm:mt-6">
 
       <div className="flex items-center justify-between mb-6">
         <button onClick={() => navigate(-1)} className="flex items-center text-gray-700 hover:text-gray-900">
@@ -496,18 +496,21 @@ const CustomerBookings = () => {
 
       <div className="space-y-4">
         {currentBookings.map((booking) => (
-          <div key={booking._id} className="p-5 border border-gray-200 rounded-lg hover:shadow-md transition flex gap-4">
+          <div
+            key={booking._id}
+            className="p-4 sm:p-5 border border-gray-200 rounded-lg hover:shadow-md transition flex flex-col sm:flex-row gap-4 sm:gap-5"
+          >
 
             {booking.SubCategoryID?.image && (
               <img
                 src={`${backendUrl}${booking.SubCategoryID.image}`}
                 alt={booking.SubCategoryID.name}
-                className="w-24 h-24 object-cover rounded-md"
+                className="w-full h-40 sm:w-24 sm:h-24 object-cover rounded-md"
               />
             )}
 
             <div className="flex-1">
-              <div className="flex justify-between items-start mb-3">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-3 mb-3">
                 <div>
                   <h3 className="font-semibold text-lg text-gray-800">
                     {booking.SubCategoryID?.name || "Service"}
@@ -518,7 +521,7 @@ const CustomerBookings = () => {
                 </div>
                 
                 {/* Booking Tracker - Top Right */}
-                <div className="ml-4">
+                <div className="ml-0 sm:ml-4 mt-1 sm:mt-0 self-start sm:self-start scale-90 sm:scale-100 origin-top-right">
                   <BookingTracker status={booking.Status} />
                 </div>
               </div>
@@ -544,9 +547,9 @@ const CustomerBookings = () => {
                 )}
               </div>
 
-              <div className="mt-3 flex justify-between items-center flex-wrap gap-2">
+              <div className="mt-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 {/* Left side: Display feedback and complaint status */}
-                <div className="flex gap-3 items-center">
+                <div className="flex flex-wrap gap-3 items-center">
                   {booking.Status === "Completed" && (
                     <>
                       {/* Feedback Display */}
@@ -605,7 +608,7 @@ const CustomerBookings = () => {
                 </div>
 
                 {/* Right side: Action buttons */}
-                <div className="flex gap-2 items-center">
+                <div className="flex flex-wrap gap-2 items-center">
                   <button
                     onClick={() => handleViewDetails(booking)}
                     className="px-4 py-1.5 text-sm font-medium text-purple-700 bg-purple-50 border border-purple-200 rounded-md hover:bg-purple-100 transition"
