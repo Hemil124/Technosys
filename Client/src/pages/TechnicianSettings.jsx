@@ -14,7 +14,7 @@ import ServiceOrbitLoader from '../components/ServiceOrbitLoader';
 import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 
-export default function TechnicianSettings() {
+export default function TechnicianAnalysis() {
   const navigate = useNavigate();
   const { backendUrl } = useContext(AppContext);
   
@@ -669,10 +669,10 @@ export default function TechnicianSettings() {
                 <h3 className="text-lg font-bold text-gray-900 mb-4">Most Booked Services</h3>
                 {mostBookedServices.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={mostBookedServices} layout="vertical">
+                    <BarChart data={mostBookedServices} layout="vertical" margin={{ left: -20 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis type="number" />
-                      <YAxis dataKey="name" type="category" width={120} />
+                      <YAxis dataKey="name" type="category" width={115} />
                       <Tooltip />
                       <Bar dataKey="bookings" fill="#8B5CF6" radius={[0, 8, 8, 0]} />
                     </BarChart>
