@@ -547,7 +547,7 @@ const TechnicianDashboard = () => {
                 {currentIncoming.map((req) => (
                   <div 
                     key={req.bookingId} 
-                    className="p-4 md:p-6 hover:bg-gray-50/50 transition-all duration-200"
+                    className="p-3 md:p-4 hover:bg-gray-50/50 transition-all duration-200"
                   >
                     {req.loading ? (
                       <div className="flex items-center justify-center py-8">
@@ -566,41 +566,41 @@ const TechnicianDashboard = () => {
                         </div>
                       </div>
                     ) : (
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         
                         {/* Service & Image Section */}
-                        <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="flex flex-col sm:flex-row gap-3">
                           {req.service?.image && (
                             <div className="flex-shrink-0">
                               <img
                                 src={`${backendUrl}${req.service.image}`}
                                 alt={req.service.name}
-                                className="w-full sm:w-28 h-28 rounded-xl object-cover shadow-md border border-gray-200"
+                                className="w-full sm:w-20 md:w-24 h-20 md:h-24 rounded-lg object-cover shadow-sm border border-gray-200"
                               />
                             </div>
                           )}
 
-                          <div className="flex-1 min-w-0 space-y-3">
+                          <div className="flex-1 min-w-0 space-y-2">
                             {/* Title Row with Coins Badge */}
-                            <div className="flex items-start justify-between gap-3">
-                              <h3 className="text-lg md:text-xl font-bold text-gray-900 leading-tight">
+                            <div className="flex items-start justify-between gap-2">
+                              <h3 className="text-base md:text-lg font-bold text-gray-900 leading-tight">
                                 {req.service?.name || "Service Request"}
                               </h3>
                               {req.coinsRequired !== undefined && (
-                                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-yellow-100 to-amber-100 rounded-full border border-yellow-300 shadow-sm flex-shrink-0">
-                                  <Coins className="h-4 w-4 text-yellow-700" />
-                                  <span className="text-sm font-bold text-yellow-900">{req.coinsRequired}</span>
+                                <div className="flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-yellow-100 to-amber-100 rounded-full border border-yellow-300 shadow-sm flex-shrink-0">
+                                  <Coins className="h-3.5 w-3.5 text-yellow-700" />
+                                  <span className="text-xs font-bold text-yellow-900">{req.coinsRequired}</span>
                                 </div>
                               )}
                             </div>
 
                             {/* Booking Details - Centered Layout */}
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6">
-                              <div className="flex items-center space-x-2">
-                                <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-lg">
-                                  <Calendar className="h-4 w-4 text-blue-600" />
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                              <div className="flex items-center space-x-1.5">
+                                <div className="flex items-center justify-center w-7 h-7 bg-blue-100 rounded-lg">
+                                  <Calendar className="h-3.5 w-3.5 text-blue-600" />
                                 </div>
-                                <span className="text-sm font-medium text-gray-700">
+                                <span className="text-xs md:text-sm font-medium text-gray-700">
                                   {new Date(req.date).toLocaleDateString('en-US', { 
                                     weekday: 'short', 
                                     month: 'short', 
@@ -610,11 +610,11 @@ const TechnicianDashboard = () => {
                                 </span>
                               </div>
 
-                              <div className="flex items-center space-x-2">
-                                <div className="flex items-center justify-center w-8 h-8 bg-purple-100 rounded-lg">
-                                  <Clock className="h-4 w-4 text-purple-600" />
+                              <div className="flex items-center space-x-1.5">
+                                <div className="flex items-center justify-center w-7 h-7 bg-purple-100 rounded-lg">
+                                  <Clock className="h-3.5 w-3.5 text-purple-600" />
                                 </div>
-                                <span className="text-sm font-medium text-gray-700">{req.timeSlot}</span>
+                                <span className="text-xs md:text-sm font-medium text-gray-700">{req.timeSlot}</span>
                               </div>
                             </div>
                           </div>
@@ -622,24 +622,24 @@ const TechnicianDashboard = () => {
 
                         {/* Customer Information Card */}
                         {req.customer && (
-                          <div className="bg-gradient-to-br from-blue-50/50 to-purple-50/50 rounded-xl p-4 border border-blue-100">
-                            <div className="flex items-center space-x-2 mb-3">
-                              <User className="h-4 w-4 text-blue-600" />
-                              <h4 className="font-semibold text-gray-900">Customer Details</h4>
+                          <div className="bg-gradient-to-br from-blue-50/50 to-purple-50/50 rounded-lg p-3 border border-blue-100">
+                            <div className="flex items-center space-x-1.5 mb-2">
+                              <User className="h-3.5 w-3.5 text-blue-600" />
+                              <h4 className="text-sm font-semibold text-gray-900">Customer Details</h4>
                             </div>
                             
-                            <div className="space-y-2">
-                              <div className="flex items-start space-x-2">
-                                <User className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
-                                <p className="text-sm text-gray-700 font-medium">
+                            <div className="space-y-1.5">
+                              <div className="flex items-start space-x-1.5">
+                                <User className="h-3.5 w-3.5 text-gray-500 mt-0.5 flex-shrink-0" />
+                                <p className="text-xs md:text-sm text-gray-700 font-medium">
                                   {req.customer.Name || "N/A"}
                                 </p>
                               </div>
 
                               {req.customer.Address && (
-                                <div className="flex items-start space-x-2">
-                                  <MapPin className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />
-                                  <p className="text-sm text-gray-600">
+                                <div className="flex items-start space-x-1.5">
+                                  <MapPin className="h-3.5 w-3.5 text-gray-500 mt-0.5 flex-shrink-0" />
+                                  <p className="text-xs md:text-sm text-gray-600">
                                     {req.customer.Address.houseNumber}, {req.customer.Address.street}, {req.customer.Address.city}, {req.customer.Address.pincode}
                                   </p>
                                 </div>
@@ -649,20 +649,20 @@ const TechnicianDashboard = () => {
                         )}
 
                         {/* Action Buttons */}
-                        <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                        <div className="flex flex-col sm:flex-row gap-2 pt-1">
                           <button
                             disabled={accepting === req.bookingId}
                             onClick={() => acceptBooking(req.bookingId)}
-                            className="flex-1 sm:flex-none px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center space-x-2"
+                            className="flex-1 sm:flex-none px-4 md:px-5 py-2 md:py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-semibold text-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center space-x-2"
                           >
                             {accepting === req.bookingId ? (
                               <>
-                                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                                 <span>Accepting...</span>
                               </>
                             ) : (
                               <>
-                                <CheckCircle className="h-5 w-5" />
+                                <CheckCircle className="h-4 w-4" />
                                 <span>Accept Booking</span>
                               </>
                             )}
@@ -674,9 +674,9 @@ const TechnicianDashboard = () => {
                                 prev.filter((p) => p.bookingId !== req.bookingId)
                               )
                             }
-                            className="flex-1 sm:flex-none px-6 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all duration-300 hover:scale-105 flex items-center justify-center space-x-2"
+                            className="flex-1 sm:flex-none px-4 md:px-5 py-2 md:py-2.5 bg-white border-2 border-gray-300 text-gray-700 rounded-lg font-semibold text-sm hover:bg-gray-50 transition-all duration-300 hover:scale-105 flex items-center justify-center space-x-2"
                           >
-                            <XCircle className="h-5 w-5" />
+                            <XCircle className="h-4 w-4" />
                             <span>Dismiss</span>
                           </button>
                         </div>
