@@ -524,43 +524,6 @@ const TechnicianDashboard = () => {
           </p>
         </div>
 
-        {/* Stats Card */}
-        <div className="mb-6">
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200/50 shadow-lg p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
-              <div className="flex items-center space-x-4">
-                <div className="p-3 bg-blue-100 rounded-xl">
-                  <Inbox className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{incoming.length}</p>
-                  <p className="text-sm text-gray-600">Total Requests</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-4">
-                <div className="p-3 bg-green-100 rounded-xl">
-                  <Bell className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{currentIncoming.length}</p>
-                  <p className="text-sm text-gray-600">Showing Now</p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-4">
-                <div className="p-3 bg-purple-100 rounded-xl">
-                  <CheckCircle className="h-6 w-6 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">Page {page}/{totalPages}</p>
-                  <p className="text-sm text-gray-600">Navigation</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Main Content Card */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50 overflow-hidden">
           
