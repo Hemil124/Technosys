@@ -37,7 +37,7 @@ export const AdminFeedbacks = () => {
   const [showRatingDropdown, setShowRatingDropdown] = useState(false);
   const [currentFeedbackPage, setCurrentFeedbackPage] = useState(1);
   const [currentComplaintPage, setCurrentComplaintPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(7);
   const [viewDetails, setViewDetails] = useState(null);
   
   // Threshold settings
@@ -198,6 +198,72 @@ export const AdminFeedbacks = () => {
           />
         ))}
         <span className="ml-2 text-sm font-semibold text-gray-700">{rating.toFixed(1)}</span>
+      </div>
+    );
+  };
+
+  // Pagination Component
+  const Pagination = ({ page, totalPages, onChange }) => {
+    const getPages = () => {
+      let arr = [];
+      arr.push(1);
+
+      if (page > 3) arr.push("...");
+
+      for (let p = page - 1; p <= page + 1; p++) {
+        if (p > 1 && p < totalPages) arr.push(p);
+      }
+
+      if (page < totalPages - 2) arr.push("...");
+
+      if (totalPages > 1) arr.push(totalPages);
+
+      return arr;
+    };
+
+    return (
+      <div className="flex items-center justify-center gap-2 mt-6 select-none">
+        <button
+          onClick={() => onChange(Math.max(1, page - 1))}
+          disabled={page === 1}
+          className={`px-4 py-2 rounded-lg border text-sm transition-all duration-200 ${
+            page === 1
+              ? "opacity-40 cursor-not-allowed"
+              : "hover:bg-gray-100 shadow-sm"
+          }`}
+        >
+          Previous
+        </button>
+
+        {getPages().map((p, i) =>
+          p === "..." ? (
+            <span key={i} className="px-3 py-2 text-gray-500">…</span>
+          ) : (
+            <button
+              key={i}
+              onClick={() => onChange(p)}
+              className={`w-10 h-10 flex items-center justify-center rounded-lg text-sm border transition-all ${
+                p === page
+                  ? "bg-gray-900 text-white shadow-md scale-110 border-gray-900"
+                  : "hover:bg-gray-100 text-gray-700 border-gray-300"
+              }`}
+            >
+              {p}
+            </button>
+          )
+        )}
+
+        <button
+          onClick={() => onChange(Math.min(totalPages, page + 1))}
+          disabled={page === totalPages}
+          className={`px-4 py-2 rounded-lg border text-sm transition-all duration-200 ${
+            page === totalPages
+              ? "opacity-40 cursor-not-allowed"
+              : "hover:bg-gray-100 shadow-sm"
+          }`}
+        >
+          Next
+        </button>
       </div>
     );
   };
@@ -504,38 +570,11 @@ export const AdminFeedbacks = () => {
                   {/* Pagination */}
                   {filteredFeedbacks.length > itemsPerPage && (
                     <div className="px-4 py-3 border-t border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm text-gray-600">
-                          Showing {feedbackStartIndex + 1} to {Math.min(feedbackStartIndex + itemsPerPage, filteredFeedbacks.length)} of {filteredFeedbacks.length} feedbacks
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => setCurrentFeedbackPage(prev => Math.max(1, prev - 1))}
-                            disabled={currentFeedbackPage === 1}
-                            className={`px-3 py-2 rounded-lg border text-sm transition-all duration-200 ${
-                              currentFeedbackPage === 1
-                                ? "opacity-40 cursor-not-allowed"
-                                : "hover:bg-gray-100"
-                            }`}
-                          >
-                            Previous
-                          </button>
-                          <span className="text-sm text-gray-700">
-                            Page {currentFeedbackPage} of {totalFeedbackPages}
-                          </span>
-                          <button
-                            onClick={() => setCurrentFeedbackPage(prev => Math.min(totalFeedbackPages, prev + 1))}
-                            disabled={currentFeedbackPage === totalFeedbackPages}
-                            className={`px-3 py-2 rounded-lg border text-sm transition-all duration-200 ${
-                              currentFeedbackPage === totalFeedbackPages
-                                ? "opacity-40 cursor-not-allowed"
-                                : "hover:bg-gray-100"
-                            }`}
-                          >
-                            Next
-                          </button>
-                        </div>
-                      </div>
+                      <Pagination 
+                        page={currentFeedbackPage} 
+                        totalPages={totalFeedbackPages} 
+                        onChange={setCurrentFeedbackPage} 
+                      />
                     </div>
                   )}
                 </>
@@ -674,38 +713,11 @@ export const AdminFeedbacks = () => {
                   {/* Pagination */}
                   {filteredComplaints.length > itemsPerPage && (
                     <div className="px-4 py-3 border-t border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm text-gray-600">
-                          Showing {complaintStartIndex + 1} to {Math.min(complaintStartIndex + itemsPerPage, filteredComplaints.length)} of {filteredComplaints.length} complaints
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => setCurrentComplaintPage(prev => Math.max(1, prev - 1))}
-                            disabled={currentComplaintPage === 1}
-                            className={`px-3 py-2 rounded-lg border text-sm transition-all duration-200 ${
-                              currentComplaintPage === 1
-                                ? "opacity-40 cursor-not-allowed"
-                                : "hover:bg-gray-100"
-                            }`}
-                          >
-                            Previous
-                          </button>
-                          <span className="text-sm text-gray-700">
-                            Page {currentComplaintPage} of {totalComplaintPages}
-                          </span>
-                          <button
-                            onClick={() => setCurrentComplaintPage(prev => Math.min(totalComplaintPages, prev + 1))}
-                            disabled={currentComplaintPage === totalComplaintPages}
-                            className={`px-3 py-2 rounded-lg border text-sm transition-all duration-200 ${
-                              currentComplaintPage === totalComplaintPages
-                                ? "opacity-40 cursor-not-allowed"
-                                : "hover:bg-gray-100"
-                            }`}
-                          >
-                            Next
-                          </button>
-                        </div>
-                      </div>
+                      <Pagination 
+                        page={currentComplaintPage} 
+                        totalPages={totalComplaintPages} 
+                        onChange={setCurrentComplaintPage} 
+                      />
                     </div>
                   )}
                 </>
