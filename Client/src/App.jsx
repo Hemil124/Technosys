@@ -241,7 +241,7 @@ const App = () => {
           <Route path="subscription" element={<TechnicianSubscription />} />
           <Route path="feedbacks" element={<TechnicianFeedbacks />} />
           <Route path="profile" element={<TechnicianProfile />} />
-          <Route path="settings" element={<TechnicianSettings />} />
+          <Route path="my-analytics" element={<TechnicianSettings />} />
         </Route>
 
 

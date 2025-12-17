@@ -110,7 +110,7 @@ export default function AdminSubscriptions() {
   // Predefined package templates for quick creation
   const packageTemplates = [
     {
-      name: "Classic Active",
+      name: "Essential",
       coins: 20,
       price: 249,
       description:
@@ -120,7 +120,7 @@ export default function AdminSubscriptions() {
       badge: "Popular",
     },
     {
-      name: "Premium Active",
+      name: "Advanced",
       coins: 75,
       price: 1199,
       description:
@@ -130,7 +130,7 @@ export default function AdminSubscriptions() {
       badge: "Recommended",
     },
     {
-      name: "Enterprise Active",
+      name: "Ultimate",
       coins: 180,
       price: 2699,
       description:
