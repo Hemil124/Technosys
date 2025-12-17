@@ -49,7 +49,10 @@ export const Admin = () => {
   const [topTechnicians, setTopTechnicians] = useState([]);
   const [topServices, setTopServices] = useState([]);
   const [topLocations, setTopLocations] = useState([]);
+  const [allCategories, setAllCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [mostBookedServices, setMostBookedServices] = useState([]);
+  const [filteredMostBookedServices, setFilteredMostBookedServices] = useState([]);
   const [performanceMetrics, setPerformanceMetrics] = useState({
     completionRate: 0,
     avgResponseTime: 0,
@@ -97,7 +100,8 @@ export const Admin = () => {
         topLocationsRes,
         metricsRes,
         financialRes,
-        mostBookedRes
+        mostBookedRes,
+        categoriesRes
       ] = await Promise.all([
         fetch(`${API_URL}/api/analytics/dashboard`, fetchOptions),
         fetch(`${API_URL}/api/analytics/weekly-revenue`, fetchOptions),
@@ -110,7 +114,8 @@ export const Admin = () => {
         fetch(`${API_URL}/api/analytics/top-locations`, fetchOptions),
         fetch(`${API_URL}/api/analytics/performance-metrics`, fetchOptions),
         fetch(`${API_URL}/api/analytics/financial-summary`, fetchOptions),
-        fetch(`${API_URL}/api/analytics/most-booked-services`, fetchOptions)
+        fetch(`${API_URL}/api/analytics/most-booked-services`, fetchOptions),
+        fetch(`${API_URL}/api/service-categories`, fetchOptions)
       ]);
 
       // Parse responses
@@ -126,6 +131,7 @@ export const Admin = () => {
       const metrics = await metricsRes.json();
       const financial = await financialRes.json();
       const mostBooked = await mostBookedRes.json();
+      const categories = await categoriesRes.json();
 
       // Check for authentication errors
       if (!dashboardRes.ok) {
@@ -150,7 +156,13 @@ export const Admin = () => {
       if (topLocs.success) setTopLocations(topLocs.data);
       if (metrics.success) setPerformanceMetrics(metrics.data);
       if (financial.success) setFinancialSummary(financial.data);
-      if (mostBooked.success) setMostBookedServices(mostBooked.data);
+      if (mostBooked.success) {
+        setMostBookedServices(mostBooked.data);
+        setFilteredMostBookedServices(mostBooked.data);
+      }
+      if (categories.success) {
+        setAllCategories(categories.data);
+      }
 
     } catch (err) {
       console.error('Error fetching analytics:', err);
@@ -527,9 +539,31 @@ export const Admin = () => {
 
         {/* Most Booked Services Chart */}
         <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Most Booked Services</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-900">Most Booked Services</h3>
+            <select
+              value={selectedCategory}
+              onChange={(e) => {
+                setSelectedCategory(e.target.value);
+                if (e.target.value) {
+                  const filtered = mostBookedServices.filter(service => service.categoryId && service.categoryId.toString() === e.target.value);
+                  setFilteredMostBookedServices(filtered);
+                } else {
+                  setFilteredMostBookedServices(mostBookedServices);
+                }
+              }}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            >
+              <option value="">All Categories</option>
+              {allCategories.map((category) => (
+                <option key={category._id} value={category._id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
           <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={mostBookedServices} layout="vertical">
+            <BarChart data={filteredMostBookedServices} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis type="number" />
               <YAxis dataKey="name" type="category" width={150} />
@@ -537,6 +571,11 @@ export const Admin = () => {
               <Bar dataKey="bookings" fill="#8B5CF6" radius={[0, 8, 8, 0]} />
             </BarChart>
           </ResponsiveContainer>
+          {filteredMostBookedServices.length === 0 && (
+            <div className="text-center text-gray-500 py-8">
+              <p>No services found for this category</p>
+            </div>
+          )}
         </div>
 
         {/* 11. Peak Hours Chart */}
