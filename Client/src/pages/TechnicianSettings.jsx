@@ -18,6 +18,16 @@ export default function TechnicianSettings() {
   const navigate = useNavigate();
   const { backendUrl } = useContext(AppContext);
   
+  // Coin Badge Component
+  const CoinBadge = ({ coins }) => (
+    <div className=" py-1 px-3 rounded-full inline-flex items-center gap-1.5 transition-all duration-300 hover:shadow-lg hover:shadow-yellow-300/40">
+      <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center shadow-md flex-shrink-0">
+        <span className="text-gray-900 font-bold text-[10px]">C</span>
+      </div>
+      <span className="font-semibold text-black text-xs whitespace-nowrap">{Number(coins).toFixed(2)}</span>
+    </div>
+  );
+  
   // State for all dashboard data
   const [dashboardData, setDashboardData] = useState({
     kpis: {
@@ -444,10 +454,12 @@ export default function TechnicianSettings() {
               Today's Activity
             </h2>
             <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl shadow-lg p-6 text-white">
-              <div className="flex items-center gap-2 mb-4">
-                <Activity className="animate-pulse" size={24} />
-                <h3 className="text-xl font-bold">Live Activity</h3>
-                <span className="px-3 py-1 bg-white/20 rounded-full text-sm animate-pulse">● LIVE</span>
+              <div className="flex flex-wrap items-center gap-2 mb-4">
+                <div className="flex items-center gap-2">
+                  <Activity className="animate-pulse flex-shrink-0" size={24} />
+                  <h3 className="text-xl font-bold">Live Activity</h3>
+                </div>
+                <span className="px-3 py-1 bg-white/20 rounded-full text-sm animate-pulse w-auto">● LIVE</span>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="text-center">
@@ -851,9 +863,7 @@ export default function TechnicianSettings() {
                         {txn.categoryName}
                       </td>
                       <td className="py-3 px-4 text-center">
-                        <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-bold">
-                          {txn.coinsUsed} 🪙
-                        </span>
+                        <CoinBadge coins={txn.coinsUsed} />
                       </td>
                       <td className="py-3 px-4 text-center">
                         <span className={`px-2 py-1 rounded text-xs font-semibold ${

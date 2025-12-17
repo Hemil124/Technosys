@@ -386,10 +386,12 @@ export const Admin = () => {
 
         {/* 2. Today's Activity */}
         <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl shadow-lg p-6 text-white">
-          <div className="flex items-center gap-2 mb-4">
-            <Activity className="animate-pulse" size={24} />
-            <h2 className="text-xl font-bold">Today's Live Activity</h2>
-            <span className="px-3 py-1 bg-white/20 rounded-full text-sm animate-pulse">● LIVE</span>
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <div className="flex items-center gap-2">
+              <Activity className="animate-pulse flex-shrink-0" size={24} />
+              <h2 className="text-xl font-bold">Today's Live Activity</h2>
+            </div>
+            <span className="px-3 py-1 bg-white/20 rounded-full text-sm animate-pulse w-auto">● LIVE</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="text-center">
