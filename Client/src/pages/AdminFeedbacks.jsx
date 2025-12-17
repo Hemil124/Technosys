@@ -459,35 +459,35 @@ export const AdminFeedbacks = () => {
                           key={feedback._id}
                           className="hover:bg-gray-50/50 transition-colors duration-200"
                         >
-                          <div className="px-6 py-4">
-                            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                          <div className="px-4 py-2.5">
+                            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-2.5">
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center space-x-4 mb-3">
+                                <div className="flex items-center space-x-3 mb-1.5">
                                   <div className="flex-1">
-                                    <div className="flex items-center space-x-3 mb-2">
-                                      <div className="text-lg font-semibold text-gray-900">
+                                    <div className="flex items-center space-x-2 mb-1">
+                                      <div className="text-base font-semibold text-gray-900">
                                         {customerName}
                                       </div>
-                                      <div className="flex items-center space-x-1 text-sm text-gray-500">
-                                        <Calendar className="h-4 w-4" />
+                                      <div className="flex items-center space-x-1 text-xs text-gray-500">
+                                        <Calendar className="h-3.5 w-3.5" />
                                         <span>{date}</span>
                                       </div>
                                     </div>
-                                    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-3">
+                                    <div className="flex flex-wrap items-center gap-2.5 text-xs text-gray-600 mb-1.5">
                                       <div className="flex items-center space-x-1">
-                                        <Tag className="h-4 w-4" />
+                                        <Tag className="h-3.5 w-3.5" />
                                         <span>{serviceName}</span>
                                       </div>
                                       <div className="flex items-center space-x-1">
-                                        <User className="h-4 w-4" />
+                                        <User className="h-3.5 w-3.5" />
                                         <span>{technicianName}</span>
                                       </div>
                                     </div>
-                                    <div className="mb-2">
+                                    <div className="mb-1">
                                       {renderStars(feedback.Rating)}
                                     </div>
                                     {feedback.FeedbackText && (
-                                      <p className="text-gray-700 bg-gray-50/50 p-4 rounded-lg border border-gray-200">
+                                      <p className="text-sm text-gray-700 bg-gray-50/50 p-2.5 rounded-lg border border-gray-200">
                                         {feedback.FeedbackText}
                                       </p>
                                     )}
@@ -503,7 +503,7 @@ export const AdminFeedbacks = () => {
 
                   {/* Pagination */}
                   {filteredFeedbacks.length > itemsPerPage && (
-                    <div className="px-6 py-4 border-t border-gray-200">
+                    <div className="px-4 py-3 border-t border-gray-200">
                       <div className="flex items-center justify-between">
                         <div className="text-sm text-gray-600">
                           Showing {feedbackStartIndex + 1} to {Math.min(feedbackStartIndex + itemsPerPage, filteredFeedbacks.length)} of {filteredFeedbacks.length} feedbacks
@@ -626,40 +626,40 @@ export const AdminFeedbacks = () => {
                           key={complaint._id}
                           className="hover:bg-gray-50/50 transition-colors duration-200"
                         >
-                          <div className="px-6 py-4">
-                            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                          <div className="px-4 py-2.5">
+                            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-2.5">
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between mb-3">
+                                <div className="flex items-start justify-between mb-1.5">
                                   <div className="flex-1">
-                                    <div className="flex items-center space-x-3 mb-2">
-                                      <div className="text-lg font-semibold text-gray-900">
+                                    <div className="flex items-center space-x-2 mb-1">
+                                      <div className="text-base font-semibold text-gray-900">
                                         {customerName}
                                       </div>
                                     </div>
                                     {customerEmail && (
-                                      <div className="text-sm text-gray-600 mb-2">
+                                      <div className="text-xs text-gray-600 mb-1">
                                         {customerEmail}
                                       </div>
                                     )}
-                                    <div className="flex items-center space-x-4 text-sm text-gray-600 mb-2">
+                                    <div className="flex items-center space-x-3 text-xs text-gray-600 mb-1">
                                       <div className="flex items-center space-x-1">
-                                        <Calendar className="h-4 w-4" />
+                                        <Calendar className="h-3.5 w-3.5" />
                                         <span>{date}</span>
                                       </div>
                                       <div className="flex items-center space-x-1">
-                                        <Tag className="h-4 w-4" />
+                                        <Tag className="h-3.5 w-3.5" />
                                         <span>{serviceName}</span>
                                       </div>
                                       <div className="flex items-center space-x-1">
-                                        <User className="h-4 w-4" />
+                                        <User className="h-3.5 w-3.5" />
                                         <span>{technicianName}</span>
                                       </div>
                                     </div>
                                   </div>
                                 </div>
-                                <div className="mb-3">
-                                  <p className="text-gray-700 bg-red-50/50 p-4 rounded-lg border border-red-200">
-                                    <strong className="block text-sm font-semibold text-red-800 mb-1">Complaint:</strong>
+                                <div className="mb-1.5">
+                                  <p className="text-sm text-gray-700 bg-red-50/50 p-2.5 rounded-lg border border-red-200">
+                                    <strong className="block text-xs font-semibold text-red-800 mb-0.5">Complaint:</strong>
                                     {complaint.ComplaintText}
                                   </p>
                                 </div>
@@ -673,7 +673,7 @@ export const AdminFeedbacks = () => {
 
                   {/* Pagination */}
                   {filteredComplaints.length > itemsPerPage && (
-                    <div className="px-6 py-4 border-t border-gray-200">
+                    <div className="px-4 py-3 border-t border-gray-200">
                       <div className="flex items-center justify-between">
                         <div className="text-sm text-gray-600">
                           Showing {complaintStartIndex + 1} to {Math.min(complaintStartIndex + itemsPerPage, filteredComplaints.length)} of {filteredComplaints.length} complaints
