@@ -58,7 +58,7 @@ import TechnicianBookings from "./pages/TechnicianBookings";
 import TechnicianSubscription from "./pages/TechnicianSubscription";
 import TechnicianFeedbacks from "./pages/TechnicianFeedbacks";
 import TechnicianProfile from "./pages/TechnicianProfile";
-import TechnicianAnalysis from "./pages/TechnicianSettings";
+import TechnicianAnalysis from "./pages/TechnicianAnalysis";
 import CustomerProfile from "./pages/CustomerProfile";
 import CustomerBookings from "./pages/CustomerBookings";
 import CustomerSettings from "./pages/CustomerSettings";

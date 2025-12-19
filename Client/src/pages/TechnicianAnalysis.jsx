@@ -77,6 +77,7 @@ export default function TechnicianAnalysis() {
   const [earningsView, setEarningsView] = useState('weekly');
   const [bookingStatus, setBookingStatus] = useState([]);
   const [revenueByService, setRevenueByService] = useState([]);
+  const [revenueServiceView, setRevenueServiceView] = useState('weekly');
   const [recentFeedback, setRecentFeedback] = useState([]);
   const [upcomingBookings, setUpcomingBookings] = useState([]);
   const [mostBookedServices, setMostBookedServices] = useState([]);
@@ -200,7 +201,7 @@ export default function TechnicianAnalysis() {
         fetch(`${API_URL}/api/technician-analytics/monthly-earnings`, fetchOptions),
         fetch(`${API_URL}/api/technician-analytics/monthly-earnings-by-month`, fetchOptions),
         fetch(`${API_URL}/api/technician-analytics/booking-status`, fetchOptions),
-        fetch(`${API_URL}/api/technician-analytics/revenue-by-service`, fetchOptions),
+        fetch(`${API_URL}/api/technician-analytics/revenue-by-service?period=${revenueServiceView}`, fetchOptions),
         fetch(`${API_URL}/api/technician-analytics/recent-feedback`, fetchOptions),
         fetch(`${API_URL}/api/technician-analytics/upcoming-bookings`, fetchOptions),
         fetch(`${API_URL}/api/technician-analytics/most-booked-services`, fetchOptions),
@@ -259,10 +260,44 @@ export default function TechnicianAnalysis() {
     }
   };
 
+  // Fetch only revenue by service data
+  const fetchRevenueByService = async (period) => {
+    try {
+      const fetchOptions = {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
+
+      const response = await fetch(
+        `${API_URL}/api/technician-analytics/revenue-by-service?period=${period}`,
+        fetchOptions
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setRevenueByService(data.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching revenue by service:', error);
+    }
+  };
+
   // Fetch data on component mount
   useEffect(() => {
     fetchAnalytics();
   }, []);
+
+  // Refetch only revenue data when filter changes
+  useEffect(() => {
+    if (revenueServiceView) {
+      fetchRevenueByService(revenueServiceView);
+    }
+  }, [revenueServiceView]);
 
   // Helper: Smart currency formatter (shows actual number if small, K/M/B if large)
   const formatCurrency = (amount) => {
@@ -633,10 +668,44 @@ export default function TechnicianAnalysis() {
               <TrendingUp className="text-cyan-600" size={20} />
               Service Analytics
             </h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
               {/* Revenue by Service */}
               <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Revenue by Service Type</h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-bold text-gray-900">Revenue by Service Type</h3>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setRevenueServiceView('alltime')}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        revenueServiceView === 'alltime'
+                          ? 'bg-cyan-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      All Time
+                    </button>
+                    <button
+                      onClick={() => setRevenueServiceView('weekly')}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        revenueServiceView === 'weekly'
+                          ? 'bg-cyan-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Weekly
+                    </button>
+                    <button
+                      onClick={() => setRevenueServiceView('monthly')}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        revenueServiceView === 'monthly'
+                          ? 'bg-cyan-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Monthly
+                    </button>
+                  </div>
+                </div>
                 {revenueByService.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={revenueByService}>
@@ -654,7 +723,6 @@ export default function TechnicianAnalysis() {
                       />
                       <Legend />
                       <Bar dataKey="revenue" fill="#3B82F6" name="Revenue (₹)" />
-                      <Bar dataKey="bookings" fill="#10B981" name="Bookings" />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (

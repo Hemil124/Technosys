@@ -1608,6 +1608,9 @@ export async function verifyArrivalOTP(req, res) {
 
     booking.Status = "In-Progress";
     booking.arrivalVerified = true;
+    if (!booking.serviceStartedAt) {
+      booking.serviceStartedAt = new Date();
+    }
     await booking.save();
 
     // Cancel the scheduled arrival deadline cancellation since technician arrived
@@ -1653,7 +1656,7 @@ export async function completeService(req, res) {
 
     // Update booking status to Completed
     booking.Status = "Completed";
-    booking.CompletedAt = new Date();
+    booking.serviceCompletedAt = new Date();
     await booking.save();
 
     // Create AdminPayout Record
@@ -2323,7 +2326,7 @@ export async function getTechnicianCompletedBookings(req, res) {
     })
       .populate('SubCategoryID', 'name image price coinsRequired')
       .populate('CustomerID', 'FirstName LastName Name Phone Mobile MobileNumber Address Email')
-      .sort({ CompletedAt: -1, createdAt: -1 })
+        .sort({ serviceCompletedAt: -1, createdAt: -1 })
       .lean();
 
     return res.json({ success: true, bookings });
