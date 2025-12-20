@@ -45,6 +45,7 @@ export const Admin = () => {
   const [revenueView, setRevenueView] = useState('weekly'); // 'weekly' or 'monthly'
   const [bookingStatusData, setBookingStatusData] = useState([]);
   const [revenueByServiceData, setRevenueByServiceData] = useState([]);
+  const [revenueServiceView, setRevenueServiceView] = useState('weekly');
   const [monthlyBookingsByCategoryData, setMonthlyBookingsByCategoryData] = useState([]);
   const [selectedMonthForBookings, setSelectedMonthForBookings] = useState(new Date().getUTCMonth());
   const [peakHoursData, setPeakHoursData] = useState([]);
@@ -55,6 +56,7 @@ export const Admin = () => {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [mostBookedServices, setMostBookedServices] = useState([]);
   const [filteredMostBookedServices, setFilteredMostBookedServices] = useState([]);
+  const [mostBookedServiceView, setMostBookedServiceView] = useState('weekly');
   const [performanceMetrics, setPerformanceMetrics] = useState({
     completionRate: 0,
     avgResponseTime: 0,
@@ -110,7 +112,7 @@ export const Admin = () => {
         fetch(`${API_URL}/api/analytics/weekly-revenue`, fetchOptions),
         fetch(`${API_URL}/api/analytics/monthly-revenue`, fetchOptions),
         fetch(`${API_URL}/api/analytics/booking-status`, fetchOptions),
-        fetch(`${API_URL}/api/analytics/revenue-by-service`, fetchOptions),
+        fetch(`${API_URL}/api/analytics/revenue-by-service?period=${revenueServiceView}`, fetchOptions),
         fetch(`${API_URL}/api/analytics/monthly-bookings-by-category`, fetchOptions),
         fetch(`${API_URL}/api/analytics/peak-hours`, fetchOptions),
         fetch(`${API_URL}/api/analytics/top-technicians`, fetchOptions),
@@ -118,7 +120,7 @@ export const Admin = () => {
         fetch(`${API_URL}/api/analytics/top-locations`, fetchOptions),
         fetch(`${API_URL}/api/analytics/performance-metrics`, fetchOptions),
         fetch(`${API_URL}/api/analytics/financial-summary`, fetchOptions),
-        fetch(`${API_URL}/api/analytics/most-booked-services`, fetchOptions),
+        fetch(`${API_URL}/api/analytics/most-booked-services?period=${mostBookedServiceView}`, fetchOptions),
         fetch(`${API_URL}/api/service-categories`, fetchOptions)
       ]);
 
@@ -200,6 +202,67 @@ export const Admin = () => {
     }
   };
 
+  // Fetch only revenue by service data
+  const fetchRevenueByService = async (period) => {
+    try {
+      const fetchOptions = {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
+
+      const response = await fetch(
+        `${API_URL}/api/analytics/revenue-by-service?period=${period}`,
+        fetchOptions
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setRevenueByServiceData(data.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching revenue by service:', error);
+    }
+  };
+
+  // Fetch only most booked services data
+  const fetchMostBookedServices = async (period) => {
+    try {
+      const fetchOptions = {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      };
+
+      const response = await fetch(
+        `${API_URL}/api/analytics/most-booked-services?period=${period}`,
+        fetchOptions
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setMostBookedServices(data.data);
+          // Apply category filter if one is selected
+          if (selectedCategory) {
+            const filtered = data.data.filter(service => service.categoryId && service.categoryId.toString() === selectedCategory);
+            setFilteredMostBookedServices(filtered);
+          } else {
+            setFilteredMostBookedServices(data.data);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching most booked services:', error);
+    }
+  };
+
   // Fetch data on component mount
   useEffect(() => {
     fetchAnalytics();
@@ -210,6 +273,20 @@ export const Admin = () => {
   useEffect(() => {
     fetchMonthlyBookingsByCategory(selectedMonthForBookings);
   }, [selectedMonthForBookings]);
+
+  // Refetch only revenue data when filter changes
+  useEffect(() => {
+    if (revenueServiceView) {
+      fetchRevenueByService(revenueServiceView);
+    }
+  }, [revenueServiceView]);
+
+  // Refetch most booked services when filter changes
+  useEffect(() => {
+    if (mostBookedServiceView) {
+      fetchMostBookedServices(mostBookedServiceView);
+    }
+  }, [mostBookedServiceView]);
 
   // Generate colors for pie chart
   const COLORS = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#14B8A6', '#F97316', '#6366F1', '#8B5CF6'];
@@ -626,7 +703,41 @@ export const Admin = () => {
 
         {/* Revenue by Service Category */}
         <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Revenue by Service Category</h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-bold text-gray-900">Revenue by Service Category</h3>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setRevenueServiceView('weekly')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  revenueServiceView === 'weekly'
+                    ? 'bg-cyan-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Weekly
+              </button>
+              <button
+                onClick={() => setRevenueServiceView('monthly')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  revenueServiceView === 'monthly'
+                    ? 'bg-cyan-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setRevenueServiceView('alltime')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  revenueServiceView === 'alltime'
+                    ? 'bg-cyan-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                All Time
+              </button>
+            </div>
+          </div>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={revenueByServiceData}>
               <CartesianGrid strokeDasharray="2 2" />
@@ -644,26 +755,60 @@ export const Admin = () => {
         <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-gray-900">Most Booked Services</h3>
-            <select
-              value={selectedCategory}
-              onChange={(e) => {
-                setSelectedCategory(e.target.value);
-                if (e.target.value) {
-                  const filtered = mostBookedServices.filter(service => service.categoryId && service.categoryId.toString() === e.target.value);
-                  setFilteredMostBookedServices(filtered);
-                } else {
-                  setFilteredMostBookedServices(mostBookedServices);
-                }
-              }}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500"
-            >
-              <option value="">All Categories</option>
-              {allCategories.map((category) => (
-                <option key={category._id} value={category._id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
+            <div className="flex gap-3">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setMostBookedServiceView('weekly')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    mostBookedServiceView === 'weekly'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Weekly
+                </button>
+                <button
+                  onClick={() => setMostBookedServiceView('monthly')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    mostBookedServiceView === 'monthly'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  onClick={() => setMostBookedServiceView('alltime')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    mostBookedServiceView === 'alltime'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  All Time
+                </button>
+              </div>
+              <select
+                value={selectedCategory}
+                onChange={(e) => {
+                  setSelectedCategory(e.target.value);
+                  if (e.target.value) {
+                    const filtered = mostBookedServices.filter(service => service.categoryId && service.categoryId.toString() === e.target.value);
+                    setFilteredMostBookedServices(filtered);
+                  } else {
+                    setFilteredMostBookedServices(mostBookedServices);
+                  }
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="">All Categories</option>
+                {allCategories.map((category) => (
+                  <option key={category._id} value={category._id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <ResponsiveContainer width="100%" height={350}>
             <BarChart data={filteredMostBookedServices} layout="vertical">

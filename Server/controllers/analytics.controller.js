@@ -448,7 +448,27 @@ export const getBookingStatusDistribution = async (req, res) => {
 // Get revenue by service category (booking count, not payment revenue since customers pay technicians)
 export const getRevenueByService = async (req, res) => {
   try {
+    const period = req.query.period || 'weekly';
+
+    // Calculate date range based on period
+    const now = new Date();
+    let matchCondition = { Status: 'Completed' };
+    
+    if (period === 'weekly') {
+      const startDate = new Date(now);
+      startDate.setDate(now.getDate() - 7);
+      matchCondition.createdAt = { $gte: startDate };
+    } else if (period === 'monthly') {
+      const startDate = new Date(now);
+      startDate.setDate(now.getDate() - 30);
+      matchCondition.createdAt = { $gte: startDate };
+    }
+    // For 'alltime', no date filter is added
+
     const revenueData = await Booking.aggregate([
+      {
+        $match: matchCondition
+      },
       {
         $lookup: {
           from: "subservicecategories",
@@ -903,7 +923,27 @@ export const getFinancialSummary = async (req, res) => {
 // Get most booked sub-services
 export const getMostBookedServices = async (req, res) => {
   try {
+    const period = req.query.period || 'weekly';
+
+    // Calculate date range based on period
+    const now = new Date();
+    let matchCondition = {};
+    
+    if (period === 'weekly') {
+      const startDate = new Date(now);
+      startDate.setDate(now.getDate() - 7);
+      matchCondition.createdAt = { $gte: startDate };
+    } else if (period === 'monthly') {
+      const startDate = new Date(now);
+      startDate.setDate(now.getDate() - 30);
+      matchCondition.createdAt = { $gte: startDate };
+    }
+    // For 'alltime', no date filter is added
+
     const mostBooked = await Booking.aggregate([
+      {
+        $match: matchCondition
+      },
       {
         $lookup: {
           from: "subservicecategories",
