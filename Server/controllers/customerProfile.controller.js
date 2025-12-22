@@ -22,54 +22,71 @@ const REPLY_TO = process.env.REPLY_TO || SENDER_EMAIL;
 // Helper to generate OTP
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
-// Helper to send email OTP. Returns an object { success, previewUrl?, error? }
+// Helper to send email OTP with retry logic. Returns an object { success, previewUrl?, error? }
 const sendEmailOTPHelper = async (email, otp) => {
-  try {
-    const message = {
-      from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
-      replyTo: REPLY_TO,
-      to: email,
-      subject: "Verify Your Email - Technosys",
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #4F46E5;">Email Verification</h2>
-          <p>Your OTP to verify email is:</p>
-          <h3 style="color: #4F46E5; font-size: 32px; letter-spacing: 5px;">${otp}</h3>
-          <p>This OTP will expire in 10 minutes.</p>
-          <p>Do not share this OTP with anyone.</p>
-        </div>
-      `,
-    };
+  const maxRetries = 3;
+  let lastError;
 
-    // If SMTP credentials are present, use the configured transporter
-    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-      const info = await transporter.sendMail(message);
-      return { success: true };
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const message = {
+        from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+        replyTo: REPLY_TO,
+        to: email,
+        subject: "Verify Your Email - Technosys",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #4F46E5;">Email Verification</h2>
+            <p>Your OTP to verify email is:</p>
+            <h3 style="color: #4F46E5; font-size: 32px; letter-spacing: 5px;">${otp}</h3>
+            <p>This OTP will expire in 10 minutes.</p>
+            <p>Do not share this OTP with anyone.</p>
+          </div>
+        `,
+      };
+
+      // If SMTP credentials are present, use the configured transporter
+      if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+        const info = await transporter.sendMail(message);
+        return { success: true };
+      }
+
+      // In development, create a Nodemailer test account (Ethereal) so developers can preview emails
+      if (process.env.NODE_ENV === "development") {
+        const testAccount = await nodemailer.createTestAccount();
+        const testTransport = nodemailer.createTransport({
+          host: testAccount.smtp.host,
+          port: testAccount.smtp.port,
+          secure: testAccount.smtp.secure,
+          auth: {
+            user: testAccount.user,
+            pass: testAccount.pass,
+          },
+        });
+        const info = await testTransport.sendMail(message);
+        const previewUrl = nodemailer.getTestMessageUrl(info);
+        return { success: true, previewUrl };
+      }
+
+      // If no SMTP and not in dev, indicate sending not configured
+      return { success: false, error: "SMTP not configured" };
+    } catch (error) {
+      lastError = error;
+      console.error(`Email OTP send error (attempt ${attempt}/${maxRetries}):`, error.message);
+      
+      // Retry on timeout errors, wait before retrying
+      if (error.code === 'ETIMEDOUT' && attempt < maxRetries) {
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      
+      break; // Don't retry on other errors
     }
-
-    // In development, create a Nodemailer test account (Ethereal) so developers can preview emails
-    if (process.env.NODE_ENV === "development") {
-      const testAccount = await nodemailer.createTestAccount();
-      const testTransport = nodemailer.createTransport({
-        host: testAccount.smtp.host,
-        port: testAccount.smtp.port,
-        secure: testAccount.smtp.secure,
-        auth: {
-          user: testAccount.user,
-          pass: testAccount.pass,
-        },
-      });
-      const info = await testTransport.sendMail(message);
-      const previewUrl = nodemailer.getTestMessageUrl(info);
-      return { success: true, previewUrl };
-    }
-
-    // If no SMTP and not in dev, indicate sending not configured
-    return { success: false, error: "SMTP not configured" };
-  } catch (error) {
-    console.error("Email OTP send error:", error);
-    return { success: false, error: error.message || String(error) };
   }
+
+  console.error("Email OTP send failed after retries:", lastError);
+  return { success: false, error: lastError.message || String(lastError) };
 };
 
 // POST - Send OTP for email verification
