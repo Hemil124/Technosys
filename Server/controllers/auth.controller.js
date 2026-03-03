@@ -21,6 +21,19 @@ const SENDER_EMAIL = process.env.SENDER_EMAIL || process.env.SMTP_USER || "no-re
 const REPLY_TO = process.env.REPLY_TO || SENDER_EMAIL;
 const FRONTEND_URL = (process.env.FRONTEND_URL || process.env.CLIENT_URL || "http://localhost:5175").replace(/\/$/, "");
 
+const signAuthToken = ({ id, type, email, mobile, provider }) =>
+  jwt.sign(
+    {
+      id,
+      type,
+      ...(email ? { email } : {}),
+      ...(mobile ? { mobile } : {}),
+      ...(provider ? { provider } : {}),
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+
 //date = 12-10-25
 export const register = async (req, res) => {
   try {
@@ -245,8 +258,10 @@ export const register = async (req, res) => {
     );
 
     // ✅ Generate JWT
-    const token = jwt.sign({ id: technician._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
+    const token = signAuthToken({
+      id: technician._id,
+      type: "technician",
+      email: technician.Email,
     });
 
     res.cookie("token", token, {
@@ -466,15 +481,11 @@ export const login = async (req, res) => {
     }
 
     // Create token with user type information
-    const token = jwt.sign(
-      {
-        id: user._id,
-        type: userType,
-        email: userType === "admin" ? user.username : user.Email,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    const token = signAuthToken({
+      id: user._id,
+      type: userType,
+      email: userType === "admin" ? user.username : user.Email,
+    });
 
     res.cookie("token", token, {
       httpOnly: true,
@@ -551,8 +562,11 @@ export const googleLogin = async (req, res) => {
       await user.save();
     }
 
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
+    const token = signAuthToken({
+      id: user._id,
+      type: "google",
+      email: user.email,
+      provider: "google",
     });
 
     res.cookie("token", token, {
@@ -1045,15 +1059,12 @@ export const verifyCustomerMobileOtp = async (req, res) => {
     await record.save();
 
     // Generate JWT token
-    const token = jwt.sign(
-      {
-        id: customer._id,
-        type: "customer",
-        mobile: customer.Mobile,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    const token = signAuthToken({
+      id: customer._id,
+      type: "customer",
+      mobile: customer.Mobile,
+      email: customer.Email || undefined,
+    });
 
     // Set cookie
     res.cookie("token", token, {

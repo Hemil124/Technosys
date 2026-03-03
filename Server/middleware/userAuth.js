@@ -90,6 +90,7 @@ import jwt from "jsonwebtoken";
 import Technician from "../models/Technician.js";
 import Admin from "../models/Admin.js";
 import Customer from "../models/Customer.js";
+import UserGoogle from "../models/userGoogleModel.js";
 
 const userAuth = async (req, res, next) => {
   try {
@@ -136,6 +137,15 @@ const userAuth = async (req, res, next) => {
           message: "Invalid token. Customer not found.",
         });
       }
+    } else if (decoded.type === 'google') {
+      user = await UserGoogle.findById(decoded.id);
+
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid token. Google user not found.",
+        });
+      }
     } else {
       return res.status(401).json({
         success: false,
@@ -161,6 +171,8 @@ const userAuth = async (req, res, next) => {
     } else if (decoded.type === 'customer') {
       req.userMobile = user.Mobile;
       req.userEmail = user.Email || null;
+    } else if (decoded.type === 'google') {
+      req.userEmail = user.email;
     }
     
     next();

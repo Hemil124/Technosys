@@ -6,7 +6,10 @@
   "type": "module",
   "scripts": {
     "start": "nodemon server.js",
-    "server": "nodemon server.js"
+    "server": "nodemon server.js",
+    "start:prod": "node server.js",
+    "load:test:50": "npx autocannon -c 50 -d 30 -p 10 http://localhost:4000/health",
+    "load:test:100": "npx autocannon -c 100 -d 30 -p 10 http://localhost:4000/health"
   },
   "author": "",
   "license": "ISC",

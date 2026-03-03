@@ -9,9 +9,10 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import hpp from "hpp";
 import morgan from "morgan";
+import mongoose from "mongoose";
 
 import connectdb from "./config/mongodb.js";
-import { initRealtime } from "./config/realtime.js";
+import { initRealtime, getIo } from "./config/realtime.js";
 import { initChangeStream } from "./config/changeStream.js";
 import authRouter from "./routes/auth.route.js";
 import userRoutesr from "./routes/user.route.js";
@@ -38,6 +39,8 @@ import { startAutoCancelScheduler } from "./controllers/booking.controller.js";
 
 const app = express();
 const port = process.env.PORT || 4000;
+let shuttingDown = false;
+let changeStream = null;
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -83,8 +86,11 @@ app.use(
 
 // Rate Limiting
 const limiter = rateLimit({
-  windowMs: 10 * 60 * 1000,
-  max: 1000,
+  windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS || 10 * 60 * 1000),
+  max: Number(process.env.RATE_LIMIT_MAX || 1000),
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  skip: (req) => req.path === '/health' || req.path === '/ready',
 });
 
 app.use(limiter);
@@ -138,6 +144,37 @@ app.use(session({
   saveUninitialized: false,
 }));
 
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    ok: true,
+    service: 'technosys-server',
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.get('/ready', (req, res) => {
+  const dbReady = mongoose.connection.readyState === 1;
+  const ready = !shuttingDown && dbReady;
+
+  res.status(ready ? 200 : 503).json({
+    ok: ready,
+    shuttingDown,
+    dbReady,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.use((req, res, next) => {
+  if (shuttingDown) {
+    return res.status(503).json({
+      success: false,
+      message: 'Server is restarting, please retry shortly.',
+    });
+  }
+  next();
+});
+
 // routes
 app.get('/', (req, res) => res.send("API Working"));
 app.use('/api/auth', authRouter);
@@ -172,7 +209,7 @@ try {
 // Initialize change stream (if available). This will emit events for DB changes
 // even when they come from outside this Node process (requires replica set).
 try {
-  initChangeStream();
+  changeStream = initChangeStream();
 } catch (err) {
   console.warn('ChangeStream initialization failed', err);
 }
@@ -183,3 +220,61 @@ try {
 } catch (err) {
   console.error('Failed to start auto-cancel scheduler', err);
 }
+
+const shutdown = async (signal) => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`${signal} received. Starting graceful shutdown...`);
+
+  const closeServer = new Promise((resolve) => {
+    server.close((err) => {
+      if (err) {
+        console.error('HTTP server close error:', err);
+      }
+      resolve();
+    });
+  });
+
+  const closeSocket = new Promise((resolve) => {
+    try {
+      const io = getIo();
+      if (!io) return resolve();
+      io.close(() => resolve());
+    } catch (err) {
+      console.error('Socket close error:', err);
+      resolve();
+    }
+  });
+
+  const closeChangeStream = new Promise((resolve) => {
+    try {
+      if (!changeStream) return resolve();
+      const result = changeStream.close();
+      if (result && typeof result.then === 'function') {
+        result.finally(resolve);
+      } else {
+        resolve();
+      }
+    } catch (err) {
+      console.error('Change stream close error:', err);
+      resolve();
+    }
+  });
+
+  const closeMongo = mongoose.connection.readyState === 0
+    ? Promise.resolve()
+    : mongoose.connection.close(false).catch((err) => {
+        console.error('Mongo connection close error:', err);
+      });
+
+  await Promise.race([
+    Promise.allSettled([closeServer, closeSocket, closeChangeStream, closeMongo]),
+    new Promise((resolve) => setTimeout(resolve, 10000)),
+  ]);
+
+  console.log('Graceful shutdown complete.');
+  process.exit(0);
+};
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));

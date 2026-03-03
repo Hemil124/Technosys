@@ -165,7 +165,12 @@ authRouter.get(
   async (req, res) => {
     // Issue the SAME JWT cookie your app already uses, with a provider flag
     const token = jwt.sign(
-      { id: req.user._id, provider: "google" },
+      {
+        id: req.user._id,
+        type: "google",
+        email: req.user.email,
+        provider: "google",
+      },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
